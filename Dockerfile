@@ -12,6 +12,6 @@ RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
 RUN pip install PyMuPDF qrcode fastapi[all] uvicorn[standard]
 
 COPY *.py .
-COPY fonts fonts
+COPY ./fonts ./fonts
 
 CMD ["uvicorn", "main:app", "--reload"]
