@@ -33,7 +33,9 @@ class Processor(object):
         self.source_pdf = source_pdf
         self.qr_code = qr_code
         self.doc_no = doc_no
+        self.inventory_code = inventory_code
         self.inventory_name = inventory_name
+        self.inventory_spec = inventory_spec
         self.quantity = quantity
         self.doc_date = doc_date
         self.horizontal_layout = horizontal_layout
