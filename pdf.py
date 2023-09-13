@@ -7,9 +7,6 @@ from qrcode.image.pil import PilImage
 
 from utils import log_time
 
-current_file_path = os.path.abspath(os.path.dirname(__file__))
-
-
 class Processor(object):
     def __init__(self,
                  source_pdf: bytes,
@@ -32,6 +29,7 @@ class Processor(object):
         :param horizontal_layout: 是否横向
         """
         super().__init__()
+        self.current_file_path = os.path.abspath(os.path.dirname(__file__))
         self.source_pdf = source_pdf
         self.qr_code = qr_code
         self.doc_no = doc_no
@@ -72,7 +70,7 @@ class Processor(object):
 
             # page.insert_image(
             #     rect=fitz.Rect(5 * self.zoom, 5 * self.zoom, 100 * self.zoom, 100 * self.zoom),
-            #     filename=os.path.join(current_file_path, 'logo', 'logo20220210-01.png'), overlay=False)
+            #     filename=os.path.join(self.current_file_path, 'logo', 'logo20220210-01.png'), overlay=False)
 
             # 二维码: 左移80、下移10、宽高统一180
             page.insert_image(
@@ -82,7 +80,7 @@ class Processor(object):
                 overlay=False)
 
             page.insert_font(fontname="chn",
-                             fontfile=os.path.join(current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
+                             fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
             # 字体大小
             fontsize = 10 * self.zoom
             # 第一列
@@ -102,7 +100,7 @@ class Processor(object):
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             page.insert_text(point=fitz.Point(300 * self.zoom, 75 * self.zoom), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
-            # doc.save(os.path.join(current_file_path, "header", f"header-{int(time.time())}.pdf"))
+            # doc.save(os.path.join(self.current_file_path, "header", f"header-{int(time.time())}.pdf"))
             pdf_bytes = doc.convert_to_pdf()
             return pdf_bytes
 
@@ -116,6 +114,6 @@ class Processor(object):
                 r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
                 new_page.show_pdf_page(r1, header_pdf, 0)
                 new_page.show_pdf_page(r2, source_pdf, p_index)
-            # target_pdf.save(os.path.join(current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
+            # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
