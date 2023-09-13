@@ -11,8 +11,8 @@ from pdf import Processor
 app = FastAPI()
 
 
-@app.post('/generate')
-def generate(file: bytes = File(),
+@app.post('/generate/from-file')
+def generate_from_file(file: bytes = File(),
              qr_code: str = Form(),
              doc_no: str = Form(),
              inventory_code: str = Form(),
