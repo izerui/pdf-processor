@@ -32,12 +32,12 @@ def log_time(func):
 @app.post('/generate')
 def generate(file: bytes = File(),
              qr_code: str = Form(),
-             doc_no: str = None,
-             inventory_code: str = None,
-             inventory_name: str = None,
-             inventory_spec: str = None,
-             quantity: str = None,
-             doc_date: str = None):
+             doc_no: str = Form(),
+             inventory_code: str = Form(),
+             inventory_name: str = Form(),
+             inventory_spec: str = Form(),
+             quantity: str = Form(),
+             doc_date: str = Form()):
     processor = Processor(file, qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
                           horizontal_layout=True)
     bytes = processor.generate_merge_pdf()
