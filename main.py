@@ -7,10 +7,12 @@ import uvicorn
 from fastapi import FastAPI, Response, File, Form
 
 from pdf import Processor
+from utils import log_time
 
 app = FastAPI()
 
 
+@log_time
 @app.post('/generate')
 def generate(file: bytes = File(),
              qr_code: str = Form(),
