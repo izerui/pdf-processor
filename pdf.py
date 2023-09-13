@@ -71,17 +71,6 @@ class Processor(object):
             page.insert_image(rect=fitz.Rect(80, 10, 100 + 180, 10 + self.header_height), stream=imagefile,
                               overlay=False)
 
-            # red = (1, 0, 0)
-            # gold = (1, 1, 0)
-            # blue = (0, 0, 1)
-            # r1 = fitz.Rect(820, 60, 820 + 100, 60 + 40)
-            # t1 = f'工单数量: {self.quantity}'
-            # shape = page.new_shape()
-            # shape.draw_rect(r1)
-            # shape.finish(width=0.3, color=red, fill=gold)
-            # shape.insert_textbox(r1, t1, color=blue, fontname='Droid Sans Fallback Regular')
-            # shape.commit()
-
             page.insert_font(fontname="chn",
                              fontfile=os.path.join(current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
 
