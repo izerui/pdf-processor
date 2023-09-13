@@ -6,6 +6,8 @@ import fitz
 import qrcode
 from qrcode.image.pil import PilImage
 
+from main import log_time
+
 current_file_path = os.path.abspath(os.path.dirname(__file__))
 
 
@@ -54,6 +56,7 @@ class Processor(object):
         a4_height = fmt[1]
         return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
 
+    @log_time
     def generate_header_pdf(self):
         """
         生成header头信息pdf
@@ -102,6 +105,7 @@ class Processor(object):
             pdf_bytes = doc.convert_to_pdf()
             return pdf_bytes
 
+    @log_time
     def generate_merge_pdf(self):
         with fitz.open() as target_pdf, fitz.open('pdf', self.generate_header_pdf()) as header_pdf, fitz.open("pdf",
                                                                                                               self.source_pdf) as source_pdf:
