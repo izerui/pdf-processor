@@ -1,12 +1,11 @@
 import os
-import time
 from io import BytesIO
 
 import fitz
 import qrcode
 from qrcode.image.pil import PilImage
 
-from main import log_time
+from utils import log_time
 
 current_file_path = os.path.abspath(os.path.dirname(__file__))
 
@@ -83,7 +82,8 @@ class Processor(object):
             # shape.insert_textbox(r1, t1, color=blue, fontname='Droid Sans Fallback Regular')
             # shape.commit()
 
-            page.insert_font(fontname="chn", fontfile=os.path.join(current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
+            page.insert_font(fontname="chn",
+                             fontfile=os.path.join(current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
 
             # 第一列
             page.insert_text(point=fitz.Point(300, 50), text=f'工单号: {self.doc_no}', fontsize=24,
