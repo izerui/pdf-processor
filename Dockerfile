@@ -13,6 +13,5 @@ RUN pip install PyMuPDF qrcode fastapi[all] uvicorn[standard]
 
 COPY *.py ./
 COPY ./fonts/ ./fonts/
-COPY ./logo/ ./logo/
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0",  "--reload"]
