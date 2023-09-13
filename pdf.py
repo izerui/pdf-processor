@@ -7,6 +7,7 @@ from qrcode.image.pil import PilImage
 
 from utils import log_time
 
+
 class Processor(object):
     def __init__(self,
                  source_pdf: bytes,
@@ -55,8 +56,7 @@ class Processor(object):
         a4_height = fmt[1]
         return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
 
-    @log_time
-    def generate_header_pdf(self):
+    def with_header_pdf(self, callback):
         """
         生成header头信息pdf
         :param horizontal_layout: 是否横向
@@ -101,19 +101,22 @@ class Processor(object):
             page.insert_text(point=fitz.Point(300 * self.zoom, 75 * self.zoom), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             # doc.save(os.path.join(self.current_file_path, "header", f"header-{int(time.time())}.pdf"))
-            pdf_bytes = doc.convert_to_pdf()
-            return pdf_bytes
+            return callback(doc)
+            # pdf_bytes = doc.convert_to_pdf()
+            # return pdf_bytes
 
     @log_time
     def generate_merge_pdf(self):
-        with fitz.open() as target_pdf, fitz.open('pdf', self.generate_header_pdf()) as header_pdf, fitz.open("pdf",
-                                                                                                              self.source_pdf) as source_pdf:
-            for p_index, source_page in enumerate(source_pdf):
-                new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
-                r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-                r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
-                new_page.show_pdf_page(r1, header_pdf, 0)
-                new_page.show_pdf_page(r2, source_pdf, p_index)
-            # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
-            pdf_bytes = target_pdf.convert_to_pdf()
-            return pdf_bytes
+        def callback(header_pdf):
+            with fitz.open() as target_pdf, fitz.open("pdf", self.source_pdf) as source_pdf:
+                for p_index, source_page in enumerate(source_pdf):
+                    new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
+                    r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
+                    r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
+                    new_page.show_pdf_page(r1, header_pdf, 0)
+                    new_page.show_pdf_page(r2, source_pdf, p_index)
+                # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
+                pdf_bytes = target_pdf.convert_to_pdf()
+                return pdf_bytes
+
+        return self.with_header_pdf(callback)
