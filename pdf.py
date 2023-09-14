@@ -114,7 +114,7 @@ class Processor(object):
             source_bytes = self.source_bytes
             if not source_bytes:
                 response = httpx.get(self.source_url)
-                pass
+                source_bytes = response.content
             with fitz.open() as target_pdf, fitz.open("pdf", source_bytes) as source_pdf:
                 for p_index, source_page in enumerate(source_pdf):
                     new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
