@@ -22,8 +22,8 @@ app = FastAPI(
 )
 
 
-@app.post('/generate/from-file')
-def generate_from_file(files: List[bytes] = File(),
+@app.post('/generate/from-file', description='通过文件生成')
+async def generate_from_file(files: List[bytes] = File(),
                        qr_code: str = Form(),
                        doc_no: str = Form(),
                        inventory_code: str = Form(),
@@ -51,8 +51,8 @@ class Item(BaseModel):
     doc_date: str
 
 
-@app.post('/generate/from-url')
-def generate_from_url(item: Item):
+@app.post('/generate/from-url', description='通过文件url生成')
+async def generate_from_url(item: Item):
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
                           item.quantity, item.doc_date,
                           source_urls=item.file_urls,
