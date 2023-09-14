@@ -1,5 +1,6 @@
 import os
 from io import BytesIO
+from typing import List
 
 import fitz
 import httpx
@@ -18,8 +19,8 @@ class Processor(object):
                  inventory_spec: str,
                  quantity: str,
                  doc_date: str,
-                 source_bytes: bytes = None,
-                 source_url: str = None,
+                 source_files: List[bytes] = None,
+                 source_urls: List[str] = None,
                  horizontal_layout: str = False,
                  zoom: int = 2):
         """
@@ -40,8 +41,8 @@ class Processor(object):
         self.inventory_spec = inventory_spec
         self.quantity = quantity
         self.doc_date = doc_date
-        self.source_bytes = source_bytes
-        self.source_url = source_url
+        self.source_files = source_files
+        self.source_urls = source_urls
         self.horizontal_layout = horizontal_layout
         self.zoom = zoom
         _wh = self._get_width_height()
@@ -111,17 +112,21 @@ class Processor(object):
     @log_time
     def generate_merge_pdf(self):
         def callback(header_pdf):
-            source_bytes = self.source_bytes
-            if not source_bytes:
-                response = httpx.get(self.source_url)
-                source_bytes = response.content
-            with fitz.open() as target_pdf, fitz.open("pdf", source_bytes) as source_pdf:
-                for p_index, source_page in enumerate(source_pdf):
-                    new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
-                    r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-                    r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
-                    new_page.show_pdf_page(r1, header_pdf, 0)
-                    new_page.show_pdf_page(r2, source_pdf, p_index)
+            sources = self.source_files
+            if not sources:
+                sources = []
+                for source_url in self.source_urls:
+                    response = httpx.get(source_url)
+                    sources.append(response.content)
+            with fitz.open() as target_pdf:
+                for source in sources:
+                    with fitz.open("pdf", source) as source_pdf:
+                        for p_index, source_page in enumerate(source_pdf):
+                            new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
+                            r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
+                            r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
+                            new_page.show_pdf_page(r1, header_pdf, 0)
+                            new_page.show_pdf_page(r2, source_pdf, p_index)
                 # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
                 pdf_bytes = target_pdf.convert_to_pdf()
                 return pdf_bytes
