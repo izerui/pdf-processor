@@ -13,3 +13,4 @@
 test file:
 * https://file.yj2025.com/CH3600-1-M04003A%20%E6%90%AC%E8%BF%90%E7%88%AA%E5%AE%89%E8%A3%85%E6%9D%BF-%E9%95%BF.pdf
 * https://file.yj2025.com/003.pdf
+* https://file.yj2025.com/WX20230909-172402%402x.png

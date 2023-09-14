@@ -117,10 +117,16 @@ class Processor(object):
                 sources = []
                 for source_url in self.source_urls:
                     response = httpx.get(source_url)
+                    if not response.is_success:
+                        raise IOError(f'文件下载失败, url: {source_url}')
                     sources.append(response.content)
+            if not sources:
+                raise RuntimeError(f'没有可转换的文件')
             with fitz.open() as target_pdf:
                 for source in sources:
                     with fitz.open("pdf", source) as source_pdf:
+                        if source_pdf.metadata['format'] == 'Image':
+                            source_pdf = fitz.open("pdf", source_pdf.convertToPDF())
                         for p_index, source_page in enumerate(source_pdf):
                             new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
                             r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
