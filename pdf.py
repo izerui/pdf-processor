@@ -128,11 +128,14 @@ class Processor(object):
                         if source_pdf.metadata['format'] == 'Image':
                             source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
                         for p_index, source_page in enumerate(source_pdf):
+                            print(source_page.rect.width, source_page.rect.height)
                             new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
                             r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-                            r2 = r1 + (0, self.header_height, 0, new_page.rect.height - self.header_height)
+                            r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
+                                           new_page.rect.height)
                             new_page.show_pdf_page(r1, header_pdf, 0)
-                            new_page.show_pdf_page(r2, source_pdf, p_index)
+                            rotate = 0 if source_page.rect.width > source_page.rect.height else 90
+                            new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate)
                 # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
                 pdf_bytes = target_pdf.convert_to_pdf()
                 return pdf_bytes
