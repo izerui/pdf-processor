@@ -22,7 +22,7 @@ app = FastAPI(
 )
 
 
-@app.post('/generate/from-file')
+@app.post('/p3/generate/from-file')
 def generate_from_file(files: List[bytes] = File(),
                        qr_code: str = Form(),
                        doc_no: str = Form(),
@@ -51,7 +51,7 @@ class Item(BaseModel):
     doc_date: str
 
 
-@app.post('/generate/from-url')
+@app.post('/p3/generate/from-url')
 def generate_from_url(item: Item):
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
                           item.quantity, item.doc_date,
