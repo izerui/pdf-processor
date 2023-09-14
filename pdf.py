@@ -126,7 +126,7 @@ class Processor(object):
                 for source in sources:
                     with fitz.open("pdf", source) as source_pdf:
                         if source_pdf.metadata['format'] == 'Image':
-                            source_pdf = fitz.open("pdf", source_pdf.convertToPDF())
+                            source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
                         for p_index, source_page in enumerate(source_pdf):
                             new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
                             r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
