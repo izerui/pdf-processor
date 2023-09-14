@@ -2,6 +2,7 @@ import os
 from io import BytesIO
 
 import fitz
+import httpx
 import qrcode
 from qrcode.image.pil import PilImage
 
@@ -10,7 +11,6 @@ from utils import log_time
 
 class Processor(object):
     def __init__(self,
-                 source_pdf: bytes,
                  qr_code: str,
                  doc_no: str,
                  inventory_code: str,
@@ -18,6 +18,8 @@ class Processor(object):
                  inventory_spec: str,
                  quantity: str,
                  doc_date: str,
+                 source_bytes: bytes = None,
+                 source_url: str = None,
                  horizontal_layout: str = False,
                  zoom: int = 2):
         """
@@ -31,7 +33,6 @@ class Processor(object):
         """
         super().__init__()
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
-        self.source_pdf = source_pdf
         self.qr_code = qr_code
         self.doc_no = doc_no
         self.inventory_code = inventory_code
@@ -39,6 +40,8 @@ class Processor(object):
         self.inventory_spec = inventory_spec
         self.quantity = quantity
         self.doc_date = doc_date
+        self.source_bytes = source_bytes
+        self.source_url = source_url
         self.horizontal_layout = horizontal_layout
         self.zoom = zoom
         _wh = self._get_width_height()
@@ -108,7 +111,11 @@ class Processor(object):
     @log_time
     def generate_merge_pdf(self):
         def callback(header_pdf):
-            with fitz.open() as target_pdf, fitz.open("pdf", self.source_pdf) as source_pdf:
+            source_bytes = self.source_bytes
+            if not source_bytes:
+                response = httpx.get(self.source_url)
+                pass
+            with fitz.open() as target_pdf, fitz.open("pdf", source_bytes) as source_pdf:
                 for p_index, source_page in enumerate(source_pdf):
                     new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
                     r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
