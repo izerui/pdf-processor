@@ -10,7 +10,15 @@ from pydantic import BaseModel
 
 from pdf import Processor
 
-app = FastAPI()
+app = FastAPI(
+    title='pdf生成、合并服务',
+    description='生产内网地址: http://10.100.244.136:8000',
+    version='1.1',
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    }
+)
 
 
 @app.post('/generate/from-file')
