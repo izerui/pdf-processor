@@ -12,7 +12,8 @@ from pdf import Processor
 
 app = FastAPI(
     title='pdf生成、合并服务',
-    description='生产内网地址: http://10.100.244.136:8000',
+    summary='文档地址: 开发: https://pdf-local.yj2025.com/docs、生产: https://pdf-aws.yj2025.com/docs',
+    description='开发内网服务地址: http://10.96.28.247:8000、生产内网服务地址: http://10.100.244.136:8000',
     version='1.1',
     license_info={
         "name": "Apache 2.0",
