@@ -11,10 +11,13 @@
     <script type="text/javascript">
         $(document).ready(function () {
             $("#file").change(function (event) {
-                $('#zoom').val(100)
-                $("#pages option").remove();
-                $("#rects").val('')
-                f = event.target.files[0]
+                for (i = 0; i < event.target.files.length; i++) {
+                    f = event.target.files[i]
+                    readFile(f)
+                }
+            });
+
+            function readFile(file) {
                 var reader = new FileReader();
                 reader.onload = function (ev) {
                     var uint8Array = new Uint8Array(ev.target.result)
@@ -22,43 +25,42 @@
                     // 使用pdf.js加载PDF文件
                     pdfjsLib.getDocument(uint8Array).promise.then(function (pdf) {
                         for (i = 1; i <= pdf.numPages; i++) {
-
+                            renderPage(pdf, i)
                         }
-                        renderPage(pdf, 1)
                     });
                 };
-                reader.readAsArrayBuffer(f);
-            });
+                reader.readAsArrayBuffer(file);
+            }
 
             function renderPage(pdf, pageNum) {
-                var canvas = document.getElementById('myCanvas');
-                if (pdf) {
-                    // 获得该PDF的第一页
-                    pdf.getPage(pageNum).then(function (page) {
-                        var scale = 1;
-                        var viewport = page.getViewport({scale: scale,});
-                        // Support HiDPI-screens.
-                        var outputScale = 1;
+                // var canvas = document.getElementById('myCanvas');
+                var canvas = document.createElement("canvas");
+                // 获得该PDF的第一页
+                pdf.getPage(pageNum).then(function (page) {
+                    var scale = 1;
+                    var viewport = page.getViewport({scale: scale,});
+                    // Support HiDPI-screens.
+                    var outputScale = 1;
 
-                        var context = canvas.getContext('2d');
+                    var context = canvas.getContext('2d');
 
-                        canvas.width = Math.floor(viewport.width * outputScale);
-                        canvas.height = Math.floor(viewport.height * outputScale);
-                        canvas.style.width = Math.floor(viewport.width) + "px";
-                        canvas.style.height = Math.floor(viewport.height) + "px";
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
+                    canvas.style.width = Math.floor(viewport.width) + "px";
+                    canvas.style.height = Math.floor(viewport.height) + "px";
 
-                        var transform = outputScale !== 1
-                            ? [outputScale, 0, 0, outputScale, 0, 0]
-                            : null;
+                    var transform = outputScale !== 1
+                        ? [outputScale, 0, 0, outputScale, 0, 0]
+                        : null;
 
-                        var renderContext = {
-                            canvasContext: context,
-                            transform: transform,
-                            viewport: viewport
-                        };
-                        page.render(renderContext);
-                    });
-                }
+                    var renderContext = {
+                        canvasContext: context,
+                        transform: transform,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                    document.getElementById('home').appendChild(canvas);
+                });
             }
 
         })
@@ -68,10 +70,13 @@
 <form role="form" action="ocr" method="POST" enctype="multipart/form-data">
     <div class="form-group">
         <label for="file">(必填)请选择PDF文件</label>
-        <input type="file" id="file" name="file">
+        <input type="file" id="file" name="file" multiple>
         <p class="help-block">支持的类型有: (*.pdf)。</p>
     </div>
 </form>
+<div id="home">
+
+</div>
 <canvas id="myCanvas"></canvas>
 </body>
 </html>
