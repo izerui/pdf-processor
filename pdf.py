@@ -128,7 +128,7 @@ class Processor(object):
                         if source_pdf.metadata['format'] == 'Image':
                             source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
                         for p_index, source_page in enumerate(source_pdf):
-                            print(source_page.rect.width, source_page.rect.height)
+                            # print(source_page.rect.width, source_page.rect.height)
                             new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
                             r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
                             r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
@@ -141,3 +141,22 @@ class Processor(object):
                 return pdf_bytes
 
         return self.with_header_pdf(callback)
+
+
+class Combiner(object):
+
+    def __init__(self, source_files: List[bytes]):
+        self.source_files = source_files
+
+    def merge(self):
+        """
+        合并多个pdf文件
+        :return:
+        """
+        with fitz.open() as target_pdf:
+            for source in self.source_files:
+                with fitz.open("pdf", source) as source_pdf:
+                    target_pdf.insert_pdf(source_pdf)
+            # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
+            pdf_bytes = target_pdf.convert_to_pdf()
+            return pdf_bytes
