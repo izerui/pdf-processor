@@ -59,6 +59,7 @@
                         viewport: viewport
                     };
                     page.render(renderContext);
+                    document.getElementById('home').append(document.createElement("br"))
                     document.getElementById('home').appendChild(canvas);
                 });
             }
@@ -74,9 +75,7 @@
         <p class="help-block">支持的类型有: (*.pdf)。</p>
     </div>
 </form>
-<div id="home">
-
+<div id="home" vertical layout>
 </div>
-<canvas id="myCanvas"></canvas>
 </body>
 </html>
