@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>pdfjs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="static/pdf.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#file").change(function (event) {
+                $('#zoom').val(100)
+                $("#pages option").remove();
+                $("#rects").val('')
+                f = event.target.files[0]
+                var reader = new FileReader();
+                reader.onload = function (ev) {
+                    var uint8Array = new Uint8Array(ev.target.result)
+                    console.log(uint8Array)
+                    // 使用pdf.js加载PDF文件
+                    pdfjsLib.getDocument(uint8Array).promise.then(function (pdf) {
+                        for (i = 1; i <= pdf.numPages; i++) {
+
+                        }
+                        renderPage(pdf, 1)
+                    });
+                };
+                reader.readAsArrayBuffer(f);
+            });
+
+            function renderPage(pdf, pageNum) {
+                var canvas = document.getElementById('myCanvas');
+                if (pdf) {
+                    // 获得该PDF的第一页
+                    pdf.getPage(pageNum).then(function (page) {
+                        var scale = 1;
+                        var viewport = page.getViewport({scale: scale,});
+                        // Support HiDPI-screens.
+                        var outputScale = 1;
+
+                        var context = canvas.getContext('2d');
+
+                        canvas.width = Math.floor(viewport.width * outputScale);
+                        canvas.height = Math.floor(viewport.height * outputScale);
+                        canvas.style.width = Math.floor(viewport.width) + "px";
+                        canvas.style.height = Math.floor(viewport.height) + "px";
+
+                        var transform = outputScale !== 1
+                            ? [outputScale, 0, 0, outputScale, 0, 0]
+                            : null;
+
+                        var renderContext = {
+                            canvasContext: context,
+                            transform: transform,
+                            viewport: viewport
+                        };
+                        page.render(renderContext);
+                    });
+                }
+            }
+
+        })
+    </script>
+</head>
+<body>
+<form role="form" action="ocr" method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+        <label for="file">(必填)请选择PDF文件</label>
+        <input type="file" id="file" name="file">
+        <p class="help-block">支持的类型有: (*.pdf)。</p>
+    </div>
+</form>
+<canvas id="myCanvas"></canvas>
+</body>
+</html>
