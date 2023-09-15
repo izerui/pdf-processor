@@ -148,6 +148,7 @@ class Combiner(object):
     def __init__(self, source_files: List[bytes]):
         self.source_files = source_files
 
+    @log_time
     def merge(self):
         """
         合并多个pdf文件
