@@ -53,6 +53,7 @@ class Processor(object):
         获取页面宽高
         :return:
         """
+        # DPI: 150
         a4_width = 1240
         a4_height = 1754
         return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
