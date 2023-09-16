@@ -39,8 +39,8 @@ async def generate_from_file(files: List[bytes] = File(),
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
-    except BaseException:
-        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
+    except Exception as err:
+        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
 
 
 class Item(BaseModel):
@@ -65,8 +65,8 @@ async def generate_from_url(item: Item):
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
-    except BaseException:
-        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
+    except Exception as err:
+        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
 
 
 @app.post('/generate/from-urls', description='通过多个文件url生成')
@@ -85,11 +85,11 @@ async def generate_from_url(items: List[Item]):
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
-    except BaseException:
-        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
+    except Exception as err:
+        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
 
 
 if __name__ == "__main__":
     # 解决 fitz 新旧别名映射的bug
     fitz.restore_aliases()
-    uvicorn.run(app, host="127.0.0.1", port=8000, timeout_keep_alive=60)
+    uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)
