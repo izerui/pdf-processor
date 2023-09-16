@@ -21,8 +21,7 @@ class Processor(object):
                  doc_date: str,
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None,
-                 horizontal_layout: str = False,
-                 zoom: int = 2):
+                 horizontal_layout: str = False):
         """
         :param file: 待处理的pdf文件
         :param qr_code: 二维码
@@ -44,20 +43,18 @@ class Processor(object):
         self.source_files = source_files
         self.source_urls = source_urls
         self.horizontal_layout = horizontal_layout
-        self.zoom = zoom
         _wh = self._get_width_height()
-        self.layout_width = _wh[0] * self.zoom
-        self.layout_height = _wh[1] * self.zoom
-        self.header_height = 90 * self.zoom
+        self.layout_width = _wh[0]
+        self.layout_height = _wh[1]
+        self.header_height = 180
 
     def _get_width_height(self):
         """
         获取页面宽高
         :return:
         """
-        fmt = fitz.paper_size("A4")
-        a4_width = fmt[0]
-        a4_height = fmt[1]
+        a4_width = 1240
+        a4_height = 1754
         return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
 
     def with_header_pdf(self, callback):
@@ -73,36 +70,36 @@ class Processor(object):
             img.save(imagefile)
 
             # page.insert_image(
-            #     rect=fitz.Rect(5 * self.zoom, 5 * self.zoom, 100 * self.zoom, 100 * self.zoom),
+            #     rect=fitz.Rect(10, 10, 200, 200),
             #     filename=os.path.join(self.current_file_path, 'logo', 'logo20220210-01.png'), overlay=False)
 
             # 二维码: 左移80、下移10、宽高统一180
             page.insert_image(
-                rect=fitz.Rect(40 * self.zoom, 5 * self.zoom, (50 + 90) * self.zoom,
-                               5 * self.zoom + self.header_height),
+                rect=fitz.Rect(80, 10, 280,
+                               10 + self.header_height),
                 stream=imagefile,
                 overlay=False)
 
             page.insert_font(fontname="chn",
                              fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
             # 字体大小
-            fontsize = 10 * self.zoom
+            fontsize = 20
             # 第一列
-            page.insert_text(point=fitz.Point(150 * self.zoom, 25 * self.zoom), text=f'工单号: {self.doc_no}',
+            page.insert_text(point=fitz.Point(300, 50), text=f'工单号: {self.doc_no}',
                              fontsize=fontsize,
                              fontname='chn', color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(150 * self.zoom, 50 * self.zoom), text=f'订单交期: {self.doc_date}',
+            page.insert_text(point=fitz.Point(300, 100), text=f'订单交期: {self.doc_date}',
                              fontsize=fontsize,
                              fontname='chn', color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(150 * self.zoom, 75 * self.zoom), text=f'工单数量: {self.quantity}',
+            page.insert_text(point=fitz.Point(300, 150), text=f'工单数量: {self.quantity}',
                              fontsize=fontsize,
                              fontname='chn', color=(0, 0, 0))
             # 第二列
-            page.insert_text(point=fitz.Point(300 * self.zoom, 25 * self.zoom), text=f'货品编码: {self.inventory_code}',
+            page.insert_text(point=fitz.Point(600, 50), text=f'货品编码: {self.inventory_code}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(300 * self.zoom, 50 * self.zoom), text=f'货品名称: {self.inventory_name}',
+            page.insert_text(point=fitz.Point(600, 100), text=f'货品名称: {self.inventory_name}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(300 * self.zoom, 75 * self.zoom), text=f'规格型号: {self.inventory_spec}',
+            page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             # doc.save(os.path.join(self.current_file_path, "header", f"header-{int(time.time())}.pdf"))
             return callback(doc)
@@ -135,7 +132,7 @@ class Processor(object):
                                            new_page.rect.height)
                             new_page.show_pdf_page(r1, header_pdf, 0)
                             rotate = 0 if source_page.rect.width > source_page.rect.height else 90
-                            new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate)
+                            new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
                 # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
                 pdf_bytes = target_pdf.convert_to_pdf()
                 return pdf_bytes
