@@ -40,7 +40,7 @@ async def generate_from_file(files: List[bytes] = File(),
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
-        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
 class Item(BaseModel):
@@ -66,7 +66,7 @@ async def generate_from_url(item: Item):
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
-        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
 @app.post('/generate/from-urls', description='通过多个文件url生成')
@@ -86,7 +86,7 @@ async def generate_from_url(items: List[Item]):
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
-        return Response(content=repr(err), headers=headers, media_type="text/html", status_code=500)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
 if __name__ == "__main__":
