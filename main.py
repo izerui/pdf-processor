@@ -40,6 +40,7 @@ async def generate_from_file(files: List[bytes] = File(),
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
+        print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
@@ -66,6 +67,7 @@ async def generate_from_url(item: Item):
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
+        print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
@@ -86,6 +88,7 @@ async def generate_from_url(items: List[Item]):
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
+        print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
