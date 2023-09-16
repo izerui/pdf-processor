@@ -1,1 +1,1 @@
-uvicorn main:app --reload --host 127.0.0.1
+uvicorn main:app --reload --host 127.0.0.1 --timeout-keep-alive 60
