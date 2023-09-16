@@ -1,6 +1,7 @@
 # This is a sample Python script.
 
 import time
+from datetime import timedelta
 from typing import List
 
 import fitz
@@ -22,7 +23,7 @@ app = FastAPI(
 )
 
 
-@app.post('/generate/from-file', description='通过文件生成')
+@app.post('/generate/from-file', description='通过文件生成', timeout=timedelta(seconds=60))
 async def generate_from_file(files: List[bytes] = File(),
                              qr_code: str = Form(),
                              doc_no: str = Form(),
@@ -51,7 +52,7 @@ class Item(BaseModel):
     doc_date: str
 
 
-@app.post('/generate/from-url', description='通过文件url生成')
+@app.post('/generate/from-url', description='通过文件url生成', timeout=timedelta(seconds=60))
 async def generate_from_url(item: Item):
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
                           item.quantity, item.doc_date,
@@ -63,7 +64,7 @@ async def generate_from_url(item: Item):
     return Response(content=bytes, headers=headers, media_type="application/pdf")
 
 
-@app.post('/generate/from-urls', description='通过多个文件url生成')
+@app.post('/generate/from-urls', description='通过多个文件url生成', timeout=timedelta(seconds=60))
 async def generate_from_url(items: List[Item]):
     pdfs = []
     for item in items:
