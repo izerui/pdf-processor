@@ -1,7 +1,6 @@
 # This is a sample Python script.
 
 import time
-from datetime import timedelta
 from typing import List
 
 import fitz
@@ -23,7 +22,7 @@ app = FastAPI(
 )
 
 
-@app.post('/generate/from-file', description='通过文件生成', timeout=timedelta(seconds=60))
+@app.post('/generate/from-file', description='通过文件生成')
 async def generate_from_file(files: List[bytes] = File(),
                              qr_code: str = Form(),
                              doc_no: str = Form(),
@@ -32,13 +31,16 @@ async def generate_from_file(files: List[bytes] = File(),
                              inventory_spec: str = Form(''),
                              quantity: str = Form(),
                              doc_date: str = Form('')):
-    processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
-                          source_files=files,
-                          horizontal_layout=True)
-    bytes = processor.generate_merge_pdf()
-    headers = {"content-type": "application/pdf",
-               "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-    return Response(content=bytes, headers=headers, media_type="application/pdf")
+    try:
+        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
+                              source_files=files,
+                              horizontal_layout=True)
+        bytes = processor.generate_merge_pdf()
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
+        return Response(content=bytes, headers=headers, media_type="application/pdf")
+    except BaseException:
+        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
 
 
 class Item(BaseModel):
@@ -52,33 +54,39 @@ class Item(BaseModel):
     doc_date: str
 
 
-@app.post('/generate/from-url', description='通过文件url生成', timeout=timedelta(seconds=60))
+@app.post('/generate/from-url', description='通过文件url生成')
 async def generate_from_url(item: Item):
-    processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
-                          item.quantity, item.doc_date,
-                          source_urls=item.file_urls,
-                          horizontal_layout=True)
-    bytes = processor.generate_merge_pdf()
-    headers = {"content-type": "application/pdf",
-               "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-    return Response(content=bytes, headers=headers, media_type="application/pdf")
-
-
-@app.post('/generate/from-urls', description='通过多个文件url生成', timeout=timedelta(seconds=60))
-async def generate_from_url(items: List[Item]):
-    pdfs = []
-    for item in items:
+    try:
         processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
                               item.quantity, item.doc_date,
                               source_urls=item.file_urls,
                               horizontal_layout=True)
         bytes = processor.generate_merge_pdf()
-        pdfs.append(bytes)
-    combiner = Combiner(pdfs)
-    bytes = combiner.merge()
-    headers = {"content-type": "application/pdf",
-               "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
-    return Response(content=bytes, headers=headers, media_type="application/pdf")
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
+        return Response(content=bytes, headers=headers, media_type="application/pdf")
+    except BaseException:
+        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
+
+
+@app.post('/generate/from-urls', description='通过多个文件url生成')
+async def generate_from_url(items: List[Item]):
+    try:
+        pdfs = []
+        for item in items:
+            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
+                                  item.quantity, item.doc_date,
+                                  source_urls=item.file_urls,
+                                  horizontal_layout=True)
+            bytes = processor.generate_merge_pdf()
+            pdfs.append(bytes)
+        combiner = Combiner(pdfs)
+        bytes = combiner.merge()
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
+        return Response(content=bytes, headers=headers, media_type="application/pdf")
+    except BaseException:
+        return Response(content=[], headers=headers, media_type="application/pdf", status_code=500)
 
 
 if __name__ == "__main__":
