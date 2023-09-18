@@ -159,3 +159,4 @@ class Combiner(object):
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
+

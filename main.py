@@ -1,11 +1,12 @@
 # This is a sample Python script.
-
+import threading
 import time
 from typing import List
 
 import fitz
+import httpx
 import uvicorn
-from fastapi import FastAPI, Response, File, Form
+from fastapi import FastAPI, Response, File, Form, UploadFile
 from pydantic import BaseModel
 
 from pdf import Processor, Combiner
@@ -76,7 +77,8 @@ async def generate_from_url(items: List[Item]):
     try:
         pdfs = []
         for item in items:
-            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
+            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
+                                  item.inventory_spec,
                                   item.quantity, item.doc_date,
                                   source_urls=item.file_urls,
                                   horizontal_layout=True)
@@ -90,6 +92,46 @@ async def generate_from_url(items: List[Item]):
     except Exception as err:
         print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+class CallItem(BaseModel):
+    items: List[Item]
+    request_id: str
+    callback_url: str = 'http://localhost:8000/callback/file'
+
+
+@app.post('/generate/async-callback-from-urls', description='通过多个文件url生成,并回调通知')
+async def generate_from_url(call_item: CallItem):
+    thread = threading.Thread(target=async_generated_with_callback, args=(call_item,))
+    thread.start()
+    return Response(content=f'已经开始处理,完成后回调地址: {call_item.callback_url}', media_type="text/html")
+
+
+def async_generated_with_callback(call_item: CallItem):
+    """
+    异步生成
+    :param call_item:
+    :return:
+    """
+    pdfs = []
+    for item in call_item.items:
+        processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
+                              item.quantity, item.doc_date,
+                              source_urls=item.file_urls,
+                              horizontal_layout=True)
+        bytes = processor.generate_merge_pdf()
+        pdfs.append(bytes)
+    combiner = Combiner(pdfs)
+    bytes = combiner.merge()
+    files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
+    data = {'request_id': call_item.request_id}
+    httpx.post(call_item.callback_url, files=files, data=data)
+
+
+@app.post('/callback/file', description='接收文件上传')
+async def generate_from_file(file: UploadFile = File(), request_id: str = Form()):
+    print('接收到示例文件上传: ', request_id, file.filename, file.size)
+    return Response(content=request_id, media_type="text/html")
 
 
 if __name__ == "__main__":
