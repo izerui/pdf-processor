@@ -6,7 +6,7 @@ import fitz
 import httpx
 import qrcode
 from qrcode.image.pil import PilImage
-
+from concurrent.futures import ThreadPoolExecutor
 from utils import log_time
 
 
@@ -110,11 +110,21 @@ class Processor(object):
     @log_time
     def generate_merge_pdf(self):
         def callback(header_pdf):
+
+            def __retry_get_file(url):
+                for _ in range(5):
+                    try:
+                        resp = httpx.get(url)
+                        return resp
+                    except Exception:
+                        continue
+                raise RuntimeError(f'{url} 文件下载失败')
+
             sources = self.source_files
             if not sources:
                 sources = []
                 for source_url in self.source_urls:
-                    response = httpx.get(source_url)
+                    response = __retry_get_file(source_url)
                     if not response.is_success:
                         raise IOError(f'文件下载失败, url: {source_url}')
                     sources.append(response.content)
@@ -159,4 +169,3 @@ class Combiner(object):
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
-

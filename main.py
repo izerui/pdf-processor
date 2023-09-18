@@ -8,6 +8,7 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, Response, File, Form, UploadFile
 from pydantic import BaseModel
+from concurrent.futures import ThreadPoolExecutor
 
 from pdf import Processor, Combiner
 
@@ -21,6 +22,8 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     }
 )
+
+executor = ThreadPoolExecutor(max_workers=4)
 
 
 @app.post('/generate/from-file', description='通过文件生成')
@@ -102,8 +105,9 @@ class CallItem(BaseModel):
 
 @app.post('/generate/async-callback-from-urls', description='通过多个文件url生成,并回调通知')
 async def generate_from_url(call_item: CallItem):
-    thread = threading.Thread(target=async_generated_with_callback, args=(call_item,))
-    thread.start()
+    # thread = threading.Thread(target=async_generated_with_callback, args=(call_item,))
+    # thread.start()
+    executor.submit(async_generated_with_callback, call_item)
     return Response(content=f'已经开始处理,完成后回调地址: {call_item.callback_url}', media_type="text/html")
 
 
@@ -113,19 +117,25 @@ def async_generated_with_callback(call_item: CallItem):
     :param call_item:
     :return:
     """
-    pdfs = []
-    for item in call_item.items:
-        processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
-                              item.quantity, item.doc_date,
-                              source_urls=item.file_urls,
-                              horizontal_layout=True)
-        bytes = processor.generate_merge_pdf()
-        pdfs.append(bytes)
-    combiner = Combiner(pdfs)
-    bytes = combiner.merge()
-    files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
-    data = {'request_id': call_item.request_id}
-    httpx.post(call_item.callback_url, files=files, data=data)
+    try:
+        pdfs = []
+        for item in call_item.items:
+            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
+                                  item.inventory_spec,
+                                  item.quantity, item.doc_date,
+                                  source_urls=item.file_urls,
+                                  horizontal_layout=True)
+            bytes = processor.generate_merge_pdf()
+            pdfs.append(bytes)
+        combiner = Combiner(pdfs)
+        bytes = combiner.merge()
+        files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
+        data = {'request_id': call_item.request_id}
+        httpx.post(call_item.callback_url, files=files, data=data)
+    except Exception as err:
+        print(repr(err))
+        data = {'request_id': call_item.request_id, 'err_msg': repr(err)}
+        httpx.post(call_item.callback_url, files=files, data=data)
 
 
 @app.post('/callback/file', description='接收文件上传')
