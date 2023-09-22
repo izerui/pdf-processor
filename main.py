@@ -140,7 +140,7 @@ def async_generated_with_callback(call_item: CallItem):
     """
     try:
         process_bar = tqdm(total=len(call_item.items))
-        with concurrent.futures.ThreadPoolExecutor(max_workers=50) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             begin_time = time.time()
             futures = []
             for index, item in enumerate(call_item.items):
