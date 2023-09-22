@@ -100,6 +100,7 @@ async def generate_from_url(items: List[Item]):
 class CallItem(BaseModel):
     items: List[Item]
     request_id: str
+    process_url: str = 'http://localhost:8080/process/generate'
     callback_url: str = 'http://localhost:8000/callback/file'
 
 
@@ -119,7 +120,8 @@ def async_generated_with_callback(call_item: CallItem):
     """
     try:
         pdfs = []
-        for item in call_item.items:
+        indexes = len(call_item.items)
+        for index, item in enumerate(call_item.items):
             processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                                   item.inventory_spec,
                                   item.quantity, item.doc_date,
@@ -127,6 +129,9 @@ def async_generated_with_callback(call_item: CallItem):
                                   horizontal_layout=True)
             bytes = processor.generate_merge_pdf()
             pdfs.append(bytes)
+            if call_item.process_url:
+                process_data = {'total': indexes, 'complete': index + 1}
+                httpx.post(call_item.process_url, data=process_data)
         combiner = Combiner(pdfs)
         bytes = combiner.merge()
         files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}

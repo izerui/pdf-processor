@@ -6,7 +6,7 @@ import fitz
 import httpx
 import qrcode
 from qrcode.image.pil import PilImage
-from concurrent.futures import ThreadPoolExecutor
+
 from utils import log_time
 
 
