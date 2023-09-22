@@ -1,4 +1,5 @@
 # This is a sample Python script.
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
@@ -130,7 +131,9 @@ def async_generated_with_callback(call_item: CallItem):
             documents.append(document)
             if call_item.process_url:
                 process_data = {'total': indexes, 'complete': index + 1, 'request_id': call_item.request_id}
-                httpx.post(call_item.process_url, data=process_data)
+                thread = threading.Thread(target=async_post_process, args=(call_item.process_url, process_data))
+                thread.start()
+
         combiner = Combiner(documents)
         bytes = combiner.merge_to_pdf_bytes()
         files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
@@ -146,6 +149,11 @@ def async_generated_with_callback(call_item: CallItem):
 async def generate_from_file(file: UploadFile = File(), request_id: str = Form()):
     print('接收到示例文件上传: ', request_id, file.filename, file.size)
     return Response(content=request_id, media_type="text/html")
+
+
+def async_post_process(url, data):
+    if url:
+        httpx.post(url, data=data)
 
 
 if __name__ == "__main__":
