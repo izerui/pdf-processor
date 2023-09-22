@@ -5,6 +5,7 @@ from typing import List
 import fitz
 import httpx
 import qrcode
+from fitz import Document
 from qrcode.image.pil import PilImage
 
 from utils import log_time
@@ -58,14 +59,14 @@ class Processor(object):
         a4_height = 1754
         return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
 
-    def with_header_pdf(self, callback):
+    def _with_header_document(self, callback):
         """
         生成header头信息pdf
         :param horizontal_layout: 是否横向
         :return:
         """
-        with fitz.open() as doc:
-            page = doc.new_page(width=self.layout_width, height=self.header_height)
+        with fitz.open() as header_doc:
+            page = header_doc.new_page(width=self.layout_width, height=self.header_height)
             img: PilImage = qrcode.make(data=self.qr_code)
             imagefile = BytesIO()
             img.save(imagefile)
@@ -103,69 +104,75 @@ class Processor(object):
             page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             # doc.save(os.path.join(self.current_file_path, "header", f"header-{int(time.time())}.pdf"))
-            return callback(doc)
+            return callback(header_doc)
             # pdf_bytes = doc.convert_to_pdf()
             # return pdf_bytes
 
+    def __retry_get_file(url):
+        for _ in range(5):
+            try:
+                resp = httpx.get(url)
+                return resp
+            except Exception:
+                continue
+        raise RuntimeError(f'{url} 文件下载失败')
+
+    def _merge_document(self, header_document):
+        sources = self.source_files
+        if not sources:
+            sources = []
+            for source_url in self.source_urls:
+                response = self.__retry_get_file(source_url)
+                if not response.is_success:
+                    raise IOError(f'文件下载失败, url: {source_url}')
+                sources.append(response.content)
+        if not sources:
+            raise RuntimeError(f'没有可转换的文件')
+        target_pdf = fitz.open()
+        for source in sources:
+            with fitz.open("pdf", source) as source_pdf:
+                if source_pdf.metadata['format'] == 'Image':
+                    source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+                for p_index, source_page in enumerate(source_pdf):
+                    # print(source_page.rect.width, source_page.rect.height)
+                    new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
+                    r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
+                    r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
+                                   new_page.rect.height)
+                    new_page.show_pdf_page(r1, header_document, 0)
+                    rotate = 0 if source_page.rect.width > source_page.rect.height else 90
+                    new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
+        # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
+        return target_pdf
+
     @log_time
-    def generate_merge_pdf(self):
-        def callback(header_pdf):
+    def generate_pdf_bytes(self):
+        document: Document = self._with_header_document(self._merge_document)
+        pdf_bytes = document.convert_to_pdf()
+        document.close()
+        return pdf_bytes
 
-            def __retry_get_file(url):
-                for _ in range(5):
-                    try:
-                        resp = httpx.get(url)
-                        return resp
-                    except Exception:
-                        continue
-                raise RuntimeError(f'{url} 文件下载失败')
-
-            sources = self.source_files
-            if not sources:
-                sources = []
-                for source_url in self.source_urls:
-                    response = __retry_get_file(source_url)
-                    if not response.is_success:
-                        raise IOError(f'文件下载失败, url: {source_url}')
-                    sources.append(response.content)
-            if not sources:
-                raise RuntimeError(f'没有可转换的文件')
-            with fitz.open() as target_pdf:
-                for source in sources:
-                    with fitz.open("pdf", source) as source_pdf:
-                        if source_pdf.metadata['format'] == 'Image':
-                            source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
-                        for p_index, source_page in enumerate(source_pdf):
-                            # print(source_page.rect.width, source_page.rect.height)
-                            new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
-                            r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-                            r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
-                                           new_page.rect.height)
-                            new_page.show_pdf_page(r1, header_pdf, 0)
-                            rotate = 0 if source_page.rect.width > source_page.rect.height else 90
-                            new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
-                # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
-                pdf_bytes = target_pdf.convert_to_pdf()
-                return pdf_bytes
-
-        return self.with_header_pdf(callback)
+    @log_time
+    def generate_document(self):
+        document: Document = self._with_header_document(self._merge_document)
+        return document
 
 
 class Combiner(object):
 
-    def __init__(self, source_files: List[bytes]):
-        self.source_files = source_files
+    def __init__(self, documents: List[Document]):
+        self.documents = documents
 
     @log_time
-    def merge(self):
+    def merge_to_pdf_bytes(self):
         """
         合并多个pdf文件
         :return:
         """
         with fitz.open() as target_pdf:
-            for source in self.source_files:
-                with fitz.open("pdf", source) as source_pdf:
-                    target_pdf.insert_pdf(source_pdf)
+            for document in self.documents:
+                target_pdf.insert_pdf(document)
+                document.close()
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes

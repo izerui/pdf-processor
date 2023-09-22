@@ -39,7 +39,7 @@ async def generate_from_file(files: List[bytes] = File(),
         processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
                               source_files=files,
                               horizontal_layout=True)
-        bytes = processor.generate_merge_pdf()
+        bytes = processor.generate_pdf_bytes()
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
@@ -66,7 +66,7 @@ async def generate_from_url(item: Item):
                               item.quantity, item.doc_date,
                               source_urls=item.file_urls,
                               horizontal_layout=True)
-        bytes = processor.generate_merge_pdf()
+        bytes = processor.generate_pdf_bytes()
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
@@ -78,17 +78,17 @@ async def generate_from_url(item: Item):
 @app.post('/generate/from-urls', description='通过多个文件url生成')
 async def generate_from_url(items: List[Item]):
     try:
-        pdfs = []
+        documents = []
         for item in items:
             processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                                   item.inventory_spec,
                                   item.quantity, item.doc_date,
                                   source_urls=item.file_urls,
                                   horizontal_layout=True)
-            bytes = processor.generate_merge_pdf()
-            pdfs.append(bytes)
-        combiner = Combiner(pdfs)
-        bytes = combiner.merge()
+            document = processor.generate_document()
+            documents.append(document)
+        combiner = Combiner(documents)
+        bytes = combiner.merge_to_pdf_bytes()
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
         return Response(content=bytes, headers=headers, media_type="application/pdf")
@@ -119,7 +119,7 @@ def async_generated_with_callback(call_item: CallItem):
     :return:
     """
     try:
-        pdfs = []
+        documents = []
         indexes = len(call_item.items)
         for index, item in enumerate(call_item.items):
             processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
@@ -127,13 +127,13 @@ def async_generated_with_callback(call_item: CallItem):
                                   item.quantity, item.doc_date,
                                   source_urls=item.file_urls,
                                   horizontal_layout=True)
-            bytes = processor.generate_merge_pdf()
-            pdfs.append(bytes)
+            document = processor.generate_document()
+            documents.append(document)
             if call_item.process_url:
                 process_data = {'total': indexes, 'complete': index + 1, 'request_id': call_item.request_id}
                 httpx.post(call_item.process_url, data=process_data)
-        combiner = Combiner(pdfs)
-        bytes = combiner.merge()
+        combiner = Combiner(documents)
+        bytes = combiner.merge_to_pdf_bytes()
         files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
         data = {'request_id': call_item.request_id}
         httpx.post(call_item.callback_url, files=files, data=data)
