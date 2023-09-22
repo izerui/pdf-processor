@@ -1,6 +1,6 @@
 # This is a sample Python script.
-import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 import fitz
@@ -8,7 +8,6 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, Response, File, Form, UploadFile
 from pydantic import BaseModel
-from concurrent.futures import ThreadPoolExecutor
 
 from pdf import Processor, Combiner
 
