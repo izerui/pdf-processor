@@ -1,4 +1,6 @@
 # This is a sample Python script.
+import concurrent
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -113,6 +115,20 @@ async def generate_from_url(call_item: CallItem):
     return Response(content=f'已经开始处理,完成后回调地址: {call_item.callback_url}', media_type="text/html")
 
 
+def _generate_document_thread(index, item, request):
+    processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
+                          item.inventory_spec,
+                          item.quantity, item.doc_date,
+                          source_urls=item.file_urls,
+                          horizontal_layout=True)
+    document = processor.generate_document()
+    if re.match(r'^https?:/{2}\w.+$', request.process_url):
+        process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id}
+        thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
+        thread.start()
+    return document
+
+
 def async_generated_with_callback(call_item: CallItem):
     """
     异步生成
@@ -120,26 +136,19 @@ def async_generated_with_callback(call_item: CallItem):
     :return:
     """
     try:
-        documents = []
-        indexes = len(call_item.items)
-        for index, item in enumerate(call_item.items):
-            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                                  item.inventory_spec,
-                                  item.quantity, item.doc_date,
-                                  source_urls=item.file_urls,
-                                  horizontal_layout=True)
-            document = processor.generate_document()
-            documents.append(document)
-            if call_item.process_url:
-                process_data = {'total': indexes, 'complete': index + 1, 'request_id': call_item.request_id}
-                thread = threading.Thread(target=async_post_process, args=(call_item.process_url, process_data))
-                thread.start()
-
-        combiner = Combiner(documents)
-        bytes = combiner.merge_to_pdf_bytes()
-        files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
-        data = {'request_id': call_item.request_id}
-        httpx.post(call_item.callback_url, files=files, data=data)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            futures = []
+            for index, item in enumerate(call_item.items):
+                future = executor.submit(_generate_document_thread, index, item, call_item)
+                futures.append(future)
+            documents = []
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                documents.append(future.result())
+            combiner = Combiner(documents)
+            bytes = combiner.merge_to_pdf_bytes()
+            files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
+            data = {'request_id': call_item.request_id}
+            httpx.post(call_item.callback_url, files=files, data=data)
     except Exception as err:
         print(repr(err))
         data = {'request_id': call_item.request_id, 'err_msg': repr(err)}
