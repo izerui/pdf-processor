@@ -130,7 +130,7 @@ def async_generated_with_callback(call_item: CallItem):
             bytes = processor.generate_merge_pdf()
             pdfs.append(bytes)
             if call_item.process_url:
-                process_data = {'total': indexes, 'complete': index + 1}
+                process_data = {'total': indexes, 'complete': index + 1, 'request_id': call_item.request_id}
                 httpx.post(call_item.process_url, data=process_data)
         combiner = Combiner(pdfs)
         bytes = combiner.merge()
