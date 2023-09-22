@@ -12,8 +12,10 @@ import uvicorn
 from fastapi import FastAPI, Response, File, Form, UploadFile
 from httpx import Timeout
 from pydantic import BaseModel
+from tqdm import tqdm
 
 from pdf import Processor, Combiner
+from utils import logger
 
 app = FastAPI(
     title='pdf生成、合并服务',
@@ -115,7 +117,7 @@ async def generate_from_url(call_item: CallItem):
     return Response(content=f'已经开始处理,完成后回调地址: {call_item.callback_url}', media_type="text/html")
 
 
-def _generate_document_thread(index, item, request):
+def _generate_document_thread(index, item, request, process_bar):
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                           item.inventory_spec,
                           item.quantity, item.doc_date,
@@ -126,6 +128,7 @@ def _generate_document_thread(index, item, request):
         process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id}
         thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
         thread.start()
+    process_bar.update(1)
     return document
 
 
@@ -136,16 +139,22 @@ def async_generated_with_callback(call_item: CallItem):
     :return:
     """
     try:
+        process_bar = tqdm(total=len(call_item.items))
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            begin_time = time.time()
             futures = []
             for index, item in enumerate(call_item.items):
-                future = pool.submit(_generate_document_thread, index, item, call_item)
+                future = pool.submit(_generate_document_thread, index, item, call_item, process_bar)
                 futures.append(future)
             documents = []
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 documents.append(future.result())
+            process_bar.close()
+            logger.info(f'requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
+            begin_time = time.time()
             combiner = Combiner(documents)
             bytes = combiner.merge_to_pdf_bytes()
+            logger.info(f'requestId:{call_item.request_id} 合并{len(documents)}个PDF耗时: {time.time() - begin_time}')
             files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
             data = {'request_id': call_item.request_id}
             httpx.post(call_item.callback_url, files=files, data=data)

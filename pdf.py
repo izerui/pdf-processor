@@ -8,8 +8,6 @@ import qrcode
 from fitz import Document
 from qrcode.image.pil import PilImage
 
-from utils import log_time
-
 
 def _retry_get_file(url):
     for _ in range(5):
@@ -146,14 +144,12 @@ class Processor(object):
         # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
         return target_pdf
 
-    @log_time
     def generate_pdf_bytes(self):
         document: Document = self._with_header_document(self._merge_document)
         pdf_bytes = document.convert_to_pdf()
         document.close()
         return pdf_bytes
 
-    @log_time
     def generate_document(self):
         document: Document = self._with_header_document(self._merge_document)
         return document
@@ -164,7 +160,6 @@ class Combiner(object):
     def __init__(self, documents: List[Document]):
         self.documents = documents
 
-    @log_time
     def merge_to_pdf_bytes(self):
         """
         合并多个pdf文件

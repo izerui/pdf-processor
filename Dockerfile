@@ -10,6 +10,7 @@ WORKDIR /data
 
 RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
 RUN pip install PyMuPDF qrcode fastapi[all] uvicorn[standard]
+RUN pip install tqdm
 
 COPY *.py ./
 COPY ./fonts/ ./fonts/
