@@ -11,6 +11,16 @@ from qrcode.image.pil import PilImage
 from utils import log_time
 
 
+def _retry_get_file(url):
+    for _ in range(5):
+        try:
+            resp = httpx.get(url)
+            return resp
+        except Exception:
+            continue
+    raise RuntimeError(f'{url} 文件下载失败')
+
+
 class Processor(object):
     def __init__(self,
                  qr_code: str,
@@ -108,21 +118,12 @@ class Processor(object):
             # pdf_bytes = doc.convert_to_pdf()
             # return pdf_bytes
 
-    def __retry_get_file(url):
-        for _ in range(5):
-            try:
-                resp = httpx.get(url)
-                return resp
-            except Exception:
-                continue
-        raise RuntimeError(f'{url} 文件下载失败')
-
     def _merge_document(self, header_document):
         sources = self.source_files
         if not sources:
             sources = []
             for source_url in self.source_urls:
-                response = self.__retry_get_file(source_url)
+                response = _retry_get_file(source_url)
                 if not response.is_success:
                     raise IOError(f'文件下载失败, url: {source_url}')
                 sources.append(response.content)
