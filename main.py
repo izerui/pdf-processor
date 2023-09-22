@@ -99,7 +99,7 @@ async def generate_from_url(items: List[Item]):
 class CallItem(BaseModel):
     items: List[Item]
     request_id: str
-    process_url: str = 'http://localhost:8080/process/generate'
+    process_url: str = None
     callback_url: str = 'http://localhost:8000/callback/file'
 
 
