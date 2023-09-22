@@ -124,7 +124,7 @@ def _generate_document_thread(index, item, request, process_bar):
                           source_urls=item.file_urls,
                           horizontal_layout=True)
     document = processor.generate_document()
-    if re.match(r'^https?:/{2}\w.+$', request.process_url):
+    if request.process_url:
         process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id}
         thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
         thread.start()
