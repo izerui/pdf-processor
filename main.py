@@ -136,10 +136,10 @@ def async_generated_with_callback(call_item: CallItem):
     :return:
     """
     try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
             for index, item in enumerate(call_item.items):
-                future = executor.submit(_generate_document_thread, index, item, call_item)
+                future = pool.submit(_generate_document_thread, index, item, call_item)
                 futures.append(future)
             documents = []
             for future in concurrent.futures.as_completed(futures):  # 并发执行
