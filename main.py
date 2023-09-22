@@ -8,6 +8,7 @@ import fitz
 import httpx
 import uvicorn
 from fastapi import FastAPI, Response, File, Form, UploadFile
+from httpx import Timeout
 from pydantic import BaseModel
 
 from pdf import Processor, Combiner
@@ -153,7 +154,7 @@ async def generate_from_file(file: UploadFile = File(), request_id: str = Form()
 
 def async_post_process(url, data):
     if url:
-        httpx.post(url, data=data)
+        httpx.post(url, data=data, timeout=Timeout(timeout=5.0, connect=5.0))
 
 
 if __name__ == "__main__":
