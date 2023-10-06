@@ -156,7 +156,7 @@ def async_generated_with_callback(call_item: CallItem):
             bytes = combiner.merge_to_pdf_bytes()
             logger.info(f'requestId:{call_item.request_id} 合并{len(documents)}个PDF耗时: {time.time() - begin_time}')
             files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
-            data = {'request_id': call_item.request_id}
+            data = {'request_id': call_item.request_id, 'total': len(call_item.items)}
             httpx.post(call_item.callback_url, files=files, data=data)
     except Exception as err:
         print(repr(err))
