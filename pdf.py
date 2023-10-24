@@ -144,7 +144,7 @@ class Processor(object):
                     new_page.show_pdf_page(r1, header_document, 0)
                     rotate = 0 if source_page.rect.width > source_page.rect.height else 90
                     # 如果原页面有旋转的话,进行自适应
-                    if rotate == 0 and source_page.rotation > 0:
+                    if rotate == 0 and source_page.rotation == 180:
                         rotate = source_page.rotation
                     new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
                 if debugger:
