@@ -9,7 +9,7 @@ import qrcode
 from fitz import Document
 from qrcode.image.pil import PilImage
 
-debugger = True
+debugger = False
 
 def _retry_get_file(url):
     for _ in range(5):
