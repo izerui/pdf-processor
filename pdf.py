@@ -9,7 +9,8 @@ import qrcode
 from fitz import Document
 from qrcode.image.pil import PilImage
 
-debugger = False
+debugger = True
+
 
 def _retry_get_file(url):
     for _ in range(5):
@@ -131,7 +132,7 @@ class Processor(object):
         if not sources:
             raise RuntimeError(f'没有可转换的文件')
         target_pdf = fitz.open()
-        for source in sources:
+        for s_index, source in enumerate(sources):
             with fitz.open("pdf", source) as source_pdf:
                 if source_pdf.metadata['format'] == 'Image':
                     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
@@ -142,11 +143,39 @@ class Processor(object):
                     r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
                                    new_page.rect.height)
                     new_page.show_pdf_page(r1, header_document, 0)
-                    rotate = 0 if source_page.rect.width > source_page.rect.height else 90
-                    # 如果原页面有旋转的话,进行自适应
-                    if rotate == 0 and source_page.rotation == 180:
-                        rotate = source_page.rotation
+                    # Maxtrix 解析: https://pymupdf.readthedocs.io/en/latest/matrix.html
+                    # a: x方向缩放(宽度)。例如，如果值为0.5，则将宽度缩小2倍。如果a < 0，将(额外地)发生左右翻转。
+                    # b: 产生剪切效果: 每个点(x, y)将变成点(x, y - b * x)。因此，水平线会“倾斜”。
+                    # c: 产生剪切效果: 每个点(x, y)都会变成点(x - c * y, y)，因此垂直线会“倾斜”。
+                    # d: y方向缩放(高度)。例如，如果值为1.5，则将高度拉伸50 %。如果d < 0，将(额外地)发生上下翻转。
+                    # e: 产生水平偏移效果: 每个Point(x, y)都会变成Point(x + e, y)， e的正(负)值会向右(左)偏移。
+                    # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
+                    print(
+                        f'文件{s_index + 1}/页面{p_index + 1}  宽:{source_page.mediabox.width}  高:{source_page.mediabox.height}  旋转:{source_page.rotation}  rotation_matrix:{source_page.rotation_matrix}')
+                    # 默认旋转为页面的旋转角度
+                    rotate = source_page.rotation
+                    # 当前页面矩形
+                    # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
+                    rotate += 0 if source_page.bound().width > source_page.bound().height else 90
+                    # # 如果原页面有旋转的话,进行自适应
+                    # if rotate == 0 and source_page.rotation == 180:
+                    #     rotate = source_page.rotation
+                    if rotate > 0:
+                        print(f'    > 转横版,需旋转 {rotate}')
+                    # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
+                    source_page.set_rotation(0)
                     new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
+
+                    # ######### 增加输出原页面 测试用
+                    # # 按原页面宽高设置新页面
+                    # sWidth = source_page.bound().width
+                    # sHeight = source_page.bound().height
+                    # sPage = target_pdf.new_page(width=sWidth, height=sHeight)
+                    # # 按源页面旋转度数复制
+                    # # cropbox 页面裁剪框
+                    # sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
+                    #                     rotate=source_page.rotation, clip=source_page.bound())
+                    # ######### 增加输出原页面 测试用
                 if debugger:
                     source_pdf.save(os.path.join(self.current_file_path, "tmp", f"source-{int(time.time())}.pdf"))
         if debugger:
