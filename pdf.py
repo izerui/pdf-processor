@@ -154,6 +154,10 @@ class Processor(object):
         document: Document = self._with_header_document(self._merge_document)
         return document
 
+    def save_to_filepath(self, file_path):
+        with self.generate_document() as document:
+            document.save(filename=file_path)
+
 
 class Combiner(object):
 
@@ -162,7 +166,7 @@ class Combiner(object):
 
     def merge_to_pdf_bytes(self):
         """
-        合并多个pdf文件
+        合并多个pdf文件,返回合并后的文件字节数组
         :return:
         """
         with fitz.open() as target_pdf:
@@ -172,3 +176,14 @@ class Combiner(object):
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
+
+    def save_to_filepath(self, file_path):
+        """
+        合并多个pdf文件, 并写入到file_path中
+        :return:
+        """
+        with fitz.open() as target_pdf:
+            for document in self.documents:
+                target_pdf.insert_pdf(document)
+                document.close()
+            target_pdf.save(file_path)

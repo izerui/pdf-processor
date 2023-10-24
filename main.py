@@ -1,8 +1,10 @@
 # This is a sample Python script.
 import concurrent
-import re
+import os
+import tempfile
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
@@ -31,6 +33,21 @@ app = FastAPI(
 executor = ThreadPoolExecutor(max_workers=4)
 
 
+def read_from_temp_file(callback):
+    """
+    使用自动删除的路径作为处理，并读取删除前的内容到文件byte数组
+    :param callback: 参数为临时路径
+    :return:
+    """
+    # 临时目录，自动删除
+    with tempfile.TemporaryDirectory() as temp_folder:
+        filepath = os.path.join(temp_folder, f'{uuid.uuid1()}.pdf')
+        callback(filepath)
+        with open(filepath, 'rb') as f:
+            byte_data = bytes(f.read())
+            return byte_data
+
+
 @app.post('/generate/from-file', description='通过文件生成')
 async def generate_from_file(files: List[bytes] = File(),
                              qr_code: str = Form(),
@@ -44,10 +61,11 @@ async def generate_from_file(files: List[bytes] = File(),
         processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
                               source_files=files,
                               horizontal_layout=True)
-        bytes = processor.generate_pdf_bytes()
+
+        byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-        return Response(content=bytes, headers=headers, media_type="application/pdf")
+        return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
@@ -67,14 +85,16 @@ class Item(BaseModel):
 @app.post('/generate/from-url', description='通过文件url生成')
 async def generate_from_url(item: Item):
     try:
-        processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name, item.inventory_spec,
+        processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
+                              item.inventory_spec,
                               item.quantity, item.doc_date,
                               source_urls=item.file_urls,
                               horizontal_layout=True)
-        bytes = processor.generate_pdf_bytes()
+
+        byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-        return Response(content=bytes, headers=headers, media_type="application/pdf")
+        return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
@@ -93,10 +113,11 @@ async def generate_from_url(items: List[Item]):
             document = processor.generate_document()
             documents.append(document)
         combiner = Combiner(documents)
-        bytes = combiner.merge_to_pdf_bytes()
+
+        byte_data = read_from_temp_file(lambda x: combiner.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
-        return Response(content=bytes, headers=headers, media_type="application/pdf")
+        return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
         return Response(content=repr(err), media_type="text/html", status_code=500)
@@ -155,7 +176,7 @@ def async_generated_with_callback(call_item: CallItem):
             logger.info(f'requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
             begin_time = time.time()
             combiner = Combiner(documents)
-            bytes = combiner.merge_to_pdf_bytes()
+            bytes = read_from_temp_file(lambda x: combiner.save_to_filepath(x))
             logger.info(f'requestId:{call_item.request_id} 合并{len(documents)}个PDF耗时: {time.time() - begin_time}')
             files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
             data = {'request_id': call_item.request_id, 'total': len(call_item.items)}
