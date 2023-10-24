@@ -1,4 +1,5 @@
 import os
+import time
 from io import BytesIO
 from typing import List
 
@@ -8,6 +9,7 @@ import qrcode
 from fitz import Document
 from qrcode.image.pil import PilImage
 
+debugger = True
 
 def _retry_get_file(url):
     for _ in range(5):
@@ -111,7 +113,8 @@ class Processor(object):
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
-            # doc.save(os.path.join(self.current_file_path, "header", f"header-{int(time.time())}.pdf"))
+            if debugger:
+                header_doc.save(os.path.join(self.current_file_path, "tmp", f"header-{int(time.time())}.pdf"))
             return callback(header_doc)
             # pdf_bytes = doc.convert_to_pdf()
             # return pdf_bytes
@@ -140,8 +143,14 @@ class Processor(object):
                                    new_page.rect.height)
                     new_page.show_pdf_page(r1, header_document, 0)
                     rotate = 0 if source_page.rect.width > source_page.rect.height else 90
+                    # 如果原页面有旋转的话
+                    if rotate == 0 and source_page.rotation > 0:
+                        rotate = source_page.rotation
                     new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
-        # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
+                if debugger:
+                    source_pdf.save(os.path.join(self.current_file_path, "tmp", f"source-{int(time.time())}.pdf"))
+        if debugger:
+            target_pdf.save(os.path.join(self.current_file_path, "tmp", f"target-{int(time.time())}.pdf"))
         return target_pdf
 
     def generate_pdf_bytes(self):
