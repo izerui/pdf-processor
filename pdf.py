@@ -9,7 +9,7 @@ import qrcode
 from fitz import Document
 from qrcode.image.pil import PilImage
 
-debugger = False
+debugger = True
 
 
 def _retry_get_file(url):
@@ -115,7 +115,10 @@ class Processor(object):
             page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname='chn', color=(0, 0, 0))
             if debugger:
-                header_doc.save(os.path.join(self.current_file_path, "tmp", f"header-{int(time.time())}.pdf"))
+                folder = os.path.join(self.current_file_path, 'tmp')
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                header_doc.save(os.path.join(folder, f"header-{int(time.time())}.pdf"))
             return callback(header_doc)
             # pdf_bytes = doc.convert_to_pdf()
             # return pdf_bytes
@@ -167,20 +170,28 @@ class Processor(object):
                     source_page.set_rotation(0)
                     new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
 
-                    # ######### 增加输出原页面 测试用
-                    # # 按原页面宽高设置新页面
-                    # sWidth = source_page.bound().width
-                    # sHeight = source_page.bound().height
-                    # sPage = target_pdf.new_page(width=sWidth, height=sHeight)
-                    # # 按源页面旋转度数复制
-                    # # cropbox 页面裁剪框
-                    # sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
-                    #                     rotate=source_page.rotation, clip=source_page.bound())
-                    # ######### 增加输出原页面 测试用
+                    if debugger:
+                        # ######### 增加输出原页面 测试用
+                        # 按原页面宽高设置新页面
+                        sWidth = source_page.bound().width
+                        sHeight = source_page.bound().height
+                        sPage = target_pdf.new_page(width=sWidth, height=sHeight)
+                        # 按源页面旋转度数复制
+                        # cropbox 页面裁剪框
+                        # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 source_page.bound()
+                        sPage.show_pdf_page(source_page.bound(), source_pdf, p_index, keep_proportion=True,
+                                            rotate=source_page.rotation, clip=source_page.bound())
+                        ######### 增加输出原页面 测试用
                 if debugger:
-                    source_pdf.save(os.path.join(self.current_file_path, "tmp", f"source-{int(time.time())}.pdf"))
+                    folder = os.path.join(self.current_file_path, 'tmp')
+                    if not os.path.exists(folder):
+                        os.makedirs(folder)
+                    source_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
         if debugger:
-            target_pdf.save(os.path.join(self.current_file_path, "tmp", f"target-{int(time.time())}.pdf"))
+            folder = os.path.join(self.current_file_path, 'tmp')
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
     def generate_pdf_bytes(self):
