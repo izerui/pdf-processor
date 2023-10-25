@@ -201,4 +201,5 @@ def async_post_process(url, data):
 if __name__ == "__main__":
     # 解决 fitz 新旧别名映射的bug
     fitz.restore_aliases()
+    print('文档地址: http://localhost:8000/docs')
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)
