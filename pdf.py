@@ -179,7 +179,7 @@ class Processor(object):
                         # 按源页面旋转度数复制
                         # cropbox 页面裁剪框
                         # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 source_page.bound()
-                        sPage.show_pdf_page(source_page.bound(), source_pdf, p_index, keep_proportion=True,
+                        sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
                                             rotate=source_page.rotation, clip=source_page.bound())
                         ######### 增加输出原页面 测试用
                 if debugger:
