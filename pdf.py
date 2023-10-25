@@ -152,10 +152,10 @@ class Processor(object):
                     # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
                     print(
                         f'文件{s_index + 1}/页面{p_index + 1}  宽:{source_page.mediabox.width}  高:{source_page.mediabox.height}  旋转:{source_page.rotation}  rotation_matrix:{source_page.rotation_matrix}')
-                    # 默认旋转为页面的旋转角度
-                    rotate = source_page.rotation
                     # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
                     source_page_rect = source_page.bound()
+                    # 默认旋转为页面的旋转角度
+                    rotate = source_page.rotation
                     # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
                     rotate += 0 if source_page_rect.width > source_page_rect.height else 90
                     # # 如果原页面有旋转的话,进行自适应
