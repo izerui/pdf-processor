@@ -237,3 +237,8 @@ class Combiner(object):
                 target_pdf.insert_pdf(document)
                 document.close()
             target_pdf.save(file_path)
+            if debugger:
+                folder = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmp')
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                target_pdf.save(os.path.join(folder, f"combiner-{int(time.time())}.pdf"))
