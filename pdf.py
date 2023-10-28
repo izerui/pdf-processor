@@ -6,7 +6,7 @@ from typing import List
 import fitz
 import httpx
 import qrcode
-from fitz import Document
+from fitz import Document, Font
 from qrcode.image.pil import PilImage
 
 debugger = False
@@ -95,10 +95,17 @@ class Processor(object):
 
             chn_fontname = 'chn'
 
+            font = Font(fontname=chn_fontname, fontfile=os.path.join(self.current_file_path, 'fonts', 'SimHei.ttf'),
+                        language='zh-Hans')
+            page.insert_font(fontname=chn_fontname,
+                             fontbuffer=font.buffer)
+
             # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
             # 其他字体下载: http://www.ae-sys.com/China/Fonts/
-            page.insert_font(fontname=chn_fontname,
-                             fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
+            # page.insert_font(fontname=chn_fontname,
+            #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
+
+
             # 字体大小
             fontsize = 20
             # 第一列
@@ -118,6 +125,11 @@ class Processor(object):
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
+
+            # # 创建字体的子集，减少文档大小
+            # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+            # header_doc.subset_fonts()
+
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
                 if not os.path.exists(folder):
@@ -238,7 +250,22 @@ class Combiner(object):
         """
         with fitz.open() as target_pdf:
             for document in self.documents:
-                target_pdf.insert_pdf(document)
+                # for index, page in enumerate(document):
+                #     page_bound = page.bound()
+                #     new_page: Page = target_pdf.new_page(width=page_bound.width, height=page_bound.height)
+                #     new_page.show_pdf_page(page_bound, document, index, keep_proportion=True,
+                #                         rotate=page.rotation, clip=page_bound)
+                #     pass
+
+                # 创建字体的子集，减少文档大小
+                # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+                document.subset_fonts()
+
+                # fonts = document.get_page_fonts(pno=0, full=True)
+                # for font in fonts:
+                #     print(font)
+
+                target_pdf.insert_pdf(docsrc=document)  # , annots=False, links=False
                 document.close()
             target_pdf.save(file_path)
             if debugger:
