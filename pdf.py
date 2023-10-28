@@ -95,8 +95,9 @@ class Processor(object):
 
             chn_fontname = 'chn'
 
+            # https://www.fontsaddict.com/font/ms-song.html
             page.insert_font(fontname=chn_fontname,
-                             fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
+                             fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
             # 字体大小
             fontsize = 20
             # 第一列
