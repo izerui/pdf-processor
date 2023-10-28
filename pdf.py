@@ -268,6 +268,7 @@ class Combiner(object):
                 # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
                 document.subset_fonts()
 
+                # 输出页面字体列表
                 # fonts = document.get_page_fonts(pno=0, full=True)
                 # for font in fonts:
                 #     print(font)
