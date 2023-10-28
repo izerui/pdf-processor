@@ -95,7 +95,8 @@ class Processor(object):
 
             chn_fontname = 'chn'
 
-            # https://www.fontsaddict.com/font/ms-song.html
+            # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
+            # 其他字体下载: http://www.ae-sys.com/China/Fonts/
             page.insert_font(fontname=chn_fontname,
                              fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
             # 字体大小
