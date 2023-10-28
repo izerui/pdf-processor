@@ -97,7 +97,7 @@ class Processor(object):
 
             # https://pymupdf.readthedocs.io/en/latest/font.html#Font
             # 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
-            # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小居中, 缺点: 中文支持不够
+            # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
             # 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
             #   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
             font = Font(fontname=chn_fontname, fontfile=os.path.join(self.current_file_path, 'fonts', 'SimHei.ttf'),
