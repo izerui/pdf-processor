@@ -93,27 +93,29 @@ class Processor(object):
                 stream=imagefile,
                 overlay=False)
 
-            page.insert_font(fontname="chn",
+            chn_fontname = 'chn'
+
+            page.insert_font(fontname=chn_fontname,
                              fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
             # 字体大小
             fontsize = 20
             # 第一列
             page.insert_text(point=fitz.Point(300, 50), text=f'工单号: {self.doc_no}',
                              fontsize=fontsize,
-                             fontname='chn', color=(0, 0, 0))
+                             fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(300, 100), text=f'订单交期: {self.doc_date}',
                              fontsize=fontsize,
-                             fontname='chn', color=(0, 0, 0))
+                             fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(300, 150), text=f'工单数量: {self.quantity}',
                              fontsize=fontsize,
-                             fontname='chn', color=(0, 0, 0))
+                             fontname=chn_fontname, color=(0, 0, 0))
             # 第二列
             page.insert_text(point=fitz.Point(600, 50), text=f'货品编码: {self.inventory_code}',
-                             fontsize=fontsize, fontname='chn', color=(0, 0, 0))
+                             fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 100), text=f'货品名称: {self.inventory_name}',
-                             fontsize=fontsize, fontname='chn', color=(0, 0, 0))
+                             fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
-                             fontsize=fontsize, fontname='chn', color=(0, 0, 0))
+                             fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
                 if not os.path.exists(folder):
