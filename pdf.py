@@ -31,6 +31,7 @@ class Processor(object):
                  inventory_spec: str,
                  quantity: str,
                  doc_date: str,
+                 process_flow: str,
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None,
                  horizontal_layout: str = False):
@@ -41,6 +42,7 @@ class Processor(object):
         :param inventory_name: 货品名称
         :param quantity: 工单数量
         :param doc_date: 订单交期
+        :param process_flow: 工艺路线
         :param horizontal_layout: 是否横向
         """
         super().__init__()
@@ -52,6 +54,7 @@ class Processor(object):
         self.inventory_spec = inventory_spec
         self.quantity = quantity
         self.doc_date = doc_date
+        self.process_flow = process_flow
         self.source_files = source_files
         self.source_urls = source_urls
         self.horizontal_layout = horizontal_layout
@@ -122,16 +125,23 @@ class Processor(object):
             page.insert_text(point=fitz.Point(300, 100), text=f'订单交期: {self.doc_date}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(300, 150), text=f'工单数量: {self.quantity}',
+            page.insert_text(point=fitz.Point(300, 150), text=f'工艺路线: {self.process_flow}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
+
             # 第二列
             page.insert_text(point=fitz.Point(600, 50), text=f'货品编码: {self.inventory_code}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 100), text=f'货品名称: {self.inventory_name}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(600, 150), text=f'规格型号: {self.inventory_spec}',
+
+
+            # 第三列
+            page.insert_text(point=fitz.Point(900, 50), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
+            page.insert_text(point=fitz.Point(900, 100), text=f'工单数量: {self.quantity}',
+                             fontsize=fontsize,
+                             fontname=chn_fontname, color=(0, 0, 0))
 
             # # 创建字体的子集，减少文档大小
             # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts

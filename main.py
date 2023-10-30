@@ -56,9 +56,10 @@ async def generate_from_file(files: List[bytes] = File(),
                              inventory_name: str = Form(),
                              inventory_spec: str = Form(''),
                              quantity: str = Form(),
-                             doc_date: str = Form('')):
+                             doc_date: str = Form(''),
+                             process_flow: str = Form('')):
     try:
-        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
+        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date, process_flow,
                               source_files=files,
                               horizontal_layout=True)
 
@@ -80,14 +81,14 @@ class Item(BaseModel):
     inventory_spec: str | None = None
     quantity: str
     doc_date: str
+    process_flow: str
 
 
 @app.post('/generate/from-url', description='通过文件url生成')
 async def generate_from_url(item: Item):
     try:
         processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                              item.inventory_spec,
-                              item.quantity, item.doc_date,
+                              item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
                               source_urls=item.file_urls,
                               horizontal_layout=True)
 
@@ -106,8 +107,7 @@ async def generate_from_url(items: List[Item]):
         documents = []
         for item in items:
             processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                                  item.inventory_spec,
-                                  item.quantity, item.doc_date,
+                                  item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
                                   source_urls=item.file_urls,
                                   horizontal_layout=True)
             document = processor.generate_document()
@@ -140,8 +140,7 @@ async def generate_from_url(call_item: CallItem):
 
 def _generate_document_thread(index, item, request, process_bar):
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                          item.inventory_spec,
-                          item.quantity, item.doc_date,
+                          item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
                           source_urls=item.file_urls,
                           horizontal_layout=True)
     document = processor.generate_document()
