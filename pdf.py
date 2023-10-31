@@ -145,7 +145,7 @@ class Processor(object):
 
             # # 创建字体的子集，减少文档大小
             # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-            # header_doc.subset_fonts()
+            header_doc.subset_fonts()
 
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
@@ -276,7 +276,7 @@ class Combiner(object):
 
                 # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
                 # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-                document.subset_fonts()
+                # document.subset_fonts()
 
                 # 输出页面字体列表
                 # fonts = document.get_page_fonts(pno=0, full=True)
