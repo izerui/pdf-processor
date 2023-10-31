@@ -59,7 +59,8 @@ async def generate_from_file(files: List[bytes] = File(),
                              doc_date: str = Form(''),
                              process_flow: str = Form('')):
     try:
-        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date, process_flow,
+        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
+                              process_flow,
                               source_files=files,
                               horizontal_layout=True)
 
@@ -74,6 +75,7 @@ async def generate_from_file(files: List[bytes] = File(),
 
 class Item(BaseModel):
     file_urls: List[str]
+    item_id: str
     qr_code: str
     doc_no: str
     inventory_code: str
@@ -145,8 +147,11 @@ def _generate_document_thread(index, item, request, process_bar):
                           horizontal_layout=True)
     document = processor.generate_document()
     if request.process_url:
-        process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id}
-        thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
+        process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id,
+                        'item_id': item.item_id}
+        bytes = read_from_temp_file(lambda x: document.save(filename=x))
+        files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
+        thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data, files))
         thread.start()
     process_bar.update(1)
     return document
@@ -192,9 +197,9 @@ async def generate_from_file(file: UploadFile = File(), request_id: str = Form()
     return Response(content=request_id, media_type="text/html")
 
 
-def async_post_process(url, data):
+def async_post_process(url, data, files):
     if url:
-        httpx.post(url, data=data, timeout=Timeout(timeout=5.0, connect=5.0))
+        httpx.post(url, files=files, data=data, timeout=Timeout(timeout=30.0, connect=10.0))
 
 
 if __name__ == "__main__":
