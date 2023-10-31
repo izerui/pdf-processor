@@ -159,7 +159,7 @@ def _generate_document_thread(index, item, request, process_bar):
 
 def async_generated_with_callback(call_item: CallItem):
     """
-    异步生成
+    异步生成item的pdf，并合并推送到callbackurl
     :param call_item:
     :return:
     """
