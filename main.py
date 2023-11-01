@@ -83,7 +83,7 @@ class Item(BaseModel):
     inventory_spec: str | None = None
     quantity: str
     doc_date: str
-    process_flow: str
+    process_flow: str | None = None
 
 
 @app.post('/generate/from-url', description='通过文件url生成')
