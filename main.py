@@ -147,7 +147,7 @@ def _generate_document_thread(index, item, request, process_bar):
                           horizontal_layout=True)
     document = processor.generate_document()
     if request.process_url:
-        process_data = {'total': len(request.items), 'complete': index + 1, 'request_id': request.request_id,
+        process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,
                         'item_id': item.item_id}
         bytes = read_from_temp_file(lambda x: document.save(filename=x))
         files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
