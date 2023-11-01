@@ -9,7 +9,7 @@ import qrcode
 from fitz import Document, Font
 from qrcode.image.pil import PilImage
 
-debugger = False
+debugger = True
 
 
 def _retry_get_file(url):
@@ -276,7 +276,7 @@ class Combiner(object):
 
                 # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
                 # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-                # document.subset_fonts()
+                document.subset_fonts()
 
                 # 输出页面字体列表
                 # fonts = document.get_page_fonts(pno=0, full=True)
