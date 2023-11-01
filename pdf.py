@@ -9,7 +9,7 @@ import qrcode
 from fitz import Document, Font
 from qrcode.image.pil import PilImage
 
-debugger = True
+debugger = False
 
 
 def _retry_get_file(url):
@@ -224,6 +224,9 @@ class Processor(object):
             folder = os.path.join(self.current_file_path, 'tmp')
             if not os.path.exists(folder):
                 os.makedirs(folder)
+            # # 创建字体的子集，减少文档大小
+            # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+            target_pdf.subset_fonts()
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
