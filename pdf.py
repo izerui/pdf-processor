@@ -31,7 +31,7 @@ class Processor(object):
                  inventory_spec: str,
                  quantity: str,
                  doc_date: str,
-                 process_flow: str,
+                 process_flow: str = '',
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None,
                  horizontal_layout: str = False):
