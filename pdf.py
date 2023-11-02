@@ -167,21 +167,54 @@ class Processor(object):
         if not sources:
             raise RuntimeError(f'没有可转换的文件')
         target_pdf = fitz.open()
-        for source in sources:
-            with fitz.open("pdf", source) as source_pdf:
-                if source_pdf.metadata['format'] == 'Image':
-                    source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
-                # 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-                # 注意: 如果发生了二次转换,页面会丢失旋转角度, 故需要设置回来
-                if source_pdf.has_annots():
-                    with fitz.open('pdf', source_pdf.convert_to_pdf()) as copy_pdf:
-                        for idx, page in enumerate(copy_pdf):
-                            source_page = source_pdf[idx]
-                            # 把丢失的页面旋转角度从源页面复制过来
-                            page.set_rotation(source_page.rotation)
-                        self._processing_pages(target_pdf, copy_pdf, header_document)
-                else:
-                    self._processing_pages(target_pdf, source_pdf, header_document)
+        for s_index, source in enumerate(sources):
+            source_pdf = fitz.open("pdf", source)
+            if source_pdf.metadata['format'] == 'Image':
+                source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+            # 最终使用的pdf对象来进行裁切拼接, 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
+            usage_pdf = source_pdf
+            # 注意: 如果发生了二次转换, 页面会丢失旋转角度
+            if source_pdf.has_annots():
+                copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
+                usage_pdf = copy_pdf
+            for p_index, usage_page in enumerate(usage_pdf):
+                source_page = source_pdf[p_index]
+                # print(usage_page.rect.width, usage_page.rect.height)
+                new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
+                r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
+                r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
+                               new_page.rect.height)
+                new_page.show_pdf_page(r1, header_document, 0)
+                # 把丢失的页面旋转角度从源页面复制过来
+                usage_page.set_rotation(source_page.rotation)
+                # 获取页面的旋转角度
+                rotate = self._get_rotate_from_page(usage_page, p_index)
+                # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
+                usage_page.set_rotation(0)
+                new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True)
+
+                if debugger:
+                    # ######### 增加输出原页面 测试用
+                    # 按原页面宽高设置新页面
+                    sWidth = usage_page.bound().width
+                    sHeight = usage_page.bound().height
+                    sPage = target_pdf.new_page(width=sWidth, height=sHeight)
+                    # 按源页面旋转度数复制
+                    # cropbox 页面裁剪框
+                    # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
+                    sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), usage_pdf, p_index, keep_proportion=True,
+                                        rotate=usage_page.rotation, clip=usage_page.bound())
+                    ######### 增加输出原页面 测试用
+            if debugger:
+                folder = os.path.join(self.current_file_path, 'tmp')
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                usage_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
+
+            # 关闭文档
+            source_pdf.close()
+            if source_pdf != usage_pdf:
+                usage_pdf.close()
         if debugger:
             folder = os.path.join(self.current_file_path, 'tmp')
             if not os.path.exists(folder):
@@ -191,44 +224,6 @@ class Processor(object):
             target_pdf.subset_fonts()
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
-
-    def _processing_pages(self, target_pdf, source_pdf, header_pdf):
-        """
-        处理单个pdf，将header区域和source页面进行合并，插入到target_pdf页面中
-        :param target_pdf: 目标pdf
-        :param source_pdf: 源pdf
-        :param header_pdf: header_pdf
-        :return: None
-        """
-        for p_index, source_page in enumerate(source_pdf):
-            new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
-            r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-            r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
-                           new_page.rect.height)
-            new_page.show_pdf_page(r1, header_pdf, 0)
-            # 获取页面的旋转角度
-            rotate = self._get_rotate_from_page(source_page, p_index)
-            # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
-            source_page.set_rotation(0)
-            new_page.show_pdf_page(r2, source_page, p_index, rotate=rotate, keep_proportion=True)
-
-            if debugger:
-                # ######### 增加输出原页面 测试用
-                # 按原页面宽高设置新页面
-                sWidth = source_page.bound().width
-                sHeight = source_page.bound().height
-                sPage = target_pdf.new_page(width=sWidth, height=sHeight)
-                # 按源页面旋转度数复制
-                # cropbox 页面裁剪框
-                # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
-                sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
-                                    rotate=source_page.rotation, clip=source_page.bound())
-                ######### 增加输出原页面 测试用
-        if debugger:
-            folder = os.path.join(self.current_file_path, 'tmp')
-            if not os.path.exists(folder):
-                os.makedirs(folder)
-            source_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
 
     def _get_rotate_from_page(self, page, page_index):
         """
