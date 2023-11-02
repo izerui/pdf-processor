@@ -179,7 +179,6 @@ class Processor(object):
                             source_page = source_pdf[idx]
                             # 把丢失的页面旋转角度从源页面复制过来
                             page.set_rotation(source_page.rotation)
-                            copy_pdf.reload_page(page)
                         self._processing_pages(target_pdf, copy_pdf, header_document)
                 else:
                     self._processing_pages(target_pdf, source_pdf, header_document)
