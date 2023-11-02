@@ -141,6 +141,14 @@ async def generate_from_url(call_item: CallItem):
 
 
 def _generate_document_thread(index, item, request, process_bar):
+    """
+    处理单个pdf
+    :param index:
+    :param item:
+    :param request:
+    :param process_bar:
+    :return:
+    """
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                           item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
                           source_urls=item.file_urls,
