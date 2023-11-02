@@ -103,7 +103,8 @@ class Processor(object):
             # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
             # 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
             #   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-            font = Font(fontname=chn_fontname, fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
+            font = Font(fontname=chn_fontname,
+                        fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
                         language='zh-Hans')
 
             # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
@@ -114,7 +115,6 @@ class Processor(object):
             # 其他字体下载: http://www.ae-sys.com/China/Fonts/
             # page.insert_font(fontname=chn_fontname,
             #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
-
 
             # 字体大小
             fontsize = 20
@@ -134,7 +134,6 @@ class Processor(object):
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
             page.insert_text(point=fitz.Point(600, 100), text=f'货品名称: {self.inventory_name}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-
 
             # 第三列
             page.insert_text(point=fitz.Point(900, 50), text=f'规格型号: {self.inventory_spec}',
@@ -168,58 +167,22 @@ class Processor(object):
         if not sources:
             raise RuntimeError(f'没有可转换的文件')
         target_pdf = fitz.open()
-        for s_index, source in enumerate(sources):
+        for source in sources:
             with fitz.open("pdf", source) as source_pdf:
                 if source_pdf.metadata['format'] == 'Image':
                     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
-                for p_index, source_page in enumerate(source_pdf):
-                    # print(source_page.rect.width, source_page.rect.height)
-                    new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
-                    r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
-                    r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
-                                   new_page.rect.height)
-                    new_page.show_pdf_page(r1, header_document, 0)
-                    # Maxtrix 解析: https://pymupdf.readthedocs.io/en/latest/matrix.html
-                    # a: x方向缩放(宽度)。例如，如果值为0.5，则将宽度缩小2倍。如果a < 0，将(额外地)发生左右翻转。
-                    # b: 产生剪切效果: 每个点(x, y)将变成点(x, y - b * x)。因此，水平线会“倾斜”。
-                    # c: 产生剪切效果: 每个点(x, y)都会变成点(x - c * y, y)，因此垂直线会“倾斜”。
-                    # d: y方向缩放(高度)。例如，如果值为1.5，则将高度拉伸50 %。如果d < 0，将(额外地)发生上下翻转。
-                    # e: 产生水平偏移效果: 每个Point(x, y)都会变成Point(x + e, y)， e的正(负)值会向右(左)偏移。
-                    # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
-                    print(
-                        f'文件{s_index + 1}/页面{p_index + 1}  宽:{source_page.mediabox.width}  高:{source_page.mediabox.height}  旋转:{source_page.rotation}  rotation_matrix:{source_page.rotation_matrix}')
-                    # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
-                    source_page_rect = source_page.bound()
-                    # 默认旋转为页面的旋转角度
-                    rotate = source_page.rotation
-                    # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
-                    rotate += 0 if source_page_rect.width > source_page_rect.height else 90
-                    # # 如果原页面有旋转的话,进行自适应
-                    # if rotate == 0 and source_page.rotation == 180:
-                    #     rotate = source_page.rotation
-                    if rotate > 0:
-                        print(f'    > 转横版,需旋转 {rotate}')
-                    # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
-                    source_page.set_rotation(0)
-                    new_page.show_pdf_page(r2, source_pdf, p_index, rotate=rotate, keep_proportion=True)
-
-                    if debugger:
-                        # ######### 增加输出原页面 测试用
-                        # 按原页面宽高设置新页面
-                        sWidth = source_page.bound().width
-                        sHeight = source_page.bound().height
-                        sPage = target_pdf.new_page(width=sWidth, height=sHeight)
-                        # 按源页面旋转度数复制
-                        # cropbox 页面裁剪框
-                        # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 source_page.bound()
-                        sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
-                                            rotate=source_page.rotation, clip=source_page.bound())
-                        ######### 增加输出原页面 测试用
-                if debugger:
-                    folder = os.path.join(self.current_file_path, 'tmp')
-                    if not os.path.exists(folder):
-                        os.makedirs(folder)
-                    source_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
+                # 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
+                # 注意: 如果发生了二次转换,页面会丢失旋转角度, 故需要设置回来
+                if source_pdf.has_annots():
+                    with fitz.open('pdf', source_pdf.convert_to_pdf()) as copy_pdf:
+                        for idx, page in enumerate(copy_pdf):
+                            source_page = source_pdf[idx]
+                            # 把丢失的页面旋转角度从源页面复制过来
+                            page.set_rotation(source_page.rotation)
+                            copy_pdf.reload_page(page)
+                        self._processing_pages(target_pdf, copy_pdf, header_document)
+                else:
+                    self._processing_pages(target_pdf, source_pdf, header_document)
         if debugger:
             folder = os.path.join(self.current_file_path, 'tmp')
             if not os.path.exists(folder):
@@ -230,17 +193,97 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
+    def _processing_pages(self, target_pdf, source_pdf, header_pdf):
+        """
+        处理单个pdf，将header区域和source页面进行合并，插入到target_pdf页面中
+        :param target_pdf: 目标pdf
+        :param source_pdf: 源pdf
+        :param header_pdf: header_pdf
+        :return: None
+        """
+        for p_index, source_page in enumerate(source_pdf):
+            new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
+            r1 = fitz.Rect(0, 0, new_page.rect.width, self.header_height)
+            r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
+                           new_page.rect.height)
+            new_page.show_pdf_page(r1, header_pdf, 0)
+            # 获取页面的旋转角度
+            rotate = self._get_rotate_from_page(source_page, p_index)
+            # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
+            source_page.set_rotation(0)
+            new_page.show_pdf_page(r2, source_page, p_index, rotate=rotate, keep_proportion=True)
+
+            if debugger:
+                # ######### 增加输出原页面 测试用
+                # 按原页面宽高设置新页面
+                sWidth = source_page.bound().width
+                sHeight = source_page.bound().height
+                sPage = target_pdf.new_page(width=sWidth, height=sHeight)
+                # 按源页面旋转度数复制
+                # cropbox 页面裁剪框
+                # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
+                sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), source_pdf, p_index, keep_proportion=True,
+                                    rotate=source_page.rotation, clip=source_page.bound())
+                ######### 增加输出原页面 测试用
+        if debugger:
+            folder = os.path.join(self.current_file_path, 'tmp')
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            source_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
+
+    def _get_rotate_from_page(self, page, page_index):
+        """
+        从源页面获取旋转角度
+        :param page: 源页面
+        :param page_index: 原页面索引
+        :return: 旋转角度
+        """
+        # Maxtrix 解析: https://pymupdf.readthedocs.io/en/latest/matrix.html
+        # a: x方向缩放(宽度)。例如，如果值为0.5，则将宽度缩小2倍。如果a < 0，将(额外地)发生左右翻转。
+        # b: 产生剪切效果: 每个点(x, y)将变成点(x, y - b * x)。因此，水平线会“倾斜”。
+        # c: 产生剪切效果: 每个点(x, y)都会变成点(x - c * y, y)，因此垂直线会“倾斜”。
+        # d: y方向缩放(高度)。例如，如果值为1.5，则将高度拉伸50 %。如果d < 0，将(额外地)发生上下翻转。
+        # e: 产生水平偏移效果: 每个Point(x, y)都会变成Point(x + e, y)， e的正(负)值会向右(左)偏移。
+        # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
+        print(
+            f'页面{page_index + 1}  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}')
+        # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
+        page_rect = page.bound()
+        # 默认旋转为页面的旋转角度
+        rotate = page.rotation
+        # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
+        rotate += 0 if page_rect.width > page_rect.height else 90
+        # # 如果原页面有旋转的话,进行自适应
+        # if rotate == 0 and page.rotation == 180:
+        #     rotate = page.rotation
+        if rotate > 0:
+            print(f'    > 转横版,需旋转 {rotate}')
+        return rotate
+
     def generate_pdf_bytes(self):
+        """
+        生成pdf文件的字节数组
+        :return:
+        """
         document: Document = self._with_header_document(self._merge_document)
         pdf_bytes = document.convert_to_pdf()
         document.close()
         return pdf_bytes
 
     def generate_document(self):
+        """
+        返回文档对象
+        :return:
+        """
         document: Document = self._with_header_document(self._merge_document)
         return document
 
     def save_to_filepath(self, file_path):
+        """
+        保存pdf到指定的文件路径
+        :param file_path:
+        :return:
+        """
         with self.generate_document() as document:
             document.save(filename=file_path)
 
