@@ -9,6 +9,8 @@ import qrcode
 from fitz import Document, Font
 from qrcode.image.pil import PilImage
 
+from utils import logger
+
 debugger = False
 
 
@@ -172,7 +174,8 @@ class Processor(object):
             if source_pdf.metadata['format'] == 'Image':
                 source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
             # 最终使用的pdf对象来进行裁切拼接, 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-            usage_pdf = source_pdf
+            usage_pdf: Document = source_pdf
+            # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
             # 注意: 如果发生了二次转换, 页面会丢失旋转角度
             if source_pdf.has_annots():
                 copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
@@ -317,13 +320,20 @@ class Combiner(object):
                 #                         rotate=page.rotation, clip=page_bound)
                 #     pass
 
-                # 这里不再进行字体文件缩容,因为客户的pdf指不定有啥字体
-                # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
-                # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-                # document.subset_fonts()
+                try:
+                    # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
+                    document.subset_fonts()
+                except BaseException as err:
+                    logger.warn(f'文档创建字体子集: {repr(err)}')
 
                 target_pdf.insert_pdf(docsrc=document)  # , annots=False, links=False
                 document.close()
+            # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
+            # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+            try:
+                target_pdf.subset_fonts()
+            except BaseException as err:
+                logger.warn(f'合并后的文档创建字体子集: {repr(err)}')
             target_pdf.save(file_path)
             if debugger:
                 folder = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmp')
