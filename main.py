@@ -153,16 +153,22 @@ def _generate_document_thread(index, item, request, process_bar):
                           item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
                           source_urls=item.file_urls,
                           horizontal_layout=True)
-    document = processor.generate_document()
-    if request.process_url:
-        process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,
-                        'item_id': item.item_id}
-        bytes = read_from_temp_file(lambda x: document.save(filename=x))
-        files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
-        thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data, files))
-        thread.start()
-    process_bar.update(1)
-    return document
+    success_state = True
+    error_msg = None
+    try:
+        document = processor.generate_document()
+        return document
+    except BaseException as error:
+        error_msg = repr(error)
+        logger.warn(error_msg)
+        success_state = False
+    finally:
+        if request.process_url:
+            process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,
+                            'item_id': item.item_id, 'success': success_state, 'error_msg': error_msg}
+            thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
+            thread.start()
+        process_bar.update(1)
 
 
 def async_generated_with_callback(call_item: CallItem):
@@ -205,9 +211,9 @@ async def generate_from_file(file: UploadFile = File(), request_id: str = Form()
     return Response(content=request_id, media_type="text/html")
 
 
-def async_post_process(url, data, files):
+def async_post_process(url, data):
     if url:
-        httpx.post(url, files=files, data=data, timeout=Timeout(timeout=30.0, connect=10.0))
+        httpx.post(url, data=data, timeout=Timeout(timeout=30.0, connect=10.0))
 
 
 if __name__ == "__main__":
