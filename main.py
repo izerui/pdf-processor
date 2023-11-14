@@ -167,7 +167,7 @@ def _generate_document_thread(index, item, request, process_bar):
         process_bar.update(1)
         if request.process_url:
             process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,
-                            'item_id': item.item_id, 'success': success_state, 'error_msg': error_msg}
+                            'item_id': item.item_id, 'success': success_state, 'err_msg': error_msg}
             thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
             thread.start()
 
