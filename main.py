@@ -162,6 +162,7 @@ def _generate_document_thread(index, item, request, process_bar):
         error_msg = repr(error)
         logger.warn(error_msg)
         success_state = False
+        return None
     finally:
         if request.process_url:
             process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,

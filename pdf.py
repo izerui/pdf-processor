@@ -297,8 +297,9 @@ class Combiner(object):
         """
         with fitz.open() as target_pdf:
             for document in self.documents:
-                target_pdf.insert_pdf(document)
-                document.close()
+                if not document:
+                    target_pdf.insert_pdf(document)
+                    document.close()
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
