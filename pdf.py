@@ -296,10 +296,11 @@ class Combiner(object):
         :return:
         """
         with fitz.open() as target_pdf:
-            for document in self.documents:
+            for index, document in enumerate(self.documents):
                 if not document:
-                    target_pdf.insert_pdf(document)
-                    document.close()
+                    raise BaseException(f'第{index + 1}个文件出错!')
+                target_pdf.insert_pdf(document)
+                document.close()
             # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
             pdf_bytes = target_pdf.convert_to_pdf()
             return pdf_bytes
@@ -312,7 +313,7 @@ class Combiner(object):
         # 输出文档的包含字体文件列表
         self._output_fonts(self.documents)
         with fitz.open() as target_pdf:
-            for document in self.documents:
+            for index, document in enumerate(self.documents):
                 # 另一种实现:
                 # for index, page in enumerate(document):
                 #     page_bound = page.bound()
@@ -320,7 +321,8 @@ class Combiner(object):
                 #     new_page.show_pdf_page(page_bound, document, index, keep_proportion=True,
                 #                         rotate=page.rotation, clip=page_bound)
                 #     pass
-
+                if not document:
+                    raise BaseException(f'第{index + 1}个文件出错!')
                 try:
                     # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
                     document.subset_fonts()

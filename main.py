@@ -164,12 +164,12 @@ def _generate_document_thread(index, item, request, process_bar):
         success_state = False
         return None
     finally:
+        process_bar.update(1)
         if request.process_url:
             process_data = {'total': len(request.items), 'index': index, 'request_id': request.request_id,
                             'item_id': item.item_id, 'success': success_state, 'error_msg': error_msg}
             thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
             thread.start()
-        process_bar.update(1)
 
 
 def async_generated_with_callback(call_item: CallItem):
@@ -192,7 +192,7 @@ def async_generated_with_callback(call_item: CallItem):
             for future in futures:
                 documents.append(future.result())
             process_bar.close()
-            logger.info(f'requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
+            logger.info(f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
             begin_time = time.time()
             combiner = Combiner(documents)
             bytes = read_from_temp_file(lambda x: combiner.save_to_filepath(x))
@@ -201,9 +201,9 @@ def async_generated_with_callback(call_item: CallItem):
             data = {'request_id': call_item.request_id, 'total': len(call_item.items)}
             httpx.post(call_item.callback_url, files=files, data=data)
     except Exception as err:
-        print(repr(err))
+        print(f'合并pdf出错: {repr(err)}')
         data = {'request_id': call_item.request_id, 'err_msg': repr(err)}
-        httpx.post(call_item.callback_url, files=files, data=data)
+        httpx.post(call_item.callback_url, data=data)
 
 
 @app.post('/callback/file', description='接收文件上传')
