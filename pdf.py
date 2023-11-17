@@ -146,7 +146,7 @@ class Processor(object):
 
             # # 创建字体的子集，减少文档大小
             # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-            # header_doc.subset_fonts()
+            header_doc.subset_fonts()
 
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
