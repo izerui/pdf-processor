@@ -189,7 +189,7 @@ def async_generated_with_callback(call_item: CallItem):
             documents = []
             for future in as_completed(futures):  # 并发执行
                 pass
-            for future in as_completed(futures): # 按原始顺序添加页
+            for future in futures: # 按原始顺序添加页
                 documents.append(future.result())
             process_bar.close()
             logger.info(f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
