@@ -3,6 +3,19 @@
 
 第三方库对比: https://dothinking.github.io/2021-01-02-Python%E5%A4%84%E7%90%86PDF%E7%9A%84%E7%AC%AC%E4%B8%89%E6%96%B9%E5%BA%93%E5%AF%B9%E6%AF%94/
 
+
+流程图: 
+
+```mermaid
+sequenceDiagram
+	autonumber
+	源PDF ->> head头PDF处理: 传入工单信息、货品信息、工艺信息等,并指定A4横版。
+	head头PDF处理 ->> head头PDF处理: 加载中文字体，按A4*2宽度生成head头pdf文件，并写入排版信息。
+	head头PDF处理 ->> pdf页面合并处理: 获取源页面旋转角度，按横版A4版面进行旋转
+	pdf页面合并处理 ->> pdf页面合并处理: 合并源pdf页面及head头页面为结果页
+	pdf页面合并处理 ->> 生成目标PDF: 将多个源PDF生成的结果页组合成独立PDF
+```
+
 样例:
 ![readme.png](readme.png)
 
