@@ -19,6 +19,6 @@
             如果a小于0，例如-2: 则图像沿y轴向左翻转，并长度拉伸倍数为2
          -->
         <rect x="0" y="0" width="60" height="30" fill="red"
-              transform="matrix(-1, 0, 0, 1, 0, 0)"/>
+              transform="matrix(1, 0, 0, -1, 0, 0)"/>
     </g>
 </svg>

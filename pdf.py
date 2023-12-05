@@ -266,14 +266,16 @@ class Processor(object):
         # 二维 Rotation Conversion Tool: https://danceswithcode.net/engineeringnotes/quaternions/conversion_tool.html
 
         print(
-            f'文件{source_index + 1}  第{page_index + 1}页  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}')
+            f'文件{source_index + 1}  第{page_index + 1}页  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}  transformation_matrix:{page.transformation_matrix}')
         # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
         page_rect = page.bound()
         # 默认旋转为页面的旋转角度
         rotate = page.rotation
         # 开始基于[变换矩阵]进行旋转
+        # 如果a小于0，例如-2: 则图像沿y轴向左翻转，并长度拉伸倍数为2
+        # 如果d小于0，例如-2: 则图像沿x轴向上翻转，并高度拉伸倍数为2 (这里判断正反只使用d)
         if rotate == 0:
-            rotate = 180 if page.rotation_matrix.d < 0 else 0
+            rotate = -180 if page.rotation_matrix.d < 0 else 0
         # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
         rotate += 0 if page_rect.width > page_rect.height else -90
         # # 如果原页面有旋转的话,进行自适应
