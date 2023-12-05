@@ -6,7 +6,7 @@ from typing import List
 import fitz
 import httpx
 import qrcode
-from fitz import Document, Font
+from fitz import Document, Font, Matrix
 from qrcode.image.pil import PilImage
 
 from utils import logger
@@ -168,11 +168,22 @@ class Processor(object):
                 sources.append(response.content)
         if not sources:
             raise RuntimeError(f'没有可转换的文件')
+        # pdfs = list(map(lambda x: fitz.open('pdf', x), sources))
+        # pages = list(map(lambda pdf: pdf[0], pdfs))
         target_pdf = fitz.open()
         for s_index, source in enumerate(sources):
             source_pdf = fitz.open("pdf", source)
-            if source_pdf.metadata['format'] == 'Image':
+
+            # 注释掉不再单独判断image类型进行pdf转换
+            # if source_pdf.metadata['format'] == 'Image':
+            #     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+
+            # 所有fitz加载的文件比如pdf、image全部重新转换一次，以适配完整对象的正常使用
+            # 比如is_fast_webaccess属性为True会影响合并效果: https://pymupdf.readthedocs.io/en/latest/document.html#Document.is_fast_webaccess
+            try:
                 source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+            except BaseException as err:
+                logger.warn(repr(err))
             # 最终使用的pdf对象来进行裁切拼接, 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
             usage_pdf: Document = source_pdf
             # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
@@ -191,16 +202,18 @@ class Processor(object):
                 # 把丢失的页面旋转角度从源页面复制过来
                 usage_page.set_rotation(source_page.rotation)
                 # 获取页面的旋转角度
-                rotate = self._get_rotate_from_page(usage_page, p_index)
+                rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
                 usage_page.set_rotation(0)
-                new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True)
+                new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=False,
+                                       clip=usage_page.bound())
 
                 if debugger:
                     # ######### 增加输出原页面 测试用
                     # 按原页面宽高设置新页面
                     sWidth = usage_page.bound().width
                     sHeight = usage_page.bound().height
+                    print(f'f:{s_index + 1} p:{p_index + 1} w:{sWidth} h:{sHeight}')
                     sPage = target_pdf.new_page(width=sWidth, height=sHeight)
                     # 按源页面旋转度数复制
                     # cropbox 页面裁剪框
@@ -228,32 +241,45 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
-    def _get_rotate_from_page(self, page, page_index):
+    def _get_rotate_from_page(self, page, page_index, source_index):
         """
         从源页面获取旋转角度
         :param page: 源页面
         :param page_index: 原页面索引
+        :param source_index: 原文件索引
         :return: 旋转角度
         """
         # Maxtrix 解析: https://pymupdf.readthedocs.io/en/latest/matrix.html
+        # 其他解析(通俗易懂):
+        # * https://docs.godotengine.org/zh-cn/4.x/tutorials/math/matrices_and_transforms.html (这个先看完，把变换矩阵理解透)
+        # * https://github.com/alvarto/blog/issues/1  (建议看这个更明白)
+        # * https://docs.aspose.com/svg/zh/net/drawing-basics/transformation-matrix/  (这个可以尝试自己获取一个svg进行修改测试) 参看文件: `transform2d.svg`
         # a: x方向缩放(宽度)。例如，如果值为0.5，则将宽度缩小2倍。如果a < 0，将(额外地)发生左右翻转。
         # b: 产生剪切效果: 每个点(x, y)将变成点(x, y - b * x)。因此，水平线会“倾斜”。
         # c: 产生剪切效果: 每个点(x, y)都会变成点(x - c * y, y)，因此垂直线会“倾斜”。
         # d: y方向缩放(高度)。例如，如果值为1.5，则将高度拉伸50 %。如果d < 0，将(额外地)发生上下翻转。
         # e: 产生水平偏移效果: 每个Point(x, y)都会变成Point(x + e, y)， e的正(负)值会向右(左)偏移。
         # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
+        # 其他一些资料:
+        # 四元数在线可视化转换网站: https://quaternions.online/
+        # 三维在线旋转变换网站: https://www.andre-gaschler.com/rotationconverter/
+        # 二维 Rotation Conversion Tool: https://danceswithcode.net/engineeringnotes/quaternions/conversion_tool.html
+
         print(
-            f'页面{page_index + 1}  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}')
+            f'文件{source_index + 1}  第{page_index + 1}页  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}')
         # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
         page_rect = page.bound()
         # 默认旋转为页面的旋转角度
         rotate = page.rotation
+        # 开始基于[变换矩阵]进行旋转
+        if rotate == 0:
+            rotate = 180 if page.rotation_matrix.d < 0 else 0
         # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
-        rotate += 0 if page_rect.width > page_rect.height else 90
+        rotate += 0 if page_rect.width > page_rect.height else -90
         # # 如果原页面有旋转的话,进行自适应
         # if rotate == 0 and page.rotation == 180:
         #     rotate = page.rotation
-        if rotate > 0:
+        if rotate != 0:
             print(f'    > 转横版,需旋转 {rotate}')
         return rotate
 

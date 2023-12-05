@@ -27,6 +27,7 @@ sequenceDiagram
 * pip install fastapi[all]
 * pip install uvicorn[standard]
 * pip install tqdm
+* ~~pip install matplotlib~~
 
 可选支持参考:
 https://pymupdf.readthedocs.io/en/latest/installation.html#notes
