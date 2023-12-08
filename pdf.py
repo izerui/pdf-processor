@@ -205,7 +205,7 @@ class Processor(object):
                 rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
                 usage_page.set_rotation(0)
-                new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=False,
+                new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True,
                                        clip=usage_page.bound())
 
                 if debugger:
@@ -218,6 +218,7 @@ class Processor(object):
                     # 按源页面旋转度数复制
                     # cropbox 页面裁剪框
                     # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
+                    # https://pymupdf.readthedocs.io/en/latest/page.html#Page.show_pdf_page
                     sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), usage_pdf, p_index, keep_proportion=True,
                                         rotate=usage_page.rotation, clip=usage_page.bound())
                     ######### 增加输出原页面 测试用
