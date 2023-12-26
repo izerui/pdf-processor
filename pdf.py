@@ -121,26 +121,26 @@ class Processor(object):
             # 字体大小
             fontsize = 20
             # 第一列
-            page.insert_text(point=fitz.Point(300, 50), text=f'工单号: {self.doc_no}',
+            page.insert_text(point=fitz.Point(280, 50), text=f'工单号: {self.doc_no}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(300, 100), text=f'订单交期: {self.doc_date}',
+            page.insert_text(point=fitz.Point(280, 100), text=f'交期: {self.doc_date}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(300, 150), text=f'工艺路线: {self.process_flow}',
+            page.insert_text(point=fitz.Point(280, 150), text=f'工艺路线: {self.process_flow}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
 
             # 第二列
-            page.insert_text(point=fitz.Point(600, 50), text=f'货品编码: {self.inventory_code}',
+            page.insert_text(point=fitz.Point(580, 50), text=f'货品编码: {self.inventory_code}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(600, 100), text=f'货品名称: {self.inventory_name}',
+            page.insert_text(point=fitz.Point(580, 100), text=f'数量: {self.quantity}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
 
             # 第三列
-            page.insert_text(point=fitz.Point(900, 50), text=f'规格型号: {self.inventory_spec}',
+            page.insert_text(point=fitz.Point(900, 50), text=f'货品名称: {self.inventory_name}',
                              fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-            page.insert_text(point=fitz.Point(900, 100), text=f'工单数量: {self.quantity}',
+            page.insert_text(point=fitz.Point(900, 100), text=f'规格型号: {self.inventory_spec}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(0, 0, 0))
 
