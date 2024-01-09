@@ -189,8 +189,11 @@ class Processor(object):
             # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
             # 注意: 如果发生了二次转换, 页面会丢失旋转角度
             if source_pdf.has_annots():
-                copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
-                usage_pdf = copy_pdf
+                try:
+                    copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
+                    usage_pdf = copy_pdf
+                except BaseException as e:
+                    logger.warn(f'处理注释失败: {repr(e)}')
             for p_index, usage_page in enumerate(usage_pdf):
                 source_page = source_pdf[p_index]
                 # print(usage_page.rect.width, usage_page.rect.height)
