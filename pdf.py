@@ -10,7 +10,7 @@ from fitz import Document, Font, Matrix
 from qrcode.image.pil import PilImage
 
 from utils import logger
-
+## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
 debugger = False
 
 
@@ -229,6 +229,41 @@ class Processor(object):
                 folder = os.path.join(self.current_file_path, 'tmp')
                 if not os.path.exists(folder):
                     os.makedirs(folder)
+                ## 测试获取第一页的线条，并画在新的页面上 begin
+                # page0 = usage_pdf[0]
+                # paths = page0.get_drawings()
+                #
+                # page1 = usage_pdf.new_page(width=page0.rect.width, height=page0.rect.height)
+                # shape = page1.new_shape()
+                # for path in paths:
+                #     # ------------------------------------
+                #     # draw each entry of the 'items' list
+                #     # ------------------------------------
+                #     for item in path["items"]:  # these are the draw commands
+                #         if item[0] == "l":  # line
+                #             shape.draw_line(item[1], item[2])
+                #         elif item[0] == "re":  # rectangle
+                #             shape.draw_rect(item[1])
+                #         elif item[0] == "qu":  # quad
+                #             shape.draw_quad(item[1])
+                #         elif item[0] == "c":  # curve
+                #             shape.draw_bezier(item[1], item[2], item[3], item[4])
+                #         else:
+                #             raise ValueError("unhandled drawing", item)
+                #     shape.finish(
+                #         fill=path["fill"],  # fill color
+                #         color=path["color"],  # line color
+                #         dashes=path["dashes"],  # line dashing
+                #         even_odd=path.get("even_odd", True),  # control color of overlaps
+                #         closePath=path["closePath"],  # whether to connect last and first point
+                #         lineJoin=path["lineJoin"],  # how line joins should look like
+                #         lineCap=max(path["lineCap"]),  # how line ends should look like
+                #         width=path["width"],  # line width
+                #         stroke_opacity=path.get("stroke_opacity", 1)  # same value for both
+                #     )
+                # # all paths processed - commit the shape to its page
+                # shape.commit()
+                ## 测试获取第一页的线条，并画在新的页面上 end
                 usage_pdf.save(os.path.join(folder, f"source-{int(time.time())}.pdf"))
 
             # 关闭文档
