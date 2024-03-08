@@ -172,18 +172,21 @@ class Processor(object):
         # pages = list(map(lambda pdf: pdf[0], pdfs))
         target_pdf = fitz.open()
         for s_index, source in enumerate(sources):
-            source_pdf = fitz.open("pdf", source)
+            source_pdf:Document = fitz.open("pdf", source)
 
             # 注释掉不再单独判断image类型进行pdf转换
             # if source_pdf.metadata['format'] == 'Image':
             #     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
 
+            # 注释掉，不再每次都重新转换一次，否则会多出一些注释类的东西，但是不转换可能会少一些注释之类的
             # 所有fitz加载的文件比如pdf、image全部重新转换一次，以适配完整对象的正常使用
             # 比如is_fast_webaccess属性为True会影响合并效果: https://pymupdf.readthedocs.io/en/latest/document.html#Document.is_fast_webaccess
-            try:
-                source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
-            except BaseException as err:
-                logger.warn(repr(err))
+            # try:
+            #     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+            # except BaseException as err:
+            #     logger.warn(repr(err))
+
+
             # 最终使用的pdf对象来进行裁切拼接, 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
             usage_pdf: Document = source_pdf
             # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
@@ -202,10 +205,8 @@ class Processor(object):
                 r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
                                new_page.rect.height)
                 new_page.show_pdf_page(r1, header_document, 0)
-                # 把丢失的页面旋转角度从源页面复制过来
-                usage_page.set_rotation(source_page.rotation)
-                # 获取页面的旋转角度
-                rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
+                # 获取页面应该回正的旋转角度
+                rotate = self._get_rotate_from_page(source_page, p_index, s_index)
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的
                 usage_page.set_rotation(0)
                 new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True,
@@ -280,10 +281,10 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
-    def _get_rotate_from_page(self, page, page_index, source_index):
+    def _get_rotate_from_page(self, source_page, page_index, source_index):
         """
         从源页面获取旋转角度
-        :param page: 源页面
+        :param source_page: 源页面
         :param page_index: 原页面索引
         :param source_index: 原文件索引
         :return: 旋转角度
@@ -305,18 +306,27 @@ class Processor(object):
         # 二维 Rotation Conversion Tool: https://danceswithcode.net/engineeringnotes/quaternions/conversion_tool.html
 
         print(
-            f'文件{source_index + 1}  第{page_index + 1}页  宽:{page.mediabox.width}  高:{page.mediabox.height}  旋转:{page.rotation}  rotation_matrix:{page.rotation_matrix}  transformation_matrix:{page.transformation_matrix}')
+            f'文件{source_index + 1}  第{page_index + 1}页  宽:{source_page.mediabox.width}  高:{source_page.mediabox.height}  旋转:{source_page.rotation}  rotation_matrix:{source_page.rotation_matrix}  transformation_matrix:{source_page.transformation_matrix}')
         # 当前页面矩形,如果进行了旋转，需要再次利用bound()获取
-        page_rect = page.bound()
-        # 默认旋转为页面的旋转角度
-        rotate = page.rotation
+        page_rect = source_page.bound()
+        # 默认旋转为页面的旋转角度的负数， 即按这个角度旋转会恢复原样
+        rotate = -source_page.rotation
         # 开始基于[变换矩阵]进行旋转
         # 如果a小于0，例如-2: 则图像沿y轴向左翻转，并长度拉伸倍数为2
         # 如果d小于0，例如-2: 则图像沿x轴向上翻转，并高度拉伸倍数为2 (这里判断正反只使用d)
-        if rotate == 0:
-            rotate = -180 if page.rotation_matrix.d < 0 else 0
-        # # 如果非默认横版(高>宽),则在现有旋转角度基础上再次旋转90度
-        rotate += 0 if page_rect.width > page_rect.height else -90
+
+
+        ##直线意味着不存在剪切并且任何旋转都是 90 度的整数倍。通常这用于确认变换之前的（轴对齐的）矩形在变换之后仍然是轴对齐的矩形
+        ## if source_page.rotation_matrix.is_rectilinear:
+
+        # 如果发生了基于x轴的上线翻转，则额外加180度
+        if source_page.rotation_matrix.d < 0:
+            rotate += 180
+
+        # if rotate == 0:
+        #     rotate = -180 if source_page.rotation_matrix.d < 0 else 0
+        # 如果默认并不是横版(高>宽),则在现有旋转角度基础上再次旋转90度
+        rotate += (0 if page_rect.width > page_rect.height else 90)
         # # 如果原页面有旋转的话,进行自适应
         # if rotate == 0 and page.rotation == 180:
         #     rotate = page.rotation
