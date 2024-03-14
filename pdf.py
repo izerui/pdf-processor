@@ -8,7 +8,9 @@ import httpx
 import qrcode
 from fitz import Document, Font, Page
 from fitz.utils import Shape
+from numpy import ndarray
 from qrcode.image.pil import PilImage
+import numpy as np
 
 from utils import logger
 
@@ -38,6 +40,7 @@ class Processor(object):
                  process_flow: str = '',
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None,
+                 marks_str: str = None,
                  horizontal_layout: str = False):
         """
         :param file: 待处理的pdf文件
@@ -61,6 +64,28 @@ class Processor(object):
         self.process_flow = process_flow
         self.source_files = source_files
         self.source_urls = source_urls
+        self.marks = None
+        if marks_str:
+            # page之间空格
+            # rect之间;
+            # 坐标之间,
+            # sample = '10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
+            self.marks = list(
+                map(
+                    lambda x: list(
+                        map(
+                            lambda y: list(
+                                map(
+                                    lambda z: int(z),
+                                    y.split(',')
+                                )
+                            ),
+                            x.split(';')
+                        )
+                    ),
+                    marks_str.split(' ')
+                )
+            )
         self.horizontal_layout = horizontal_layout
         _wh = self._get_width_height()
         self.layout_width = _wh[0]
@@ -199,8 +224,8 @@ class Processor(object):
                 except BaseException as e:
                     logger.warn(f'处理注释失败: {repr(e)}')
             for p_index, usage_page in enumerate(usage_pdf):
-
-                # self._mask_page_content(usage_page)
+                # 标记遮罩区域
+                self._mask_page_content(p_index, usage_page)
                 # source_page = source_pdf[p_index]
                 # print(usage_page.rect.width, usage_page.rect.height)
                 new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
@@ -285,34 +310,28 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
-    def _mask_page_content(self, page: Page):
+    def _mask_page_content(self, index: int, page: Page):
         """
         遮罩页面内容
+        :param index: 页码
         :param page: 要遮罩的页面
         :return:
         """
-        # rect = fitz.Rect(120, 200 - 5, 300, 200)
-        # page.draw_rect(
-        #     rect=rect,
-        #     fill=1,  # fill color
-        #     color=(0, 0, 0, 0),  # line color
-        #     overlay=True,
-        #     dashes=None,  # line dashing
-        #     lineJoin=0,  # how line joins should look like
-        #     lineCap=0,  # how line ends should look like
-        #     width=1,  # line width
-        #     stroke_opacity=1  # same value for both
-        # )
-
-        shape: Shape = page.new_shape()
-        rect = fitz.Rect(120, 200 - 5, 600, 800)
-        shape.draw_rect(rect=rect)
-        shape.finish(
-            fill=0,  # fill color
-            color=0  # line color
-        )
-        shape.commit()
-        page.refresh()
+        marks: list = self.marks
+        if marks and len(marks) > index:
+            # 当前页的多个遮罩区域list
+            page_marks: list = marks[index]
+            if page_marks and len(page_marks) > 0:
+                for rect_mark in page_marks:
+                    assert len(rect_mark) == 4, '遮罩格式不对,坐标以逗号连接[x0,y0,x1,y1], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以空格连接[page0 page1]! 示例: 10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
+                    shape: Shape = page.new_shape()
+                    rect = fitz.Rect(rect_mark[0], rect_mark[1], rect_mark[2], rect_mark[3])
+                    shape.draw_rect(rect=rect)
+                    shape.finish(
+                        fill=0,  # fill color
+                        color=0  # line color
+                    )
+                    shape.commit()
         pass
 
     def _get_rotate_from_page(self, source_page: Page, page_index, source_index):

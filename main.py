@@ -1,4 +1,3 @@
-# This is a sample Python script.
 import concurrent
 import os
 import tempfile
@@ -57,11 +56,12 @@ async def generate_from_file(files: List[bytes] = File(),
                              inventory_spec: str = Form(''),
                              quantity: str = Form(),
                              doc_date: str = Form(''),
-                             process_flow: str = Form('')):
+                             process_flow: str = Form(''),
+                             marks_str: str = Form('')):
     try:
         processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
                               process_flow,
-                              source_files=files,
+                              source_files=files, marks_str=marks_str,
                               horizontal_layout=True)
 
         byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
@@ -70,6 +70,7 @@ async def generate_from_file(files: List[bytes] = File(),
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
+        logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
@@ -84,6 +85,7 @@ class Item(BaseModel):
     quantity: str
     doc_date: str
     process_flow: str | None = None
+    marks_str: str | None = None
 
 
 @app.post('/generate/from-url', description='通过文件url生成')
@@ -91,7 +93,7 @@ async def generate_from_url(item: Item):
     try:
         processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                               item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                              source_urls=item.file_urls,
+                              source_urls=item.file_urls, marks_str=item.marks_str,
                               horizontal_layout=True)
 
         byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
@@ -100,6 +102,7 @@ async def generate_from_url(item: Item):
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
+        logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
@@ -110,7 +113,7 @@ async def generate_from_url(items: List[Item]):
         for item in items:
             processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                                   item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                                  source_urls=item.file_urls,
+                                  source_urls=item.file_urls, marks_str=item.marks_str,
                                   horizontal_layout=True)
             document = processor.generate_document()
             documents.append(document)
@@ -122,6 +125,7 @@ async def generate_from_url(items: List[Item]):
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
+        logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
@@ -151,7 +155,7 @@ def _generate_document_thread(index, item, request, process_bar):
     """
     processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
                           item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                          source_urls=item.file_urls,
+                          source_urls=item.file_urls, marks_str=item.marks_str,
                           horizontal_layout=True)
     success_state = True
     error_msg = None
@@ -202,6 +206,7 @@ def async_generated_with_callback(call_item: CallItem):
             httpx.post(call_item.callback_url, files=files, data=data)
     except Exception as err:
         print(f'合并pdf出错: {repr(err)}')
+        logger.exception(err)
         data = {'request_id': call_item.request_id, 'err_msg': repr(err)}
         httpx.post(call_item.callback_url, data=data)
 
