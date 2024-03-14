@@ -57,11 +57,12 @@ async def generate_from_file(files: List[bytes] = File(),
                              quantity: str = Form(),
                              doc_date: str = Form(''),
                              process_flow: str = Form(''),
-                             marks_str: str = Form('')):
+                             marks_str: str = Form(''),
+                             rotates: str = Form('')):
     try:
         processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
                               process_flow,
-                              source_files=files, marks_str=marks_str,
+                              source_files=files, marks_str=marks_str, rotates=rotates.split(',') if rotates else None,
                               horizontal_layout=True)
 
         byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
@@ -86,6 +87,7 @@ class Item(BaseModel):
     doc_date: str
     process_flow: str | None = None
     marks_str: str | None = None
+    rotates: List[int] | None = None
 
 
 @app.post('/generate/from-url', description='通过文件url生成')
@@ -193,10 +195,11 @@ def async_generated_with_callback(call_item: CallItem):
             documents = []
             for future in as_completed(futures):  # 并发执行
                 pass
-            for future in futures: # 按原始顺序添加页
+            for future in futures:  # 按原始顺序添加页
                 documents.append(future.result())
             process_bar.close()
-            logger.info(f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
+            logger.info(
+                f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
             begin_time = time.time()
             combiner = Combiner(documents)
             bytes = read_from_temp_file(lambda x: combiner.save_to_filepath(x))

@@ -41,6 +41,7 @@ class Processor(object):
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None,
                  marks_str: str = None,
+                 rotates: List[int] = None,
                  horizontal_layout: str = False):
         """
         :param file: 待处理的pdf文件
@@ -76,7 +77,7 @@ class Processor(object):
                         map(
                             lambda y: list(
                                 map(
-                                    lambda z: int(z),
+                                    lambda z: z,
                                     y.split(',')
                                 )
                             ),
@@ -323,15 +324,24 @@ class Processor(object):
             page_marks: list = marks[index]
             if page_marks and len(page_marks) > 0:
                 for rect_mark in page_marks:
-                    assert len(rect_mark) == 4, '遮罩格式不对,坐标以逗号连接[x0,y0,x1,y1], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以空格连接[page0 page1]! 示例: 10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
-                    shape: Shape = page.new_shape()
-                    rect = fitz.Rect(rect_mark[0], rect_mark[1], rect_mark[2], rect_mark[3])
-                    shape.draw_rect(rect=rect)
-                    shape.finish(
-                        fill=0,  # fill color
-                        color=0  # line color
-                    )
-                    shape.commit()
+                    assert len(
+                        rect_mark) >= 4, '遮罩格式不对,坐标以逗号连接[x0,y0,x1,y1], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以空格连接[page0 page1]! 示例: 10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
+                    rect = fitz.Rect(float(rect_mark[0]), float(rect_mark[1]), float(rect_mark[2]), float(rect_mark[3]))
+                    if len(rect_mark) == 4:  # 添加遮罩矩形区域
+                        shape: Shape = page.new_shape()
+                        shape.draw_rect(rect=rect)
+                        shape.finish(
+                            fill=0,  # fill color
+                            color=0  # line color
+                        )
+                        shape.commit()
+                    elif len(rect_mark) == 5:
+                        img_url = rect_mark[4]
+                        response = _retry_get_file(img_url)
+                        if not response.is_success:
+                            raise IOError(f'图片下载失败, url: {img_url}')
+                        # img = fitz.open(stream=response.content)
+                        page.insert_image(rect, stream=response.content, keep_proportion=False)
         pass
 
     def _get_rotate_from_page(self, source_page: Page, page_index, source_index):
