@@ -7,6 +7,7 @@ import fitz
 import httpx
 import qrcode
 from fitz import Document, Font, Page
+from fitz.utils import Shape
 from qrcode.image.pil import PilImage
 
 from utils import logger
@@ -179,13 +180,13 @@ class Processor(object):
             # if source_pdf.metadata['format'] == 'Image':
             #     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
 
-            # 注释掉，不再每次都重新转换一次，否则会多出一些注释类的东西，但是不转换可能会少一些注释之类的
-            # 所有fitz加载的文件比如pdf、image全部重新转换一次，以适配完整对象的正常使用
+            # 如果是图片重新转换一次，以适配完整对象的正常使用
             # 比如is_fast_webaccess属性为True会影响合并效果: https://pymupdf.readthedocs.io/en/latest/document.html#Document.is_fast_webaccess
-            # try:
-            #     source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
-            # except BaseException as err:
-            #     logger.warn(repr(err))
+            if not source_pdf.is_pdf:
+                try:
+                    source_pdf = fitz.open("pdf", source_pdf.convert_to_pdf())
+                except BaseException as err:
+                    logger.warn(repr(err))
 
             # 最终使用的pdf对象来进行裁切拼接, 如果有注释，则为转化后的新pdf 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
             usage_pdf: Document = source_pdf
@@ -198,6 +199,8 @@ class Processor(object):
                 except BaseException as e:
                     logger.warn(f'处理注释失败: {repr(e)}')
             for p_index, usage_page in enumerate(usage_pdf):
+
+                # self._mask_page_content(usage_page)
                 # source_page = source_pdf[p_index]
                 # print(usage_page.rect.width, usage_page.rect.height)
                 new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
@@ -211,6 +214,7 @@ class Processor(object):
                 usage_page.set_rotation(0)
                 new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True,
                                        clip=usage_page.cropbox)
+                # self._mask_page_content(new_page)
 
                 if debugger:
                     # ######### 增加输出原页面 测试用
@@ -281,6 +285,36 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
+    def _mask_page_content(self, page: Page):
+        """
+        遮罩页面内容
+        :param page: 要遮罩的页面
+        :return:
+        """
+        # rect = fitz.Rect(120, 200 - 5, 300, 200)
+        # page.draw_rect(
+        #     rect=rect,
+        #     fill=1,  # fill color
+        #     color=(0, 0, 0, 0),  # line color
+        #     overlay=True,
+        #     dashes=None,  # line dashing
+        #     lineJoin=0,  # how line joins should look like
+        #     lineCap=0,  # how line ends should look like
+        #     width=1,  # line width
+        #     stroke_opacity=1  # same value for both
+        # )
+
+        shape: Shape = page.new_shape()
+        rect = fitz.Rect(120, 200 - 5, 600, 800)
+        shape.draw_rect(rect=rect)
+        shape.finish(
+            fill=0,  # fill color
+            color=0  # line color
+        )
+        shape.commit()
+        page.refresh()
+        pass
+
     def _get_rotate_from_page(self, source_page: Page, page_index, source_index):
         """
         从源页面获取旋转角度
@@ -320,7 +354,7 @@ class Processor(object):
                 rotate = -source_page.rotation
             else:
                 rotate = -source_page.rotation
-                rotate += -90 # 竖版一以右侧为底， 如果是+90 则是以竖版的左侧为底
+                rotate += -90  # 竖版一以右侧为底， 如果是+90 则是以竖版的左侧为底
 
         # 如果发生了基于x轴的上线翻转，则额外加180度
         if source_page.rotation_matrix.d < 0:
