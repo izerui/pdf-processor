@@ -1,9 +1,7 @@
 import concurrent
-import os
-import tempfile
+
 import threading
 import time
-import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List
 
@@ -16,7 +14,7 @@ from pydantic import BaseModel
 from tqdm import tqdm
 
 from pdf import Processor, Combiner
-from utils import logger
+from utils import logger, read_temp_file_instant
 
 app = FastAPI(
     title='pdf生成、合并服务',
@@ -32,40 +30,35 @@ app = FastAPI(
 executor = ThreadPoolExecutor(max_workers=4)
 
 
-def read_from_temp_file(callback):
-    """
-    使用自动删除的路径作为处理，并读取删除前的内容到文件byte数组
-    :param callback: 参数为临时路径
-    :return:
-    """
-    # 临时目录，自动删除
-    with tempfile.TemporaryDirectory() as temp_folder:
-        filepath = os.path.join(temp_folder, f'{uuid.uuid1()}.pdf')
-        callback(filepath)
-        with open(filepath, 'rb') as f:
-            byte_data = bytes(f.read())
-            return byte_data
-
-
 @app.post('/generate/from-file', description='通过文件生成')
 async def generate_from_file(files: List[bytes] = File(),
-                             qr_code: str = Form(),
-                             doc_no: str = Form(),
-                             inventory_code: str = Form(),
-                             inventory_name: str = Form(),
-                             inventory_spec: str = Form(''),
-                             quantity: str = Form(),
-                             doc_date: str = Form(''),
-                             process_flow: str = Form(''),
-                             marks_str: str = Form(''),
-                             rotates: str = Form('')):
+                             qr_code: str = Form('code001', description='二维码内容'),
+                             doc_no: str = Form('SO202305240001', description='工单号'),
+                             inventory_code: str = Form('20120527003_001', description='货品编码'),
+                             inventory_name: str = Form('ios数据线_001', description='货品名称'),
+                             inventory_spec: str = Form('型号008_001', description='规格型号'),
+                             quantity: str = Form(12, description='数量'),
+                             doc_date: str = Form('2024-02-02', description='交期'),
+                             process_flow: str = Form('生产->包装->装箱', description='工艺路线'),
+                             marks_str: str = Form(
+                                 '497,191,586,347,https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg',
+                                 description='遮罩区域: 坐标及图片url以逗号连接[x0,y0,x1,y1,img_url], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以&连接[page0&page1]!'),
+                             rotates: str = Form('', description='每页的旋转角度')):
     try:
-        processor = Processor(qr_code, doc_no, inventory_code, inventory_name, inventory_spec, quantity, doc_date,
-                              process_flow,
-                              source_files=files, marks_str=marks_str, rotates=rotates.split(',') if rotates else None,
-                              horizontal_layout=True)
-
-        byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
+        processor = Processor(source_files=files)
+        processor.set_generate_config(
+            qr_code=qr_code,
+            doc_no=doc_no,
+            inventory_code=inventory_code,
+            inventory_name=inventory_name,
+            inventory_spec=inventory_spec,
+            quantity=quantity,
+            doc_date=doc_date,
+            process_flow=process_flow,
+            marks_str=marks_str,
+            horizontal_layout=True
+        )
+        byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
@@ -93,12 +86,20 @@ class Item(BaseModel):
 @app.post('/generate/from-url', description='通过文件url生成')
 async def generate_from_url(item: Item):
     try:
-        processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                              item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                              source_urls=item.file_urls, marks_str=item.marks_str,
-                              horizontal_layout=True)
-
-        byte_data = read_from_temp_file(lambda x: processor.save_to_filepath(x))
+        processor = Processor(source_urls=item.file_urls)
+        processor.set_generate_config(
+            qr_code=item.qr_code,
+            doc_no=item.doc_no,
+            inventory_code=item.inventory_code,
+            inventory_name=item.inventory_name,
+            inventory_spec=item.inventory_spec,
+            quantity=item.quantity,
+            doc_date=item.doc_date,
+            process_flow=item.process_flow,
+            marks_str=item.marks_str,
+            horizontal_layout=True
+        )
+        byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
@@ -113,15 +114,24 @@ async def generate_from_url(items: List[Item]):
     try:
         documents = []
         for item in items:
-            processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                                  item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                                  source_urls=item.file_urls, marks_str=item.marks_str,
-                                  horizontal_layout=True)
+            processor = Processor(source_urls=item.file_urls)
+            processor.set_generate_config(
+                qr_code=item.qr_code,
+                doc_no=item.doc_no,
+                inventory_code=item.inventory_code,
+                inventory_name=item.inventory_name,
+                inventory_spec=item.inventory_spec,
+                quantity=item.quantity,
+                doc_date=item.doc_date,
+                process_flow=item.process_flow,
+                marks_str=item.marks_str,
+                horizontal_layout=True
+            )
             document = processor.generate_document()
             documents.append(document)
         combiner = Combiner(documents)
 
-        byte_data = read_from_temp_file(lambda x: combiner.save_to_filepath(x))
+        byte_data = read_temp_file_instant(lambda x: combiner.save_to_filepath(x))
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=merge-{int(time.time())}.pdf'}
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
@@ -155,13 +165,22 @@ def _generate_document_thread(index, item, request, process_bar):
     :param process_bar:
     :return:
     """
-    processor = Processor(item.qr_code, item.doc_no, item.inventory_code, item.inventory_name,
-                          item.inventory_spec, item.quantity, item.doc_date, item.process_flow,
-                          source_urls=item.file_urls, marks_str=item.marks_str,
-                          horizontal_layout=True)
+    processor = Processor(source_urls=item.file_urls)
     success_state = True
     error_msg = None
     try:
+        processor.set_generate_config(
+            qr_code=item.qr_code,
+            doc_no=item.doc_no,
+            inventory_code=item.inventory_code,
+            inventory_name=item.inventory_name,
+            inventory_spec=item.inventory_spec,
+            quantity=item.quantity,
+            doc_date=item.doc_date,
+            process_flow=item.process_flow,
+            marks_str=item.marks_str,
+            horizontal_layout=True
+        )
         document = processor.generate_document()
         return document
     except BaseException as error:
@@ -202,7 +221,7 @@ def async_generated_with_callback(call_item: CallItem):
                 f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
             begin_time = time.time()
             combiner = Combiner(documents)
-            bytes = read_from_temp_file(lambda x: combiner.save_to_filepath(x))
+            bytes = read_temp_file_instant(lambda x: combiner.save_to_filepath(x))
             logger.info(f'requestId:{call_item.request_id} 合并{len(documents)}个PDF耗时: {time.time() - begin_time}')
             files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
             data = {'request_id': call_item.request_id, 'total': len(call_item.items)}

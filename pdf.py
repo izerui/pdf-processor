@@ -4,45 +4,21 @@ from io import BytesIO
 from typing import List
 
 import fitz
-import httpx
 import qrcode
 from fitz import Document, Font, Page
 from fitz.utils import Shape
-from numpy import ndarray
 from qrcode.image.pil import PilImage
-import numpy as np
 
-from utils import logger
+from utils import logger, get_url_file_for_retry
 
 ## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
 debugger = False
 
 
-def _retry_get_file(url):
-    for _ in range(5):
-        try:
-            resp = httpx.get(url)
-            return resp
-        except Exception:
-            continue
-    raise RuntimeError(f'{url} 文件下载失败')
-
-
 class Processor(object):
     def __init__(self,
-                 qr_code: str,
-                 doc_no: str,
-                 inventory_code: str,
-                 inventory_name: str,
-                 inventory_spec: str,
-                 quantity: str,
-                 doc_date: str,
-                 process_flow: str = '',
                  source_files: List[bytes] = None,
-                 source_urls: List[str] = None,
-                 marks_str: str = None,
-                 rotates: List[int] = None,
-                 horizontal_layout: str = False):
+                 source_urls: List[str] = None):
         """
         :param file: 待处理的pdf文件
         :param qr_code: 二维码
@@ -55,6 +31,45 @@ class Processor(object):
         """
         super().__init__()
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
+        self.sources = source_files
+        if not self.sources:
+            self.sources = []
+            for source_url in source_urls:
+                response = get_url_file_for_retry(source_url)
+                if not response.is_success:
+                    raise IOError(f'文件下载失败, url: {source_url}')
+                self.sources.append(response.content)
+        if not self.sources:
+            raise RuntimeError(f'没有指定pdf文件')
+
+    def set_generate_config(self,
+                            qr_code: str,
+                            doc_no: str,
+                            inventory_code: str,
+                            inventory_name: str,
+                            inventory_spec: str,
+                            quantity: str,
+                            doc_date: str,
+                            process_flow: str = '',
+                            marks_str: str = None,
+                            rotates: List[int] = None,
+                            horizontal_layout: str = True
+                            ):
+        """
+        初始化处理pdf的前置需要的相关参数
+        :param qr_code: 二维码内容
+        :param doc_no: 工单号
+        :param inventory_code: 货品编码
+        :param inventory_name: 货品名称
+        :param inventory_spec: 规格型号
+        :param quantity: 数量
+        :param doc_date: 交期
+        :param process_flow: 工艺路线
+        :param marks_str: 打码遮罩的区域集合字符串
+        :param rotates: 每页旋转的角度集合字符串
+        :param horizontal_layout: 转换后目标是否横版
+        :return:
+        """
         self.qr_code = qr_code
         self.doc_no = doc_no
         self.inventory_code = inventory_code
@@ -63,8 +78,6 @@ class Processor(object):
         self.quantity = quantity
         self.doc_date = doc_date
         self.process_flow = process_flow
-        self.source_files = source_files
-        self.source_urls = source_urls
         self.marks = None
         if marks_str:
             # page之间空格
@@ -77,23 +90,24 @@ class Processor(object):
                         map(
                             lambda y: list(
                                 map(
-                                    lambda z: z,
+                                    lambda z: z.strip(),
                                     y.split(',')
                                 )
                             ),
                             x.split(';')
                         )
                     ),
-                    marks_str.split(' ')
+                    marks_str.split('&')
                 )
             )
         self.horizontal_layout = horizontal_layout
-        _wh = self._get_width_height()
+        _wh = self._get_a4_width_height()
         self.layout_width = _wh[0]
         self.layout_height = _wh[1]
         self.header_height = 180
+        pass
 
-    def _get_width_height(self):
+    def _get_a4_width_height(self):
         """
         获取页面宽高
         :return:
@@ -126,8 +140,12 @@ class Processor(object):
                 stream=imagefile,
                 overlay=False)
 
-            chn_fontname = 'chn'
+            # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
+            # 其他字体下载: http://www.ae-sys.com/China/Fonts/
+            # page.insert_font(fontname=chn_fontname,
+            #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
 
+            chn_fontname = 'chn'
             # https://pymupdf.readthedocs.io/en/latest/font.html#Font
             # 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
             # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
@@ -136,15 +154,9 @@ class Processor(object):
             font = Font(fontname=chn_fontname,
                         fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
                         language='zh-Hans')
-
             # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
             page.insert_font(fontname=chn_fontname,
                              fontbuffer=font.buffer)
-
-            # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
-            # 其他字体下载: http://www.ae-sys.com/China/Fonts/
-            # page.insert_font(fontname=chn_fontname,
-            #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
 
             # 字体大小
             fontsize = 20
@@ -186,20 +198,10 @@ class Processor(object):
             # return pdf_bytes
 
     def _merge_document(self, header_document):
-        sources = self.source_files
-        if not sources:
-            sources = []
-            for source_url in self.source_urls:
-                response = _retry_get_file(source_url)
-                if not response.is_success:
-                    raise IOError(f'文件下载失败, url: {source_url}')
-                sources.append(response.content)
-        if not sources:
-            raise RuntimeError(f'没有可转换的文件')
         # pdfs = list(map(lambda x: fitz.open('pdf', x), sources))
         # pages = list(map(lambda pdf: pdf[0], pdfs))
         target_pdf = fitz.open()
-        for s_index, source in enumerate(sources):
+        for s_index, source in enumerate(self.sources):
             source_pdf: Document = fitz.open("pdf", source)
 
             # 注释掉不再单独判断image类型进行pdf转换
@@ -225,8 +227,6 @@ class Processor(object):
                 except BaseException as e:
                     logger.warn(f'处理注释失败: {repr(e)}')
             for p_index, usage_page in enumerate(usage_pdf):
-                # 标记遮罩区域
-                self._mask_page_content(p_index, usage_page)
                 # source_page = source_pdf[p_index]
                 # print(usage_page.rect.width, usage_page.rect.height)
                 new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
@@ -236,6 +236,9 @@ class Processor(object):
                 new_page.show_pdf_page(r1, header_document, 0)
                 # 获取页面应该回正的旋转角度
                 rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
+                # 标记遮罩区域
+                self._mask_page_content(p_index, usage_page)
+
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
                 usage_page.set_rotation(0)
                 new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True,
@@ -325,8 +328,9 @@ class Processor(object):
             if page_marks and len(page_marks) > 0:
                 for rect_mark in page_marks:
                     assert len(
-                        rect_mark) >= 4, '遮罩格式不对,坐标以逗号连接[x0,y0,x1,y1], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以空格连接[page0 page1]! 示例: 10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
+                        rect_mark) >= 4, '遮罩格式不对,坐标及图片url以逗号连接[x0,y0,x1,y1,img_url], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以&连接[page0&page1]! 示例: 10,2,4,5;4,2,1,6&100,20,40,50;14,22,11,16&102,23,44,55;41,22,13,64'
                     rect = fitz.Rect(float(rect_mark[0]), float(rect_mark[1]), float(rect_mark[2]), float(rect_mark[3]))
+                    # rect = rect * page.rotation_matrix
                     if len(rect_mark) == 4:  # 添加遮罩矩形区域
                         shape: Shape = page.new_shape()
                         shape.draw_rect(rect=rect)
@@ -335,9 +339,9 @@ class Processor(object):
                             color=0  # line color
                         )
                         shape.commit()
-                    elif len(rect_mark) == 5:
+                    elif len(rect_mark) == 5:  # 用图片拉伸填充
                         img_url = rect_mark[4]
-                        response = _retry_get_file(img_url)
+                        response = get_url_file_for_retry(img_url)
                         if not response.is_success:
                             raise IOError(f'图片下载失败, url: {img_url}')
                         # img = fitz.open(stream=response.content)
