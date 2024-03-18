@@ -36,7 +36,7 @@ test file:
 * https://file.yj2025.com/CH3600-1-M04003A%20%E6%90%AC%E8%BF%90%E7%88%AA%E5%AE%89%E8%A3%85%E6%9D%BF-%E9%95%BF.pdf
 * https://file.yj2025.com/003.pdf
 * https://file.yj2025.com/WX20230909-172402%402x.png
-* https://file.yj2025.com/%E5%B7%A5%E7%A8%8B%E5%9B%BE%E7%BA%B80940-%E7%AB%96%E5%90%91.pdf
+* https://file.yj2025.com/工程图纸0940-竖向.pdf
 * https://file.yj2025.com/PD5060-GL-016T%20%E9%95%9C%E6%9E%B6%E6%8A%A4%E7%BD%A9.pdf
 * https://file.yj2025.com/CS01-P3-001.pdf
 * https://file.yj2025.com/CS01-P3-002.pdf

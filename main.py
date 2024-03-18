@@ -1,5 +1,4 @@
 import concurrent
-
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -9,6 +8,7 @@ import fitz
 import httpx
 import uvicorn
 from fastapi import FastAPI, Response, File, Form, UploadFile
+from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -30,7 +30,7 @@ app = FastAPI(
 executor = ThreadPoolExecutor(max_workers=4)
 
 
-@app.post('/generate/from-file', description='通过文件生成')
+@app.post('/generate/from-files', description='通过文件生成(仅做测试)')
 async def generate_from_file(files: List[bytes] = File(),
                              qr_code: str = Form('code001', description='二维码内容'),
                              doc_no: str = Form('SO202305240001', description='工单号'),
@@ -62,6 +62,30 @@ async def generate_from_file(files: List[bytes] = File(),
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         return Response(content=byte_data, headers=headers, media_type="application/pdf")
+    except Exception as err:
+        print(repr(err))
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@app.post('/rotate/from-files', description='通过文件列表获取旋转角度(仅做测试)', response_class=ORJSONResponse)
+async def rotate_from_file(files: List[bytes] = File()):
+    try:
+        processor = Processor(source_files=files)
+        docs_rotates = processor.get_rotates_from_docs()
+        return ORJSONResponse(docs_rotates)
+    except Exception as err:
+        print(repr(err))
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@app.post('/rotate/from-urls', description='通过文件url列表获取旋转角度', response_class=ORJSONResponse)
+async def rotate_from_urls(file_urls: List[str]):
+    try:
+        processor = Processor(source_urls=file_urls)
+        docs_rotates = processor.get_rotates_from_docs()
+        return ORJSONResponse(docs_rotates)
     except Exception as err:
         print(repr(err))
         logger.exception(err)
@@ -109,7 +133,7 @@ async def generate_from_url(item: Item):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@app.post('/generate/from-urls', description='通过多个文件url生成')
+@app.post('/generate/from-urls', description='通过多个item(单个item可能包含多个文件)生成')
 async def generate_from_url(items: List[Item]):
     try:
         documents = []

@@ -42,6 +42,28 @@ class Processor(object):
         if not self.sources:
             raise RuntimeError(f'没有指定pdf文件')
 
+    def get_rotates_from_docs(self):
+        docs_rotates = []
+        for s_index, source in enumerate(self.sources):
+            document: Document = fitz.open("pdf", source)
+            # 如果是图片重新转换一次，以适配完整对象的正常使用
+            if not document.is_pdf:
+                try:
+                    document = fitz.open("pdf", document.convert_to_pdf())
+                except BaseException as err:
+                    logger.warn(repr(err))
+            # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
+            if document.has_annots():
+                try:
+                    document = fitz.open('pdf', document.convert_to_pdf())
+                except BaseException as e:
+                    logger.warn(f'处理注释失败: {repr(e)}')
+            page_rotates = []
+            for p_index, page in enumerate(document):
+                page_rotates.append(self._get_rotate_from_page(page, p_index, s_index))
+            docs_rotates.append({'doc_index': s_index, 'page_rotates': page_rotates})
+        return docs_rotates
+
     def set_generate_config(self,
                             qr_code: str,
                             doc_no: str,
@@ -237,7 +259,7 @@ class Processor(object):
                 # 获取页面应该回正的旋转角度
                 rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
                 # 标记遮罩区域
-                self._mask_page_content(p_index, usage_page)
+                self._mask_page_content(p_index, usage_page, rotate)
 
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
                 usage_page.set_rotation(0)
@@ -279,13 +301,16 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
-    def _mask_page_content(self, index: int, page: Page):
+    def _mask_page_content(self, index: int, page: Page, rotate: float = None):
         """
         遮罩页面内容
         :param index: 页码
         :param page: 要遮罩的页面
         :return:
         """
+        # _rotate = page.rotation
+        # if rotate:
+        # page.set_rotation(rotate)
         marks: list = self.marks
         if marks and len(marks) > index:
             # 当前页的多个遮罩区域list
@@ -309,8 +334,15 @@ class Processor(object):
                         response = get_url_file_for_retry(img_url)
                         if not response.is_success:
                             raise IOError(f'图片下载失败, url: {img_url}')
-                        # img = fitz.open(stream=response.content)
                         page.insert_image(rect, stream=response.content, keep_proportion=False)
+
+                        # img = Image.open(BytesIO(response.content))
+                        # # 创建缩略图
+                        # img.thumbnail((rect[2] - rect[0], rect[3] - rect[0]))
+                        # # 将 PIL 图像转换为 fitz.Pixmap 对象
+                        # pixmap = fitz.Pixmap(img)
+                        # page.insert_image(rect, pixmap, keep_proportion=False)
+        # page.set_rotation(_rotate)
         pass
 
     def _get_rotate_from_page(self, source_page: Page, page_index, source_index):
