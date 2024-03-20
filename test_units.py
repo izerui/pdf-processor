@@ -34,32 +34,39 @@ class TestTable(unittest.TestCase):
                 zoom = 1
                 # 矩形的左上、右下坐标数组 [x0,y0,x1,y1]
                 p = []
-                for i in [0, 0, 200, 200]:
+                for i in [0, 0, 500, 500]:
                     p.append(i / zoom)
 
-                # 获取可见页面大小
-                media_box = page.mediabox
-
                 # 真正对应未缩放的原始页面的矩形坐标区域
-                rect = fitz.Rect(float(p[0]), float(p[1]), float(p[2]) + 200, float(p[3]) + 200)
+                a, b, c, d, e, f = page.transformation_matrix
+                x0 = a * float(p[0]) + c * float(p[1]) + e
+                y0 = b * float(p[0]) + d * float(p[1]) + f
+                x1 = a * float(p[2]) + c * float(p[3]) + e
+                y1 = b * float(p[2]) + d * float(p[3]) + f
+                # rect = fitz.Rect(float(p[0]), float(p[1]), float(p[2]), float(p[3]))
+                rect = fitz.Rect(x0, y0, x1, y1)
 
                 # 矩阵旋转 https://pymupdf.readthedocs.io/en/latest/page.html#Page.rotation_matrix
-                rect = rect.transform(page.transformation_matrix)
+                # rect = rect.transform(page.transformation_matrix)
+                # 等同于: rect = rect * page.transformation_matrix
+
                 print(filename, f'旋转:【{page.rotation}】')
                 print(f'    插入坐标矩形:{rect}')
                 print(f'    变换矩阵:{page.transformation_matrix}')
                 print(f'    旋转矩阵:{page.rotation_matrix}')
                 print(f'    反旋矩阵:{page.derotation_matrix}')
 
-                page_rect = page.rect  # 获取页面矩形
+                # 获取可见页面大小
+                media_box = page.mediabox
                 # 获取缩放量和偏移量
-                scale = page_rect.width / page_rect.height
-                offset_x = page_rect.x0
-                offset_y = page_rect.y0
+                scale = media_box.width / media_box.height
+                offset_x = media_box.x0
+                offset_y = media_box.y0
 
                 print("         缩放量：", scale)
                 print("         偏移量 X：", offset_x)
                 print("         偏移量 Y：", offset_y)
+                print("         rect cropbox mediabox 是否一致：", page.rect == page.cropbox == page.mediabox)
 
                 # img_url = None
                 img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
@@ -69,7 +76,7 @@ class TestTable(unittest.TestCase):
                         raise IOError(f'图片下载失败, url: {img_url}')
                     # page.set_rotation(0)
                     img_pixmap = fitz.Pixmap(response.content)
-                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False)
+                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0)
                 else:
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
@@ -78,6 +85,6 @@ class TestTable(unittest.TestCase):
                         color=0  # line color
                     )
                     shape.commit()
-            doc.save(os.path.join(dir, f'__{p[0]}_{p[1]}_{p[2]}_{p[3]}_{filename}'))
+            doc.save(os.path.join(dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
 
     pass
