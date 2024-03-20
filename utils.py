@@ -6,7 +6,7 @@ import tempfile
 import uuid
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+logging.basicConfig(format=LOG_FORMAT, level=logging.WARN)
 logger = logging.getLogger()
 
 

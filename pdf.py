@@ -12,7 +12,7 @@ from qrcode.image.pil import PilImage
 from utils import logger, get_url_file_for_retry
 
 ## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
-debugger = False
+debugger = True
 
 
 class Processor(object):
@@ -74,7 +74,7 @@ class Processor(object):
                             doc_date: str,
                             process_flow: str = '',
                             marks_str: str = None,
-                            rotates: List[int] = None,
+                            rotates_str: str = None,
                             horizontal_layout: str = True
                             ):
         """
@@ -88,7 +88,7 @@ class Processor(object):
         :param doc_date: 交期
         :param process_flow: 工艺路线
         :param marks_str: 打码遮罩的区域集合字符串
-        :param rotates: 每页旋转的角度集合字符串
+        :param rotates: 每页旋转的角度列表
         :param horizontal_layout: 转换后目标是否横版
         :return:
         """
@@ -102,24 +102,43 @@ class Processor(object):
         self.process_flow = process_flow
         self.marks = None
         if marks_str:
-            # page之间空格
+            # 文件之间/
+            # page之间&
             # rect之间;
             # 坐标之间,
-            # sample = '10,2,4,5;4,2,1,6 100,20,40,50;14,22,11,16 102,23,44,55;41,22,13,64'
+            # sample = '10,2,4,5;4,2,1,6&100,20,40,50;14,22,11,16&102,23,44,55;41,22,13,64'
             self.marks = list(
+                map(lambda p: list(
+                    map(
+                        lambda x: list(
+                            map(
+                                lambda y: list(
+                                    map(
+                                        lambda z: z.strip(),
+                                        y.split('➍')
+                                    )
+                                ),
+                                x.split('➌')
+                            )
+                        ),
+                        p.split('➋')
+                    )
+                ), marks_str.split('➊'))
+            )
+        self.rotates = None
+        if rotates_str:
+            # 文件之间;
+            # 旋转角度之间,
+            # sample = '-90➋270➋0➋180➊0➋0➋270'
+            self.rotates = list(
                 map(
                     lambda x: list(
                         map(
-                            lambda y: list(
-                                map(
-                                    lambda z: z.strip(),
-                                    y.split(',')
-                                )
-                            ),
-                            x.split(';')
+                            lambda y: float(y),
+                            x.split('➋')
                         )
                     ),
-                    marks_str.split('&')
+                    rotates_str.split('➊')
                 )
             )
         self.horizontal_layout = horizontal_layout
@@ -256,11 +275,18 @@ class Processor(object):
                 r2 = fitz.Rect(0, self.header_height, new_page.rect.width,
                                new_page.rect.height)
                 new_page.show_pdf_page(r1, header_document, 0)
-                # 获取页面应该回正的旋转角度
-                rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
+                # 转横版，需要的旋转角度
+                rotate = None
+                # 如果传递进来的有旋转角度,则优先使用
+                if self.rotates and len(self.rotates) > s_index:
+                    pages_rotates = self.rotates[s_index]
+                    if pages_rotates and len(pages_rotates) > p_index:
+                        rotate = pages_rotates[p_index]
+                else:
+                    # 获取页面应该回正的旋转角度
+                    rotate = self._get_rotate_from_page(usage_page, p_index, s_index)
                 # 标记遮罩区域
-                self._mask_page_content(p_index, usage_page, rotate)
-
+                self._mask_page_content(s_index, p_index, usage_page)
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
                 usage_page.set_rotation(0)
                 new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotate, keep_proportion=True,
@@ -270,8 +296,8 @@ class Processor(object):
                 if debugger:
                     # ######### 增加输出原页面 测试用
                     # 按原页面宽高设置新页面
-                    sWidth = usage_page.bound().width
-                    sHeight = usage_page.bound().height
+                    sWidth = usage_page.cropbox.width
+                    sHeight = usage_page.cropbox.height
                     print(f'f:{s_index + 1} p:{p_index + 1} w:{sWidth} h:{sHeight}')
                     sPage = target_pdf.new_page(width=sWidth, height=sHeight)
                     # 按源页面旋转度数复制
@@ -279,7 +305,7 @@ class Processor(object):
                     # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
                     # https://pymupdf.readthedocs.io/en/latest/page.html#Page.show_pdf_page
                     sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), usage_pdf, p_index, keep_proportion=True,
-                                        rotate=usage_page.rotation, clip=usage_page.bound())
+                                        rotate=rotate, clip=usage_page.cropbox)
                     ######### 增加输出原页面 测试用
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
@@ -301,48 +327,48 @@ class Processor(object):
             target_pdf.save(os.path.join(folder, f"target-{int(time.time())}.pdf"))
         return target_pdf
 
-    def _mask_page_content(self, index: int, page: Page, rotate: float = None):
+    def _mask_page_content(self, s_index: int, p_index: int, page: Page):
         """
         遮罩页面内容
-        :param index: 页码
+        :param s_index: 文件索引
+        :param p_index: 所属文件的页码
         :param page: 要遮罩的页面
         :return:
         """
-        # _rotate = page.rotation
-        # if rotate:
-        # page.set_rotation(rotate)
-        marks: list = self.marks
-        if marks and len(marks) > index:
-            # 当前页的多个遮罩区域list
-            page_marks: list = marks[index]
-            if page_marks and len(page_marks) > 0:
-                for rect_mark in page_marks:
-                    assert len(
-                        rect_mark) >= 4, '遮罩格式不对,坐标及图片url以逗号连接[x0,y0,x1,y1,img_url], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以&连接[page0&page1]! 示例: 10,2,4,5;4,2,1,6&100,20,40,50;14,22,11,16&102,23,44,55;41,22,13,64'
-                    rect = fitz.Rect(float(rect_mark[0]), float(rect_mark[1]), float(rect_mark[2]), float(rect_mark[3]))
-                    # rect = rect * page.rotation_matrix
-                    if len(rect_mark) == 4:  # 添加遮罩矩形区域
-                        shape: Shape = page.new_shape()
-                        shape.draw_rect(rect=rect)
-                        shape.finish(
-                            fill=0,  # fill color
-                            color=0  # line color
-                        )
-                        shape.commit()
-                    elif len(rect_mark) == 5:  # 用图片拉伸填充
-                        img_url = rect_mark[4]
-                        response = get_url_file_for_retry(img_url)
-                        if not response.is_success:
-                            raise IOError(f'图片下载失败, url: {img_url}')
-                        page.insert_image(rect, stream=response.content, keep_proportion=False)
+        # 查找指定文件索引的遮罩页面内容数组
+        if self.marks and len(self.marks) > s_index:
+            # 指定文件的每页数组
+            page_marks: list = self.marks[s_index]
+            if page_marks and len(page_marks) > p_index:
+                # 当前页的多个遮罩区域list
+                rect_marks: list = page_marks[p_index]
+                if rect_marks and len(rect_marks) > 0:
+                    for rect_mark in rect_marks:
+                        assert len(
+                            rect_mark) >= 4, '遮罩格式不对,坐标及图片url以逗号连接[x0,y0,x1,y1,img_url], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以&连接[page0&page1], 每个文件以/连接[file0/file1]! 示例: 10,2,4,5;4,2,1,6&100,20,40,50;14,22,11,16&102,23,44,55;41,22,13,64/10,2,4,5;4,2,1,6&100,20,40,50;14,22,11,16'
+                        rect = fitz.Rect(float(rect_mark[0]), float(rect_mark[1]), float(rect_mark[2]),
+                                         float(rect_mark[3]))
+                        if len(rect_mark) == 4:  # 添加遮罩矩形区域
+                            shape: Shape = page.new_shape()
+                            shape.draw_rect(rect=rect)
+                            shape.finish(
+                                fill=0,  # fill color
+                                color=0  # line color
+                            )
+                            shape.commit()
+                        elif len(rect_mark) == 5:  # 用图片拉伸填充
+                            img_url = rect_mark[4]
+                            response = get_url_file_for_retry(img_url)
+                            if not response.is_success:
+                                raise IOError(f'图片下载失败, url: {img_url}')
+                            page.insert_image(rect, stream=response.content, keep_proportion=False)
 
-                        # img = Image.open(BytesIO(response.content))
-                        # # 创建缩略图
-                        # img.thumbnail((rect[2] - rect[0], rect[3] - rect[0]))
-                        # # 将 PIL 图像转换为 fitz.Pixmap 对象
-                        # pixmap = fitz.Pixmap(img)
-                        # page.insert_image(rect, pixmap, keep_proportion=False)
-        # page.set_rotation(_rotate)
+                            # img = Image.open(BytesIO(response.content))
+                            # # 创建缩略图
+                            # img.thumbnail((rect[2] - rect[0], rect[3] - rect[0]))
+                            # # 将 PIL 图像转换为 fitz.Pixmap 对象
+                            # pixmap = fitz.Pixmap(img)
+                            # page.insert_image(rect, pixmap, keep_proportion=False)
         pass
 
     def _get_rotate_from_page(self, source_page: Page, page_index, source_index):

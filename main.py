@@ -41,9 +41,9 @@ async def generate_from_file(files: List[bytes] = File(),
                              doc_date: str = Form('2024-02-02', description='交期'),
                              process_flow: str = Form('生产->包装->装箱', description='工艺路线'),
                              marks_str: str = Form(
-                                 '497,191,586,347,https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg',
-                                 description='遮罩区域: 坐标及图片url以逗号连接[x0,y0,x1,y1,img_url], 多个遮罩块以;连接[rect0;rect1], 每页的遮罩数组以&连接[page0&page1]!'),
-                             rotates: str = Form('', description='每页的旋转角度')):
+                                 '22➍23➍182➍103➍https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg',
+                                 description='多文件,多页,多遮罩区域: 坐标及图片url以➍连接[x0➍y0➍x1➍y1➍img_url], 多个遮罩块以➌连接[rect0➌rect1], 每页的遮罩数组以➋连接[page0➋page1], 每个文件以➊连接[file0➊file1]!'),
+                             rotates_str: str = Form('', description='多文件,每页的旋转角度, 每页以➋连接, 每文件以➊连接')):
     try:
         processor = Processor(source_files=files)
         processor.set_generate_config(
@@ -56,6 +56,7 @@ async def generate_from_file(files: List[bytes] = File(),
             doc_date=doc_date,
             process_flow=process_flow,
             marks_str=marks_str,
+            rotates_str=rotates_str,
             horizontal_layout=True
         )
         byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
@@ -104,7 +105,7 @@ class Item(BaseModel):
     doc_date: str
     process_flow: str | None = None
     marks_str: str | None = None
-    rotates: List[int] | None = None
+    rotates_str: str | None = None
 
 
 @app.post('/generate/from-url', description='通过文件url生成')
@@ -121,6 +122,7 @@ async def generate_from_url(item: Item):
             doc_date=item.doc_date,
             process_flow=item.process_flow,
             marks_str=item.marks_str,
+            rotates_str=item.rotates_str,
             horizontal_layout=True
         )
         byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
@@ -149,6 +151,7 @@ async def generate_from_url(items: List[Item]):
                 doc_date=item.doc_date,
                 process_flow=item.process_flow,
                 marks_str=item.marks_str,
+                rotates_str=item.rotates_str,
                 horizontal_layout=True
             )
             document = processor.generate_document()
@@ -203,6 +206,7 @@ def _generate_document_thread(index, item, request, process_bar):
             doc_date=item.doc_date,
             process_flow=item.process_flow,
             marks_str=item.marks_str,
+            rotates_str=item.rotates_str,
             horizontal_layout=True
         )
         document = processor.generate_document()
