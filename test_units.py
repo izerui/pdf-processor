@@ -62,7 +62,7 @@ class TestTable(unittest.TestCase):
                         shape.commit()
 
                     # page.show_pdf_page(mark_page.cropbox, mark_pdf, rotate=page.rotation, keep_proportion=True, clip=page.cropbox, overlay=True)
-                    mark_page.show_pdf_page(page.cropbox, doc, rotate=mark_page.rotation, keep_proportion=True,
+                    mark_page.show_pdf_page(page.cropbox, doc, keep_proportion=True,
                                             clip=mark_page.cropbox, overlay=True)
 
                 mark_pdf.save(os.path.join(dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
