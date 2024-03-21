@@ -2,7 +2,7 @@ import os
 import unittest
 
 import fitz
-from fitz import Page
+from fitz import Page, Document
 from fitz.utils import Shape
 
 from utils import get_url_file_for_retry
@@ -27,9 +27,13 @@ class TestTable(unittest.TestCase):
             file_path = os.path.join(dir, filename)
             if not os.path.isfile(file_path) or not file_path.endswith('.pdf'):
                 continue
+            # 遮罩doc
+            mark_pdf: Document = fitz.open()
             with fitz.open(file_path) as doc:
                 for index, page in enumerate(doc):
                     page: Page = page
+                    # 遮罩页, 使用源页面未旋转前的矩形区域
+                    mark_page = mark_pdf.new_page(width=page.cropbox.width, height=page.cropbox.height)
                     # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                     zoom = 1
                     # 矩形的左上、右下坐标数组 [x0,y0,x1,y1]
@@ -70,14 +74,27 @@ class TestTable(unittest.TestCase):
                             raise IOError(f'图片下载失败, url: {img_url}')
                         # page.set_rotation(0)
                         img_pixmap = fitz.Pixmap(response.content)
-                        page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0)
+                        mark_page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0)
                     else:
-                        shape: Shape = page.new_shape()
+                        shape: Shape = mark_page.new_shape()
                         shape.draw_rect(rect=rect)
                         shape.finish(
                             fill=0,  # fill color
                             color=0  # line color
                         )
                         shape.commit()
-                doc.save(os.path.join(dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
+
+                    # page.show_pdf_page(mark_page.cropbox, mark_pdf, rotate=page.rotation, keep_proportion=True, clip=page.cropbox, overlay=True)
+                    rotation = page.rotation
+                    # 合并前设置两个页面旋转为0，保证页面一致
+                    page.set_rotation(0)
+                    mark_page.show_pdf_page(page.cropbox, doc, keep_proportion=True, rotate=0,
+                                            clip=mark_page.cropbox, overlay=True)
+                    # 合并后页面恢复原来的旋转角度
+                    page.set_rotation(rotation)
+                    mark_page.set_rotation(page.rotation)
+                # doc.save(os.path.join(dir, f'__doc_|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
+            mark_pdf.save(os.path.join(dir, f'__mark_|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
+            mark_pdf.close()
+
     pass
