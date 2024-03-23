@@ -29,6 +29,9 @@ sequenceDiagram
 * pip install tqdm
 * ~~pip install matplotlib~~
 
+压力测试工具:
+* pip install locust
+
 可选支持参考:
 https://pymupdf.readthedocs.io/en/latest/installation.html#notes
 

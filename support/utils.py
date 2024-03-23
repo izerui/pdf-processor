@@ -1,14 +1,19 @@
 import logging
-import time
-import httpx
 import os
 import tempfile
+import time
 import uuid
 
+import httpx
+
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-logging.basicConfig(format=LOG_FORMAT, level=logging.WARN)
+logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 logger = logging.getLogger()
 
+a4_dpi = 150
+a4_width = 1754
+a4_height = 1240
+header_height = 180
 
 def log_time(func):
     def wrapper(*args, **kwargs):
@@ -23,19 +28,22 @@ def log_time(func):
 
     return wrapper
 
-def get_url_file_for_retry(url):
+
+async def get_url_file_retry(url, retry_count: int = 5):
     """
     从url获取文件内容，重试5次
     :param url: 文件的url地址
     :return:
     """
-    for _ in range(5):
-        try:
-            resp = httpx.get(url)
-            return resp
-        except Exception:
-            continue
-    raise RuntimeError(f'{url} 文件下载失败')
+    async with httpx.AsyncClient() as client:
+        for _ in range(retry_count):
+            try:
+                resp = await client.get(url)
+                return resp
+            except Exception:
+                continue
+        raise RuntimeError(f'{url} 文件下载失败')
+
 
 def read_temp_file_instant(callback):
     """

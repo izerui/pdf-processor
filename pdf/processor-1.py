@@ -9,13 +9,14 @@ from fitz import Document, Font, Page
 from fitz.utils import Shape
 from qrcode.image.pil import PilImage
 
-from utils import logger, get_url_file_for_retry
+from support import logger, get_url_file_retry, log_time
 
 ## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
-debugger = True
+debugger = False
 
 
 class Processor(object):
+    @log_time
     def __init__(self,
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None):
@@ -35,34 +36,12 @@ class Processor(object):
         if not self.sources:
             self.sources = []
             for source_url in source_urls:
-                response = get_url_file_for_retry(source_url)
+                response = get_url_file_retry(source_url)
                 if not response.is_success:
                     raise IOError(f'文件下载失败, url: {source_url}')
                 self.sources.append(response.content)
         if not self.sources:
             raise RuntimeError(f'没有指定pdf文件')
-
-    def get_rotates_from_docs(self):
-        docs_rotates = []
-        for s_index, source in enumerate(self.sources):
-            document: Document = fitz.open("pdf", source)
-            # 如果是图片重新转换一次，以适配完整对象的正常使用
-            if not document.is_pdf:
-                try:
-                    document = fitz.open("pdf", document.convert_to_pdf())
-                except BaseException as err:
-                    logger.warn(repr(err))
-            # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
-            if document.has_annots():
-                try:
-                    document = fitz.open('pdf', document.convert_to_pdf())
-                except BaseException as e:
-                    logger.warn(f'处理注释失败: {repr(e)}')
-            page_rotates = []
-            for p_index, page in enumerate(document):
-                page_rotates.append(self._get_rotate_from_page(page, p_index, s_index))
-            docs_rotates.append({'doc_index': s_index, 'page_rotates': page_rotates})
-        return docs_rotates
 
     def set_generate_config(self,
                             qr_code: str,
@@ -148,16 +127,8 @@ class Processor(object):
         self.header_height = 180
         pass
 
-    def _get_a4_width_height(self):
-        """
-        获取页面宽高
-        :return:
-        """
-        # DPI: 150
-        a4_width = 1240
-        a4_height = 1754
-        return (a4_height, a4_width) if self.horizontal_layout else (a4_width, a4_height)
 
+    @log_time
     def _with_header_document(self, callback):
         """
         生成header头信息pdf
@@ -238,6 +209,7 @@ class Processor(object):
             # pdf_bytes = doc.convert_to_pdf()
             # return pdf_bytes
 
+    @log_time
     def _merge_document(self, header_document):
         # pdfs = list(map(lambda x: fitz.open('pdf', x), sources))
         # pages = list(map(lambda pdf: pdf[0], pdfs))
@@ -261,13 +233,17 @@ class Processor(object):
             usage_pdf: Document = source_pdf
             # 判断页面是否包含注释,如果包含注释则转换成另一个pdf再利用
             # 注意: 如果发生了二次转换, 页面会丢失旋转角度
-            if source_pdf.has_annots():
-                try:
-                    copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
-                    usage_pdf = copy_pdf
-                except BaseException as e:
-                    logger.warn(f'处理注释失败: {repr(e)}')
+            source_page_rotations = []
+            for index, page in enumerate(usage_pdf):
+                source_page_rotations.append(page.rotation)
+            try:
+                copy_pdf = fitz.open('pdf', source_pdf.convert_to_pdf())
+                usage_pdf = copy_pdf
+            except BaseException as e:
+                logger.warn(f'处理注释失败: {repr(e)}')
             for p_index, usage_page in enumerate(usage_pdf):
+                # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去
+                usage_page.set_rotation(source_page_rotations[p_index])
                 # source_page = source_pdf[p_index]
                 # print(usage_page.rect.width, usage_page.rect.height)
                 new_page = target_pdf.new_page(width=self.layout_width, height=self.layout_height)
@@ -296,16 +272,13 @@ class Processor(object):
                 if debugger:
                     # ######### 增加输出原页面 测试用
                     # 按原页面宽高设置新页面
-                    sWidth = usage_page.cropbox.width
-                    sHeight = usage_page.cropbox.height
-                    print(f'f:{s_index + 1} p:{p_index + 1} w:{sWidth} h:{sHeight}')
-                    sPage = target_pdf.new_page(width=sWidth, height=sHeight)
+                    sPage = target_pdf.new_page(width=usage_page.cropbox.width, height=usage_page.cropbox.height)
                     # 按源页面旋转度数复制
                     # cropbox 页面裁剪框
                     # fitz.Rect(0, 0, sWidth, sHeight) 也可以换成 usage_page.bound()
                     # https://pymupdf.readthedocs.io/en/latest/page.html#Page.show_pdf_page
-                    sPage.show_pdf_page(fitz.Rect(0, 0, sWidth, sHeight), usage_pdf, p_index, keep_proportion=True,
-                                        rotate=rotate, clip=usage_page.cropbox)
+                    sPage.show_pdf_page(usage_page.cropbox, usage_pdf, p_index, keep_proportion=True, clip=usage_page.cropbox)
+                    sPage.set_rotation(source_page_rotations[p_index])
                     ######### 增加输出原页面 测试用
             if debugger:
                 folder = os.path.join(self.current_file_path, 'tmp')
@@ -358,7 +331,7 @@ class Processor(object):
                             shape.commit()
                         elif len(rect_mark) == 5:  # 用图片拉伸填充
                             img_url = rect_mark[4]
-                            response = get_url_file_for_retry(img_url)
+                            response = get_url_file_retry(img_url)
                             if not response.is_success:
                                 raise IOError(f'图片下载失败, url: {img_url}')
                             page.insert_image(rect, stream=response.content, keep_proportion=False)
@@ -371,54 +344,7 @@ class Processor(object):
                             # page.insert_image(rect, pixmap, keep_proportion=False)
         pass
 
-    def _get_rotate_from_page(self, source_page: Page, page_index, source_index):
-        """
-        从源页面获取旋转角度
-        :param source_page: 源页面
-        :param page_index: 原页面索引
-        :param source_index: 原文件索引
-        :return: 旋转角度
-        """
-        # Maxtrix 解析: https://pymupdf.readthedocs.io/en/latest/matrix.html
-        # 其他解析(通俗易懂):
-        # * https://docs.godotengine.org/zh-cn/4.x/tutorials/math/matrices_and_transforms.html (这个先看完，把变换矩阵理解透)
-        # * https://github.com/alvarto/blog/issues/1  (建议看这个更明白)
-        # * https://docs.aspose.com/svg/zh/net/drawing-basics/transformation-matrix/  (这个可以尝试自己获取一个svg进行修改测试) 参看文件: `transform2d.svg`
-        # a: x方向缩放(宽度)。例如，如果值为0.5，则将宽度缩小2倍。如果a < 0，将(额外地)发生左右翻转。
-        # b: 产生剪切效果: 每个点(x, y)将变成点(x, y - b * x)。因此，水平线会“倾斜”。
-        # c: 产生剪切效果: 每个点(x, y)都会变成点(x - c * y, y)，因此垂直线会“倾斜”。
-        # d: y方向缩放(高度)。例如，如果值为1.5，则将高度拉伸50 %。如果d < 0，将(额外地)发生上下翻转。
-        # e: 产生水平偏移效果: 每个Point(x, y)都会变成Point(x + e, y)， e的正(负)值会向右(左)偏移。
-        # f: 产生垂直位移效应: 每个Point(x, y)都会变成Point(x, y - f)， f的正(负)值会向下(上)移动。
-        # 其他一些资料:
-        # 四元数在线可视化转换网站: https://quaternions.online/
-        # 三维在线旋转变换网站: https://www.andre-gaschler.com/rotationconverter/
-        # 二维 Rotation Conversion Tool: https://danceswithcode.net/engineeringnotes/quaternions/conversion_tool.html
 
-        print(
-            f'文件{source_index + 1}  第{page_index + 1}页  宽:{source_page.mediabox.width}  高:{source_page.mediabox.height}  旋转:{source_page.rotation}  rotation_matrix:{source_page.rotation_matrix}  transformation_matrix:{source_page.transformation_matrix}')
-
-        # 原始页面的长宽  注意： cropbox 为原始页面，  page.bound() 为set_rotation后的看到的页面，所以不能用bound() 因为外部使用页面拼接的时候是使用原始页面，最后合并时候才旋转
-        page_rect = source_page.cropbox
-
-        # 原页面是否是横版
-        is_horizontal: bool = page_rect.width > page_rect.height
-        rotate = 0
-        # 如果默认是横版，不做90转换, 如果是竖版，需要旋转90度的奇数倍数
-        if not is_horizontal:
-            if (int(source_page.rotation / 90)) % 2 == 1:
-                rotate = -source_page.rotation
-            else:
-                rotate = -source_page.rotation
-                rotate += -90  # 竖版一以右侧为底， 如果是+90 则是以竖版的左侧为底
-
-        # 如果发生了基于x轴的上线翻转，则额外加180度
-        if source_page.rotation_matrix.d < 0:
-            rotate += 180
-
-        if rotate != 0:
-            print(f'    > 转横版,需旋转 {rotate}')
-        return rotate
 
     def generate_pdf_bytes(self):
         """
@@ -446,73 +372,3 @@ class Processor(object):
         """
         with self.generate_document() as document:
             document.save(filename=file_path)
-
-
-class Combiner(object):
-
-    def __init__(self, documents: List[Document]):
-        self.documents = documents
-
-    def merge_to_pdf_bytes(self):
-        """
-        合并多个pdf文件,返回合并后的文件字节数组
-        :return:
-        """
-        with fitz.open() as target_pdf:
-            for index, document in enumerate(self.documents):
-                if not document:
-                    raise BaseException(f'第{index + 1}个文件出错!')
-                target_pdf.insert_pdf(document)
-                document.close()
-            # target_pdf.save(os.path.join(self.current_file_path, "output", f"newpdf-{int(time.time())}.pdf"))
-            pdf_bytes = target_pdf.convert_to_pdf()
-            return pdf_bytes
-
-    def save_to_filepath(self, file_path):
-        """
-        合并多个pdf文件, 并写入到file_path中
-        :return:
-        """
-        # 输出文档的包含字体文件列表
-        self._output_fonts(self.documents)
-        with fitz.open() as target_pdf:
-            for index, document in enumerate(self.documents):
-                # 另一种实现:
-                # for index, page in enumerate(document):
-                #     page_bound = page.bound()
-                #     new_page: Page = target_pdf.new_page(width=page_bound.width, height=page_bound.height)
-                #     new_page.show_pdf_page(page_bound, document, index, keep_proportion=True,
-                #                         rotate=page.rotation, clip=page_bound)
-                #     pass
-                if not document:
-                    raise BaseException(f'第{index + 1}个文件出错!')
-                try:
-                    # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
-                    document.subset_fonts()
-                except BaseException as err:
-                    logger.warn(f'文档创建字体子集: {repr(err)}')
-
-                target_pdf.insert_pdf(docsrc=document)  # , annots=False, links=False
-                document.close()
-            # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
-            # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-            try:
-                target_pdf.subset_fonts()
-            except BaseException as err:
-                logger.warn(f'合并后的文档创建字体子集: {repr(err)}')
-            target_pdf.save(file_path)
-            if debugger:
-                folder = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'tmp')
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                target_pdf.save(os.path.join(folder, f"combiner-{int(time.time())}.pdf"))
-
-    def _output_fonts(self, documents):
-        for d_index, document in enumerate(documents):
-            print(f'文档{d_index + 1}:')
-            for p_index, page in enumerate(document):
-                # 输出页面字体列表
-                fonts = document.get_page_fonts(pno=p_index, full=True)
-                print(f'    页面{p_index + 1},包含的字体:')
-                for font in fonts:
-                    print(f'        {font}')
