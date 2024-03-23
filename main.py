@@ -8,8 +8,8 @@ from fastapi import FastAPI, Response
 from fastapi.responses import ORJSONResponse
 from fitz import Document
 
-from pdf import Reader, Editor, Processor
 from model import File, SimpleFile, Item
+from pdf import Reader, Editor, Processor
 from support import logger
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 executor = ThreadPoolExecutor(max_workers=4)
+
 
 # @app.post('/generate/from-files', description='通过文件生成(仅做测试)')
 # async def generate_from_file(files: List[bytes] = File(),
@@ -83,7 +84,7 @@ async def rotate_from_urls(files: List[SimpleFile]):
         processor = Processor()
         for index, sfile in enumerate(files):
             file = File(name=sfile.name, url=sfile.url)
-            reader: Reader = await processor.create_reader(file)
+            reader: Reader = processor.create_reader(file)
             rotations = reader.get_rotations_for_cropbox()
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
@@ -121,24 +122,42 @@ async def rotate_from_urls(files: List[SimpleFile]):
 #         return Response(content=repr(err), media_type="text/html", status_code=500)
 #
 #
+
 @app.post('/generate/from-urls', description='通过多个item(单个item可能包含多个文件)生成')
 async def generate_from_url(items: List[Item]):
     try:
+        s_time = time.time()
+        file_count = 0
         # 要生成的目的pdf
         target_doc = fitz.open()
         processor: Processor = Processor()
+        # 并发下载文件
+        processor.wrap_file_bytes_for_items(items)
         for item in items:
+            file_count += len(item.files)
             item.wrap_random_when_qr_string()
+            # 第一种写法
             # 每个item的头部区域pdf
+            time0 = time.time()
             header_doc: Document = processor.generate_header_doc_without_close(item)
             for file in item.files:
-                source_editor: Editor = await processor.create_editor(file)
+                source_editor: Editor = processor.create_editor(file.byte_array)
                 # 合并到target_doc
-                source_editor.wrap_pdf_with_header(header_doc, target_doc)
+                source_editor.wrap_pdf_with_header(file, header_doc, target_doc)
             header_doc.close()
+            time1 = time.time()
+            logger.info(f'=======================================> 【处理单个item】 耗时: {time1 - time0}秒')
+
+            # 第二种写法
+            # 每个item生成的独立的文档
+            # target_item_doc = processor.generate_item_doc_without_close(item)
+            # target_doc.insert_pdf(docsrc=target_item_doc)
+
         target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
+        e_time = time.time()
+        logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {e_time - s_time}秒')
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))

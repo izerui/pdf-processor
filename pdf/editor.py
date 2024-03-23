@@ -1,8 +1,10 @@
+import time
+
 from fitz import Document, fitz
 
 from model import File
 from pdf import Reader
-from support import logger, a4_width, a4_height, header_height
+from support import logger, a4_width, a4_height, header_height, log_time
 
 debugger = False
 
@@ -12,15 +14,22 @@ class Editor(Reader):
     pdf修改器
     """
 
-    def __init__(self, file: File):
+    def __init__(self, bytes: bytes):
         """
         构造函数
-        :param file: 单个pdf请求对象
+        :param bytes: 单个pdf对象的内容字节数组
         """
-        super().__init__(file)
+        super().__init__(bytes)
 
-    def wrap_pdf_with_header(self, header_doc: Document, target_doc: Document):
-        assert self.doc, '文档未初始化,请调用init_doc()方法初始化!'
+    @log_time
+    def wrap_pdf_with_header(self, file: File, header_doc: Document, target_doc: Document):
+        """
+        将头内容和源内容合并到target_doc文件中
+        :param file: 源内容文件的其他参数载体,实际使用还是初始化的self.doc
+        :param header_doc: 头文件
+        :param target_doc: 目标文件
+        :return:
+        """
         usage_pdf: Document = self.doc
         # 转换前先记录下原始pdf的rotations, 因为发生`convert_to_pdf`后，旋转角度会丢失
         source_page_rotations = []
@@ -45,8 +54,8 @@ class Editor(Reader):
             # 转横版 (针对`cropbox`区域，在贴到下部区域前要旋转的角度)
             rotation = 0.0
             # 如果传递进来的有旋转角度,则优先使用(如果传递的旋转角度是针对原始pdf未旋转页面，则不用特殊处理)
-            if self.file.rotations and len(self.file.rotations) > p_index:
-                rotation = self.file.rotations[p_index]
+            if file.rotations and len(file.rotations) > p_index:
+                rotation = file.rotations[p_index]
             else:
                 # 获取页面应该回正的旋转角度
                 rotation = self.get_page_roration_for_cropbox(p_index)
@@ -54,8 +63,10 @@ class Editor(Reader):
             # self._mask_page_content(s_index, p_index, usage_page)
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
             usage_page.set_rotation(0)
+            time0 = time.time()
             new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotation, keep_proportion=True,
                                    clip=usage_page.cropbox)
+            print('show_pdf_page耗时: ', time.time() - time0)
             # 清理无效链接，针对页面缩容
             # new_page.clean_contents()
 

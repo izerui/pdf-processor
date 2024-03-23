@@ -1,17 +1,23 @@
+import concurrent
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 
 import qrcode
 from fitz import fitz, Font, Document
 from qrcode.image.pil import PilImage
+from tqdm import tqdm
 
 from model import Item, File
 from pdf import Editor
 from pdf import Reader
-from support import a4_width, header_height, logger, read_temp_file_instant
+from support import a4_width, header_height, logger, log_time, get_url_content_retry
 
 debugger = False
+
+# 文件下载线程池
+download_executor = ThreadPoolExecutor(max_workers=200)
 
 
 class Processor(object):
@@ -23,6 +29,7 @@ class Processor(object):
         """
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
 
+    @log_time
     def generate_header_doc_without_close(self, item: Item) -> Document:
         """
         生成header头信息pdf对象
@@ -103,7 +110,7 @@ class Processor(object):
         # pdf_bytes = doc.convert_to_pdf()
         # return pdf_bytes
 
-    async def generate_doc_without_close(self, item: Item) -> Document:
+    def generate_item_doc_without_close(self, item: Item) -> Document:
         """
         生成独立包含header和原页面的文档
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
@@ -113,12 +120,11 @@ class Processor(object):
         # 每个item的头部区域pdf
         header_doc: Document = self.generate_header_doc_without_close(item)
         for file in item.files:
-            await self.wrap_pdf_with_header(file, header_doc, target_item_doc)
+            self.wrap_pdf_with_header(file, header_doc, target_item_doc)
         header_doc.close()
         return target_item_doc
 
-
-    async def wrap_pdf_with_header(self, file: File, header_doc: Document, target_doc: Document):
+    def wrap_pdf_with_header(self, file: File, header_doc: Document, target_doc: Document):
         """
         将file和 headerdoc 合并成一个新的页面
         :param file: 源文件
@@ -126,31 +132,28 @@ class Processor(object):
         :param target_doc: 目标文件
         :return:
         """
-        source_editor: Editor = await self.create_editor(file)
+        source_editor: Editor = self.create_editor(file)
         # 合并到target_doc
-        source_editor.wrap_pdf_with_header(header_doc, target_doc)
+        source_editor.wrap_pdf_with_header(file, header_doc, target_doc)
 
-
-    async def create_reader(self, file: File) -> Reader:
+    def create_reader(self, bytes: bytes) -> Reader:
         """
         创建一个pdf文件读取器
         对象销毁的时候会自动关闭文件打开的句柄
-        :param file: pdf文件
+        :param bytes: pdf文件内容字节数组
         :return:
         """
-        reader = Reader(file)
-        await reader.init_doc()
+        reader = Reader(bytes)
         return reader
 
-    async def create_editor(self, file: File) -> Editor:
+    def create_editor(self, bytes: bytes) -> Editor:
         """
         创建一个pdf文件编辑器(包含查看器功能)
         对象销毁的时候会自动关闭文件打开的句柄
-        :param file:
+        :param bytes: pdf文件内容字节数组
         :return:
         """
-        editor = Editor(file)
-        await editor.init_doc()
+        editor = Editor(bytes)
         return editor
 
     def get_doc_bytes_and_close(self, doc: Document):
@@ -164,7 +167,30 @@ class Processor(object):
             doc.subset_fonts()
         except BaseException as err:
             logger.warn(f'文档创建字体子集: {repr(err)}')
-        # pdf_bytes = doc.convert_to_pdf()
-        pdf_bytes = read_temp_file_instant(lambda x: doc.save(x))
+        pdf_bytes = doc.convert_to_pdf()
+        # pdf_bytes = read_temp_file_instant(lambda x: doc.save(x))
         doc.close()
         return pdf_bytes
+
+    @log_time
+    def wrap_file_bytes_for_items(self, items: list[Item]):
+        """
+        批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
+        :param items:
+        :return:
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            for item in items:
+                for f_index, file in enumerate(item.files):
+                    future = pool.submit(self.wrap_file_bytes_for_file, file)
+                    futures.append(future)
+            process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                process_bar.update(1)
+                pass
+        pass
+
+    def wrap_file_bytes_for_file(self, file: File):
+        file.byte_array = get_url_content_retry(file.url, 5)
+        pass

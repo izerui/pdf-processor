@@ -9,7 +9,7 @@ from fitz import Document, Font, Page
 from fitz.utils import Shape
 from qrcode.image.pil import PilImage
 
-from support import logger, get_url_file_retry, log_time
+from support import logger, get_url_content_retry, log_time
 
 ## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
 debugger = False
@@ -36,7 +36,7 @@ class Processor(object):
         if not self.sources:
             self.sources = []
             for source_url in source_urls:
-                response = get_url_file_retry(source_url)
+                response = get_url_content_retry(source_url)
                 if not response.is_success:
                     raise IOError(f'文件下载失败, url: {source_url}')
                 self.sources.append(response.content)
@@ -331,7 +331,7 @@ class Processor(object):
                             shape.commit()
                         elif len(rect_mark) == 5:  # 用图片拉伸填充
                             img_url = rect_mark[4]
-                            response = get_url_file_retry(img_url)
+                            response = get_url_content_retry(img_url)
                             if not response.is_success:
                                 raise IOError(f'图片下载失败, url: {img_url}')
                             page.insert_image(rect, stream=response.content, keep_proportion=False)

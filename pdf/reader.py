@@ -1,7 +1,9 @@
+import time
+
 from fitz import Document, Page, fitz
 
 from model import File
-from support import logger, get_url_file_retry, log_time
+from support import logger, get_url_content_retry, log_time
 
 
 class Reader(object):
@@ -9,19 +11,12 @@ class Reader(object):
     pdf读取器
     """
 
-    def __init__(self, file: File):
+    def __init__(self, bytes: bytes):
         """
         构造函数
-        :param file: 单个pdf对象
+        :param bytes: 单个pdf对象的内容字节数组
         """
-        self.file = file
-
-    async def init_doc(self):
-        """
-        从file初始化文档对象
-        :return:
-        """
-        self.doc = await self.get_doc_by_url(self.file.url)
+        self.doc = fitz.open("pdf", bytes)
 
     @log_time
     async def get_doc_by_url(self, url: str) -> Document:
@@ -30,7 +25,7 @@ class Reader(object):
         :param url: pdf文件下载url
         :return: document
         """
-        response = await get_url_file_retry(url)
+        response = await get_url_content_retry(url)
         if not response.is_success:
             raise IOError(f'文件下载失败, url: {url}')
         pdf: Document = fitz.open("pdf", response.content)
@@ -67,17 +62,15 @@ class Reader(object):
         # 三维在线旋转变换网站: https://www.andre-gaschler.com/rotationconverter/
         # 二维 Rotation Conversion Tool: https://danceswithcode.net/engineeringnotes/quaternions/conversion_tool.html
 
-        assert self.doc, '文档未初始化,请调用init_doc()方法初始化!'
-
         page: Page = self.doc[index]
 
         # 注意： cropbox 为原始页面，  page.bound() 为set_rotation后的看到的页面，所以不能用bound()、rect 因为外部使用页面拼接的时候是使用原始页面，最后合并时候才旋转
-        print(
-            f'''文件{self.file.name}  第{index + 1}页  
-            rect cropbox mediabox 是否一致: {page.rect == page.cropbox == page.mediabox}
-            原始矩形宽:{page.cropbox.width}  高:{page.cropbox.height}  旋转角度:{page.rotation}  
-            旋转矩阵:{page.rotation_matrix}  
-            变换矩阵:{page.transformation_matrix}''')
+        # print(
+        #     f'''文件{self.file.name}  第{index + 1}页
+        #     rect cropbox mediabox 是否一致: {page.rect == page.cropbox == page.mediabox}
+        #     原始矩形宽:{page.cropbox.width}  高:{page.cropbox.height}  旋转角度:{page.rotation}
+        #     旋转矩阵:{page.rotation_matrix}
+        #     变换矩阵:{page.transformation_matrix}''')
 
         # 原页面是否是横版
         is_horizontal: bool = page.cropbox.width > page.cropbox.height
@@ -95,8 +88,8 @@ class Reader(object):
         if page.rotation_matrix.d < 0:
             rotate_for_cropbox += 180
 
-        if rotate_for_cropbox != 0:
-            print(f'    > 转横版,需旋转 {rotate_for_cropbox}')
+        # if rotate_for_cropbox != 0:
+        #     print(f'    > 转横版,需旋转 {rotate_for_cropbox}')
         return rotate_for_cropbox
 
     def get_rotations_for_cropbox(self) -> list[float]:
@@ -104,7 +97,6 @@ class Reader(object):
         获取每页针对未旋转前的`cropbox`区域,转成横版所需的角度
         :return: 旋转角度数组
         """
-        assert self.doc, '文档未初始化,请调用init_doc()方法初始化!'
         # 如果不是pdf，一般情况下都是图片，所以默认返回0
         if not self.doc.is_pdf:
             return [0.0]

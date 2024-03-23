@@ -5,7 +5,7 @@ import fitz
 from fitz import Page, Document
 from fitz.utils import Shape
 
-from support import get_url_file_retry
+from support import get_url_content_retry
 
 
 @unittest.expectedFailure
@@ -85,7 +85,7 @@ class TestTable(unittest.TestCase):
                 # img_url = None
                 img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
                 if img_url:
-                    response = get_url_file_retry(img_url)
+                    response = get_url_content_retry(img_url)
                     if not response.is_success:
                         raise IOError(f'图片下载失败, url: {img_url}')
                     # page.set_rotation(0)
@@ -153,7 +153,7 @@ class TestTable(unittest.TestCase):
                     # img_url = None
                     img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
                     if img_url:
-                        response = get_url_file_retry(img_url)
+                        response = get_url_content_retry(img_url)
                         if not response.is_success:
                             raise IOError(f'图片下载失败, url: {img_url}')
                         # page.set_rotation(0)

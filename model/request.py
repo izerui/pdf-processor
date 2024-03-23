@@ -69,6 +69,11 @@ class File(BaseModel):
         title="文件url", max_length=2000, examples=['https://file.yj2025.com/003.pdf']
     )
 
+    # 不需要传值,内容会自动通过url下载
+    byte_array: bytes | None = Field(
+        default=None, title="文件内容字节数组,不需要传值", exclude=True
+    )
+
     # 每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)
     zooms: List[float] | None = Field(
         title="每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[1]]
