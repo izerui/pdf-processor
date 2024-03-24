@@ -7,6 +7,7 @@ import uvicorn
 from fastapi import FastAPI, Response
 from fastapi.responses import ORJSONResponse
 from fitz import Document
+from tqdm import tqdm
 
 from model import File, SimpleFile, Item
 from pdf import Reader, Editor, Processor
@@ -130,28 +131,25 @@ async def generate_from_url(items: List[Item]):
     try:
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
+        for item in items:
+            file_count += len(item.files)
         # 要生成的目的pdf
         target_doc = fitz.open()
         processor: Processor = Processor()
         # 并发下载文件
         processor.wrap_file_bytes_for_items(items)
+        # 处理进度
+        # process_bar = tqdm(total=len(items), desc=f'处理{len(items)}个条目, 共{file_count}个文件')
         for item in items:
-            file_count += len(item.files)
             # 如果是测试 传入string则增加不同item之间的批次号
             item.wrap_batch_number_when_qr_string()
             # 每个item生成独立的document，然后插入到target中
             target_item_doc = processor.generate_item_doc_without_close(item)
             target_doc.insert_pdf(docsrc=target_item_doc)
-
-        try:
-            target_doc.subset_fonts()
-        except BaseException as err:
-            logger.warn(f'合并后的文档创建字体子集: {repr(err)}')
-
+            # process_bar.update(1)
         target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
         headers = {"content-type": "application/pdf",
-                   "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-        e_time = time.time()
+                   "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
         logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:

@@ -16,6 +16,22 @@ from support import a4_width, header_height, logger, get_url_content_retry, logg
 debugger = False
 
 
+# ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
+# 其他字体下载: http://www.ae-sys.com/China/Fonts/
+# page.insert_font(fontname=chn_fontname,
+#                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
+
+chn_fontname = 'chn'
+# https://pymupdf.readthedocs.io/en/latest/font.html#Font
+# 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
+# 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
+# 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
+#   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+font = Font(fontname=chn_fontname,
+            fontfile=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
+            language='zh-Hans')
+
+
 class Processor(object):
 
     def __init__(self):
@@ -49,20 +65,6 @@ class Processor(object):
             stream=imagefile,
             overlay=False)
 
-        # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
-        # 其他字体下载: http://www.ae-sys.com/China/Fonts/
-        # page.insert_font(fontname=chn_fontname,
-        #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
-
-        chn_fontname = 'chn'
-        # https://pymupdf.readthedocs.io/en/latest/font.html#Font
-        # 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
-        # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
-        # 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
-        #   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-        font = Font(fontname=chn_fontname,
-                    fontfile=os.path.join(self.current_file_path, 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
-                    language='zh-Hans')
         # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
         page.insert_font(fontname=chn_fontname,
                          fontbuffer=font.buffer)
