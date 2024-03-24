@@ -207,6 +207,7 @@ class Processor(object):
         :param doc:
         :return:
         """
+        # TODO 考虑使用本地文件做进程间全局锁
         for _ in range(5):
             try:
                 doc.subset_fonts()
