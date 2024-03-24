@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/pdf-processor.iml" filepath="$PROJECT_DIR$/.idea/pdf-processor.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/pdf-processor-old.iml" filepath="$PROJECT_DIR$/.idea/pdf-processor-old.iml" />
     </modules>
   </component>
 </project>

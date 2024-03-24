@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
-class Rect(BaseModel):
+class Mark(BaseModel):
     """
     单个矩形遮罩区域
     坐标参考: 相对于pdf左上角的坐标区域
@@ -32,24 +32,10 @@ class Rect(BaseModel):
     )
 
 
-class PageMarks(BaseModel):
-    """
-    每页的多个遮罩区域
-    """
-    # 页码
-    page_index: int = Field(
-        title="页码", examples=[0]
-    )
-    # 每页的矩形遮罩区域数组
-    rects: List[Rect] = Field(
-        title="每页的矩形遮罩区域数组"
-    )
-
-
 class SimpleFile(BaseModel):
     # 文件名
     name: str = Field(
-        title="文件名称", max_length=200, examples=['我的世界.pdf']
+        title="文件名称", max_length=200, examples=['多页.pdf']
     )
 
     # pdf文件url地址
@@ -61,12 +47,12 @@ class SimpleFile(BaseModel):
 class File(BaseModel):
     # 文件名
     name: str = Field(
-        title="文件名称", max_length=200, examples=['我的世界.pdf']
+        title="文件名称", max_length=200, examples=['单页.pdf']
     )
 
     # pdf文件url地址
     url: str = Field(
-        title="文件url", max_length=2000, examples=['https://file.yj2025.com/003.pdf']
+        title="文件url", max_length=2000, examples=['https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf']
     )
 
     # 不需要传值,内容会自动通过url下载
@@ -74,16 +60,20 @@ class File(BaseModel):
         default=None, title="文件内容字节数组,不需要传值", exclude=True
     )
 
-    # 每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)
-    zooms: List[float] | None = Field(
-        default=None, title="每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[1]]
+    # 每个页面统一的缩放大小 0 ~ 1 (0.8 表示缩小1/4)
+    zoom: float | None = Field(
+        default=1, title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[1]
     )
 
-    # 每个页面的遮罩区域列表
-    page_marks: List[PageMarks] | None = None
+    # 每个页面都一样的遮罩区域列表
+    marks: List[Mark] | None = Field(
+        title="每个页面都一样的遮罩区域列表"
+    )
 
     # 每个页面的旋转角度
-    rotations: List[float] | None = None
+    rotations: List[float] | None = Field(
+        title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[0]]
+    )
 
 
 class Item(BaseModel):

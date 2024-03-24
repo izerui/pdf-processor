@@ -1,11 +1,13 @@
 import logging
 import os
 import tempfile
+import threading
 import time
 import uuid
 from functools import wraps
 
 import httpx
+import psutil
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
@@ -26,29 +28,20 @@ def logged(desc=None):
         @wraps(func)
         def wrapper(*args, **kwargs):
             # 在调用原始函数前添加新的功能，或在后面添加
-            s_time = time.time()
+            s_time = int(time.perf_counter() * 1000)
             # 调用原始函数
             result = func(*args, **kwargs)
-            logger.info(f'===================> 【{desc}】 耗时: {time.time() - s_time}秒')
+            pid = os.getpid()
+            pinfo = psutil.Process(pid)
+            t = threading.current_thread()
+            mem = psutil.virtual_memory()
+            print(
+                f'--->【pid:[{pid}] thread_name:[{t.name}] cpu_user_times:[{pinfo.cpu_times().user}] free_mem:[{mem.available / (1024 * 1024)}Mb]】【{desc}】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
             return result
 
         return wrapper
 
     return decorate
-
-
-def log_time(func):
-    def wrapper(*args, **kwargs):
-        # 在调用原始函数前添加新的功能，或在后面添加
-        s_time = time.time()
-        # 调用原始函数
-        result = func(*args, **kwargs)
-        # 在结果之前或结果之后添加其他内容
-        e_time = time.time()
-        logger.info(f'=======================================> 【{repr(func)}】 耗时: {e_time - s_time}秒')
-        return result
-
-    return wrapper
 
 
 async def async_get_url_file_retry(url, retry_count: int = 5):
@@ -77,11 +70,11 @@ def get_url_content_retry(url, retry_count: int = 5):
         try:
             response = httpx.get(url)
             if not response.is_success:
-                raise IOError(f'文件下载失败, url: {url}')
+                raise IOError(f'获取文件内容失败, url: {url}')
             return response.content
         except Exception:
             continue
-    raise RuntimeError(f'{url} 文件下载失败')
+    raise RuntimeError(f'{url} 获取文件内容失败')
 
 
 def read_temp_file_instant(callback):

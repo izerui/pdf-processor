@@ -10,7 +10,7 @@ from fitz import Document
 
 from model import File, SimpleFile, Item
 from pdf import Reader, Editor, Processor
-from support import logger
+from support import logger, logged
 
 app = FastAPI(
     title='pdf生成、合并服务',
@@ -85,7 +85,7 @@ async def rotate_from_urls(files: List[SimpleFile]):
         down_files = list(map(lambda x: File(name=x.name, url=x.url), files))
         processor.wrap_file_bytes_for_files(down_files)
         for index, file in enumerate(down_files):
-            reader: Reader = processor.create_reader(file.byte_array)
+            reader: Reader = processor.create_reader(file.byte_array, False)
             rotations = reader.get_rotations_for_cropbox()
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
@@ -124,10 +124,11 @@ async def rotate_from_urls(files: List[SimpleFile]):
 #
 #
 
+@logged(desc='处理多个pdf文件')
 @app.post('/generate/from-urls', description='通过多个item(单个item可能包含多个文件)生成')
 async def generate_from_url(items: List[Item]):
     try:
-        s_time = time.time()
+        s_time = int(time.perf_counter() * 1000)
         file_count = 0
         # 要生成的目的pdf
         target_doc = fitz.open()
@@ -138,25 +139,20 @@ async def generate_from_url(items: List[Item]):
             file_count += len(item.files)
             # 如果是测试 传入string则增加不同item之间的批次号
             item.wrap_batch_number_when_qr_string()
-            # 第一种写法，循环所有item写入到target中
-            # 每个item的头部区域pdf
-            header_doc: Document = processor.generate_header_doc_without_close(item)
-            for file in item.files:
-                source_editor: Editor = processor.create_editor(file.byte_array)
-                # 合并到target_doc
-                source_editor.wrap_pdf_with_header(file, header_doc, target_doc)
-            header_doc.close()
+            # 每个item生成独立的document，然后插入到target中
+            target_item_doc = processor.generate_item_doc_without_close(item)
+            target_doc.insert_pdf(docsrc=target_item_doc)
 
-            # 第二种写法，每个item生成独立的document，然后插入到target中
-            # 每个item生成的独立的文档
-            # target_item_doc = processor.generate_item_doc_without_close(item)
-            # target_doc.insert_pdf(docsrc=target_item_doc)
+        try:
+            target_doc.subset_fonts()
+        except BaseException as err:
+            logger.warn(f'合并后的文档创建字体子集: {repr(err)}')
 
         target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         e_time = time.time()
-        logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {time.time() - s_time}秒')
+        logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))

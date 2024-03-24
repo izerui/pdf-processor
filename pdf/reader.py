@@ -1,9 +1,8 @@
-import time
+from fitz import Page, fitz
 
-from fitz import Document, Page, fitz
+from fitz import Page, fitz
 
-from model import File
-from support import logger, get_url_content_retry, log_time, logged
+from support import logger, logged
 
 
 class Reader(object):
@@ -11,24 +10,38 @@ class Reader(object):
     pdf读取器
     """
 
-    def __init__(self, bytes: bytes):
+    def __init__(self, bytes: bytes, is_rewrap: bool = False):
         """
         构造函数
+        :param is_rewrap: 是否需要针对文档进行二次包装处理
         :param bytes: 单个pdf对象的内容字节数组
         """
         self.doc = fitz.open("pdf", bytes)
+        if is_rewrap:
+            self.rewrap_doc()
 
-    async def get_doc_by_url(self, url: str) -> Document:
+    @logged(desc='重新包装当前的doc')
+    def rewrap_doc(self):
         """
-        通过url下载pdf，并返回document对象
-        :param url: pdf文件下载url
-        :return: document
+        重新包装当前的doc,避免一些识别处理问题, 注意这里转换后文档页面的rotation会重置为0
+        :return:
         """
-        response = await get_url_content_retry(url)
-        if not response.is_success:
-            raise IOError(f'文件下载失败, url: {url}')
-        pdf: Document = fitz.open("pdf", response.content)
-        return pdf
+        try:
+            # 转换前先记录下原始pdf的rotations, 因为发生`convert_to_pdf`后，旋转角度会丢失
+            rotations = []
+            for index, page in enumerate(self.doc):
+                rotations.append(page.rotation)
+
+            # 将原pdf重新转换下，保证注释可见
+            # 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
+            rewrap_pdf = fitz.open('pdf', self.doc.convert_to_pdf())
+            self.doc.close()
+            self.doc = rewrap_pdf
+            # 还原转换前的旋转角度
+            for index, page in enumerate(self.doc):
+                page.set_rotation(rotations[index])
+        except BaseException as e:
+            logger.warn(f'重新包装转换失败: {repr(e)}')
 
     def __del__(self):
         try:
@@ -88,8 +101,6 @@ class Reader(object):
         if page.rotation_matrix.d < 0:
             rotate_for_cropbox += 180
 
-        # if rotate_for_cropbox != 0:
-        #     print(f'    > 转横版,需旋转 {rotate_for_cropbox}')
         return rotate_for_cropbox
 
     @logged(desc='获取所有页面转成横版所需的角度')
