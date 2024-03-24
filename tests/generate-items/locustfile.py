@@ -20,14 +20,12 @@ class TestAsync(TaskSet):
                 "files": [
                     {
                         "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/003.pdf",
+                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
                         ],
-                        "rotations": [
-                            0
-                        ]
+                        "rotations": []
                     }
                 ],
                 "item_id": "string",
@@ -44,14 +42,12 @@ class TestAsync(TaskSet):
                 "files": [
                     {
                         "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/003.pdf",
+                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
                         ],
-                        "rotations": [
-                            0
-                        ]
+                        "rotations": []
                     }
                 ],
                 "item_id": "string",
@@ -68,14 +64,12 @@ class TestAsync(TaskSet):
                 "files": [
                     {
                         "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/003.pdf",
+                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
                         ],
-                        "rotations": [
-                            0
-                        ]
+                        "rotations": []
                     }
                 ],
                 "item_id": "string",
@@ -92,14 +86,12 @@ class TestAsync(TaskSet):
                 "files": [
                     {
                         "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/003.pdf",
+                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
                         ],
-                        "rotations": [
-                            0
-                        ]
+                        "rotations": []
                     }
                 ],
                 "item_id": "string",

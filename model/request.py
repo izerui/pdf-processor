@@ -81,31 +81,49 @@ class Item(BaseModel):
     files: List[File]
 
     # 当前请求的item的标识ID
-    item_id: str
+    item_id: str = Field(
+        title='当前请求的item的标识ID', examples=['当前请求的item的标识ID']
+    )
 
     # 二维码内容
-    qr_code: str
+    qr_code: str = Field(
+        title='二维码内容', examples=['二维码内容']
+    )
 
     # 工单号
-    doc_no: str
+    doc_no: str = Field(
+        title='工单号', examples=['卧室一个 DOC100']
+    )
 
     # 货品编码
-    inventory_code: str
+    inventory_code: str = Field(
+        title='货品编码', examples=['你以为的是 Ivne002，。']
+    )
 
     # 货品名称
-    inventory_name: str
+    inventory_name: str = Field(
+        title='货品名称', examples=['货品是 se名称！3']
+    )
 
     # 货品规格型号
-    inventory_spec: str | None = None
+    inventory_spec: str | None = Field(
+        title='货品规格型号', examples=['货品规 *6ds格型号']
+    )
 
     # 数量
-    quantity: str
+    quantity: str = Field(
+        title='数量', examples=['数量 - 120']
+    )
 
     # 交期
-    doc_date: str
+    doc_date: str = Field(
+        title='交期', examples=['2024年03月24日']
+    )
 
     # 工艺路线
-    process_flow: str | None = None
+    process_flow: str | None = Field(
+        title='工艺路线', examples=['工艺路线1 》工艺路线 2']
+    )
 
     def wrap_batch_number_when_qr_string(self):
         if 'string' == self.qr_code:

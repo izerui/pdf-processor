@@ -6,15 +6,13 @@ from io import BytesIO
 import qrcode
 from fitz import fitz, Font, Document
 from qrcode.image.pil import PilImage
-from tqdm import tqdm
 
 from model import Item, File
 from pdf import Editor
 from pdf import Reader
-from support import a4_width, header_height, logger, get_url_content_retry, logged
+from support import a4_width, header_height, logger, get_url_content_retry, logged, read_bytes_from_file
 
 debugger = False
-
 
 # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
 # 其他字体下载: http://www.ae-sys.com/China/Fonts/
@@ -27,8 +25,12 @@ chn_fontname = 'chn'
 # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
 # 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
 #   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+
+font_buffer = read_bytes_from_file(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
+
 font = Font(fontname=chn_fontname,
-            fontfile=os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts', 'FangZhengHeiTiJianTi-1.ttf'),
+            fontbuffer=font_buffer,
             language='zh-Hans')
 
 
@@ -95,13 +97,6 @@ class Processor(object):
                          fontsize=fontsize,
                          fontname=chn_fontname, color=(0, 0, 0))
 
-        # # 创建字体的子集，减少文档大小
-        # # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-        # header_doc.subset_fonts()
-        try:
-            header_doc.subset_fonts()
-        except BaseException as err:
-            logger.warn(f'head文档创建字体子集: {repr(err)}')
         return header_doc
 
     @logged(desc='每个item生成独立包含header和原页面的文档')
@@ -122,11 +117,6 @@ class Processor(object):
             # 合并到target_doc
             source_editor.wrap_target_doc_with_header(file.rotations, header_doc, target_item_doc)
         header_doc.close()
-        try:
-            # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
-            target_item_doc.subset_fonts()
-        except BaseException as err:
-            logger.warn(f'target_item_doc文档创建字体子集: {repr(err)}')
         return target_item_doc
 
     @logged(desc='初始化一个pdf文件读取器')
@@ -159,17 +149,11 @@ class Processor(object):
         生成pdf文件的字节数组,并关闭文档已打开的句柄
         :return:
         """
-        try:
-            # 创建字体的子集，减少文档大小 Package fontTools must be installed `pip install fonttools`
-            # https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
-            doc.subset_fonts()
-        except BaseException as err:
-            logger.warn(f'文档创建字体子集: {repr(err)}')
         pdf_bytes = doc.convert_to_pdf()
         # pdf_bytes = read_temp_file_instant(lambda x: doc.save(x) and doc.close())
         return pdf_bytes
 
-    @logged(desc='批量从请求的items中所有的文件url地址')
+    @logged(desc='并发下载请求的多个item的多个文件')
     def wrap_file_bytes_for_items(self, items: list[Item]):
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
@@ -200,13 +184,13 @@ class Processor(object):
             for file in files:
                 future = pool.submit(self.wrap_file_bytes_for_file, file)
                 futures.append(future)
-            process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
+            # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
-                process_bar.update(1)
+                # process_bar.update(1)
                 pass
         pass
 
-    @logged(desc='下载单个pdf文件')
+    # @logged(desc='下载单个pdf文件')
     def wrap_file_bytes_for_file(self, file: File):
         """
         下载单个pdf文件
@@ -215,3 +199,19 @@ class Processor(object):
         """
         file.byte_array = get_url_content_retry(file.url, 5)
         pass
+
+    def compress_doc(self, doc: Document):
+        """
+        创建字体的子集，减少文档大小，前提必须在主线程中调用,否则会导致文件找不到异常
+        参考：https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+        :param doc:
+        :return:
+        """
+        for _ in range(5):
+            try:
+                doc.subset_fonts()
+                return
+            except Exception:
+                logger.warn(f'压缩文档处理进程冲突: 第{_}次')
+                continue
+        logger.warn(f'5次重试未成功压缩!')

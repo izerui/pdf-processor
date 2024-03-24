@@ -1,3 +1,4 @@
+import concurrent
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
@@ -131,25 +132,35 @@ async def generate_from_url(items: List[Item]):
     try:
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
-        for item in items:
-            file_count += len(item.files)
         # 要生成的目的pdf
         target_doc = fitz.open()
         processor: Processor = Processor()
-        # 并发下载文件
+        # 并发下载文件,否则无法使用`file.byte_array`
         processor.wrap_file_bytes_for_items(items)
-        # 处理进度
-        # process_bar = tqdm(total=len(items), desc=f'处理{len(items)}个条目, 共{file_count}个文件')
-        for item in items:
-            # 如果是测试 传入string则增加不同item之间的批次号
-            item.wrap_batch_number_when_qr_string()
+        item_docs = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            for item in items:
+                file_count += len(item.files)
+                # 如果是测试 传入string则增加不同item之间的批次号
+                item.wrap_batch_number_when_qr_string()
+                # 开始多线程处理
+                future = pool.submit(processor.generate_item_doc_without_close, item)
+                futures.append(future)
+            # 处理进度
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                item_docs.append(future.result())
+        for item_doc in item_docs:
+            # 先压缩
+            processor.compress_doc(item_doc)
             # 每个item生成独立的document，然后插入到target中
-            target_item_doc = processor.generate_item_doc_without_close(item)
-            target_doc.insert_pdf(docsrc=target_item_doc)
-            # process_bar.update(1)
+            target_doc.insert_pdf(docsrc=item_doc)
+        # 再次压缩
+        processor.compress_doc(target_doc)
         target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
         headers = {"content-type": "application/pdf",
-                   "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
+                   "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
+        e_time = time.time()
         logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
@@ -265,3 +276,4 @@ if __name__ == "__main__":
     fitz.restore_aliases()
     print('文档地址: http://localhost:8000/docs')
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)
+

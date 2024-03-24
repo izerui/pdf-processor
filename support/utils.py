@@ -90,3 +90,13 @@ def read_temp_file_instant(callback):
         with open(filepath, 'rb') as f:
             byte_data = bytes(f.read())
             return byte_data
+
+def read_bytes_from_file(file_path: str):
+    """
+    从文件路径读取二进制
+    :param file_path:
+    :return:
+    """
+    with open(file_path, 'rb') as f:
+        byte_data = bytes(f.read())
+        return byte_data

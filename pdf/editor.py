@@ -42,9 +42,9 @@ class Editor(Reader):
                 if mark.image_url:
                     future = pool.submit(append_dict, mark.image_url, image_pixmap_dict)
                     futures.append(future)
-            process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}遮罩图片')
+            # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}遮罩图片')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
-                process_bar.update(1)
+                # process_bar.update(1)
                 pass
         return image_pixmap_dict
 
