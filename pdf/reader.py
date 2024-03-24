@@ -3,7 +3,7 @@ import time
 from fitz import Document, Page, fitz
 
 from model import File
-from support import logger, get_url_content_retry, log_time
+from support import logger, get_url_content_retry, log_time, logged
 
 
 class Reader(object):
@@ -18,7 +18,6 @@ class Reader(object):
         """
         self.doc = fitz.open("pdf", bytes)
 
-    @log_time
     async def get_doc_by_url(self, url: str) -> Document:
         """
         通过url下载pdf，并返回document对象
@@ -39,6 +38,7 @@ class Reader(object):
             logger.warn(repr(err))
             pass
 
+    # @logged(desc='获取单个页面转成横版所需的角度')
     def get_page_roration_for_cropbox(self, index: int) -> float:
         """
         通过指定索引的页面,获取其针对未旋转前的`cropbox`区域,转成横版所需的角度
@@ -92,6 +92,7 @@ class Reader(object):
         #     print(f'    > 转横版,需旋转 {rotate_for_cropbox}')
         return rotate_for_cropbox
 
+    @logged(desc='获取所有页面转成横版所需的角度')
     def get_rotations_for_cropbox(self) -> list[float]:
         """
         获取每页针对未旋转前的`cropbox`区域,转成横版所需的角度

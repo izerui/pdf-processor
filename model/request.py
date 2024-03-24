@@ -76,7 +76,7 @@ class File(BaseModel):
 
     # 每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)
     zooms: List[float] | None = Field(
-        title="每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[1]]
+        default=None, title="每个页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[1]]
     )
 
     # 每个页面的遮罩区域列表
@@ -117,7 +117,7 @@ class Item(BaseModel):
     # 工艺路线
     process_flow: str | None = None
 
-    def wrap_random_when_qr_string(self):
+    def wrap_batch_number_when_qr_string(self):
         if 'string' == self.qr_code:
             rdm = f'{random.randrange(0, 101, 2)}'
             self.qr_code += rdm

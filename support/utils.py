@@ -3,6 +3,7 @@ import os
 import tempfile
 import time
 import uuid
+from functools import wraps
 
 import httpx
 
@@ -14,6 +15,26 @@ a4_dpi = 150
 a4_width = 1754
 a4_height = 1240
 header_height = 180
+
+
+def logged(desc=None):
+    """
+    Add logging to a function. desc is the name
+    """
+
+    def decorate(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # 在调用原始函数前添加新的功能，或在后面添加
+            s_time = time.time()
+            # 调用原始函数
+            result = func(*args, **kwargs)
+            logger.info(f'===================> 【{desc}】 耗时: {time.time() - s_time}秒')
+            return result
+
+        return wrapper
+
+    return decorate
 
 
 def log_time(func):

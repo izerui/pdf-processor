@@ -9,14 +9,14 @@ from fitz import Document, Font, Page
 from fitz.utils import Shape
 from qrcode.image.pil import PilImage
 
-from support import logger, get_url_content_retry, log_time
+from support import logger, get_url_content_retry, log_time, logged
 
 ## All Index: https://pymupdf.readthedocs.io/en/latest/genindex-all.html
 debugger = False
 
 
 class Processor(object):
-    @log_time
+
     def __init__(self,
                  source_files: List[bytes] = None,
                  source_urls: List[str] = None):
@@ -128,7 +128,7 @@ class Processor(object):
         pass
 
 
-    @log_time
+    @logged(desc='生成header头信息pdf')
     def _with_header_document(self, callback):
         """
         生成header头信息pdf

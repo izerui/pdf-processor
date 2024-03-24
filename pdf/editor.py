@@ -4,7 +4,7 @@ from fitz import Document, fitz
 
 from model import File
 from pdf import Reader
-from support import logger, a4_width, a4_height, header_height, log_time
+from support import logger, a4_width, a4_height, header_height, log_time, logged
 
 debugger = False
 
@@ -21,7 +21,7 @@ class Editor(Reader):
         """
         super().__init__(bytes)
 
-    @log_time
+    @logged(desc='将头内容和源内容合并到target_doc文件中')
     def wrap_pdf_with_header(self, file: File, header_doc: Document, target_doc: Document):
         """
         将头内容和源内容合并到target_doc文件中
@@ -63,10 +63,8 @@ class Editor(Reader):
             # self._mask_page_content(s_index, p_index, usage_page)
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
             usage_page.set_rotation(0)
-            time0 = time.time()
             new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotation, keep_proportion=True,
                                    clip=usage_page.cropbox)
-            print('show_pdf_page耗时: ', time.time() - time0)
             # 清理无效链接，针对页面缩容
             # new_page.clean_contents()
 

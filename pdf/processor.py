@@ -12,7 +12,7 @@ from tqdm import tqdm
 from model import Item, File
 from pdf import Editor
 from pdf import Reader
-from support import a4_width, header_height, logger, log_time, get_url_content_retry
+from support import a4_width, header_height, logger, log_time, get_url_content_retry, logged
 
 debugger = False
 
@@ -29,7 +29,7 @@ class Processor(object):
         """
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
 
-    @log_time
+    @logged(desc='生成header头信息pdf对象')
     def generate_header_doc_without_close(self, item: Item) -> Document:
         """
         生成header头信息pdf对象
@@ -138,7 +138,7 @@ class Processor(object):
 
     def create_reader(self, bytes: bytes) -> Reader:
         """
-        创建一个pdf文件读取器
+        初始化一个pdf文件读取器
         对象销毁的时候会自动关闭文件打开的句柄
         :param bytes: pdf文件内容字节数组
         :return:
@@ -146,9 +146,10 @@ class Processor(object):
         reader = Reader(bytes)
         return reader
 
+    @logged(desc='初始化一个pdf文件编辑器')
     def create_editor(self, bytes: bytes) -> Editor:
         """
-        创建一个pdf文件编辑器(包含查看器功能)
+        初始化一个pdf文件编辑器(包含查看器功能)
         对象销毁的时候会自动关闭文件打开的句柄
         :param bytes: pdf文件内容字节数组
         :return:
@@ -156,6 +157,7 @@ class Processor(object):
         editor = Editor(bytes)
         return editor
 
+    @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document):
         """
         生成pdf文件的字节数组,并关闭文档已打开的句柄
@@ -172,7 +174,7 @@ class Processor(object):
         doc.close()
         return pdf_bytes
 
-    @log_time
+    @logged(desc='批量从请求的items中所有的文件url地址')
     def wrap_file_bytes_for_items(self, items: list[Item]):
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
@@ -191,6 +193,30 @@ class Processor(object):
                 pass
         pass
 
+    @logged(desc='批量从请求的files的url列表中下载文件并补全到bytes_array中')
+    def wrap_file_bytes_for_files(self, files: list[File]):
+        """
+        批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
+        :param items:
+        :return:
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            for file in files:
+                future = pool.submit(self.wrap_file_bytes_for_file, file)
+                futures.append(future)
+            process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                process_bar.update(1)
+                pass
+        pass
+
+    @logged(desc='下载单个pdf文件')
     def wrap_file_bytes_for_file(self, file: File):
+        """
+        下载单个pdf文件
+        :param file:
+        :return:
+        """
         file.byte_array = get_url_content_retry(file.url, 5)
         pass
