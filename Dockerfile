@@ -14,6 +14,10 @@ RUN pip install fonttools
 RUN pip install tqdm
 
 COPY *.py ./
-COPY ./fonts/ ./fonts/
+COPY ./model/ ./model/
+COPY ./pdf/ ./pdf/
+COPY ./support/ ./support/
+COPY ./tests/ ./tests/
+COPY ./view/ ./view/
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0",  "--reload"]
