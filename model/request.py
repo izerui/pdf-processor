@@ -27,6 +27,7 @@ class Mark(BaseModel):
     )
     # 矩形区域如果是图片，则为图片网络url地址
     image_url: str | None = Field(
+        None,
         title="矩形区域如果是图片，则为图片网络url地址,否则留空",
         examples=['https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg']
     )
@@ -57,22 +58,22 @@ class File(BaseModel):
 
     # 不需要传值,内容会自动通过url下载
     byte_array: bytes | None = Field(
-        default=None, title="文件内容字节数组,不需要传值", exclude=True
+        None, title="文件内容字节数组,不需要传值", exclude=True
     )
 
     # 每个页面统一的缩放大小 0 ~ 1 (0.8 表示缩小1/4)
     zoom: float | None = Field(
-        default=1, title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[1]
+        None, title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[1]
     )
 
     # 每个页面都一样的遮罩区域列表
     marks: List[Mark] | None = Field(
-        title="每个页面都一样的遮罩区域列表"
+        None, title="每个页面都一样的遮罩区域列表"
     )
 
     # 每个页面的旋转角度
     rotations: List[float] | None = Field(
-        title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[0]]
+        None, title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[0]]
     )
 
 
@@ -82,50 +83,54 @@ class Item(BaseModel):
 
     # 当前请求的item的标识ID
     item_id: str = Field(
-        title='当前请求的item的标识ID', examples=['当前请求的item的标识ID']
+        None, title='当前请求的item的标识ID', examples=['当前请求的item的标识ID']
     )
 
     # 二维码内容
     qr_code: str = Field(
-        title='二维码内容', examples=['二维码内容']
+        None, title='二维码内容', examples=['二维码内容']
     )
 
     # 工单号
     doc_no: str = Field(
-        title='工单号', examples=['卧室一个 DOC100']
+        None, title='工单号', examples=['卧室一个 DOC100']
     )
 
     # 货品编码
     inventory_code: str = Field(
-        title='货品编码', examples=['你以为的是 Ivne002，。']
+        None, title='货品编码', examples=['你以为的是 Ivne002，。']
     )
 
     # 货品名称
     inventory_name: str = Field(
-        title='货品名称', examples=['货品是 se名称！3']
+        None, title='货品名称', examples=['货品是 se名称！3']
     )
 
     # 货品规格型号
     inventory_spec: str | None = Field(
-        title='货品规格型号', examples=['货品规 *6ds格型号']
+        None, title='货品规格型号', examples=['货品规 *6ds格型号']
     )
 
     # 数量
     quantity: str = Field(
-        title='数量', examples=['数量 - 120']
+        None, title='数量', examples=['数量 - 120']
     )
 
     # 交期
     doc_date: str = Field(
-        title='交期', examples=['2024年03月24日']
+        None, title='交期', examples=['2024年03月24日']
     )
 
     # 工艺路线
     process_flow: str | None = Field(
-        title='工艺路线', examples=['工艺路线1 》工艺路线 2']
+        None, title='工艺路线', examples=['工艺路线1 》工艺路线 2']
     )
 
     def wrap_batch_number_when_qr_string(self):
+        """
+        如果是测试 传入string则增加不同item之间的批次号
+        :return:
+        """
         if 'string' == self.qr_code:
             rdm = f'{random.randrange(0, 101, 2)}'
             self.qr_code += rdm
@@ -143,10 +148,10 @@ class CallbackItems(BaseModel):
     items: List[Item]
     request_id: str
     process_url: str | None = Field(
-        examples=['http://localhost:8000/callback/process']
+        None, examples=['http://localhost:8000/callback/process']
     )
     callback_url: str | None = Field(
-        examples=['http://localhost:8000/callback/file']
+        None, examples=['http://localhost:8000/callback/file']
     )
 
 

@@ -26,7 +26,19 @@ app = FastAPI(
 )
 
 
-@app.post('/rotations/from-urls', description='通过文件url列表获取旋转角度', response_class=ORJSONResponse)
+@app.post('/file/upload-url', summary='上传文件到测试公有空间并返回url等信息')
+async def file_url(file: UploadFile):
+    profile = 'test'
+    client = QiniuClient()
+    data = await file.read()
+    key = f'pdf-processor/source/{datetime.datetime.now().strftime("%Y-%m-%d")}/{file.filename}'
+    rest = client.upload_data(profile, True, key, data)
+    rest['url'] = client.get_download_url(profile, True, key)
+    print(rest)
+    return Response(content=rest['url'], media_type="text/html")
+
+
+@app.post('/rotations/from-urls', summary='通过文件url列表获取旋转角度', response_class=ORJSONResponse)
 def rotate_from_urls(files: List[SimpleFile]):
     try:
         results = []
@@ -45,20 +57,8 @@ def rotate_from_urls(files: List[SimpleFile]):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@app.post('/file/upload-url', description='上传文件到测试公有空间并返回url等信息')
-async def file_url(file: UploadFile):
-    profile = 'test'
-    client = QiniuClient()
-    data = await file.read()
-    key = f'pdf-processor/source/{datetime.datetime.now().strftime("%Y-%m-%d")}/{file.filename}'
-    rest = client.upload_data(profile, True, key, data)
-    rest['url'] = client.get_download_url(profile, True, key)
-    print(rest)
-    return Response(content=rest['url'], media_type="text/html")
-
-
 @logged(desc='处理多个pdf文件,并返回结果文档')
-@app.post('/generate/from-urls', description='处理多个pdf文件,并返回结果文档')
+@app.post('/generate/from-urls', summary='处理多个pdf文件,并返回结果文档')
 def generate_from_url(items: List[Item]):
     try:
         def item_call(item_index, item_doc, exception):
@@ -76,7 +76,7 @@ def generate_from_url(items: List[Item]):
 
 
 @logged(desc='处理多个pdf文件,并回调通知')
-@app.post('/generate/async-callback-from-urls', description='处理多个pdf文件,并回调通知')
+@app.post('/generate/async-callback-from-urls', summary='处理多个pdf文件,并回调通知')
 def callback_from_urls(callback_items: CallbackItems):
     try:
 
@@ -129,14 +129,14 @@ def callback_from_urls(callback_items: CallbackItems):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@app.post('/callback/process', description='接收进度信息')
+@app.post('/callback/process', summary='回调示例-接收进度信息')
 def callback_process(callback_process: CallbackProcess):
     print(
         f'<--- 【接收到处理进度】: 共{callback_process.total}个item, 当前第{callback_process.index}个, request_id:{callback_process.request_id}, item_id:{callback_process.item_id} success: {callback_process.success} err_msg:{callback_process.err_msg}')
     return Response(content='success', media_type="text/html")
 
 
-@app.post('/callback/file', description='接收文件上传')
+@app.post('/callback/file', summary='回调示例-接收文件上传')
 async def callback_file(file: UploadFile | None = None,
                         request_id: str | None = Form(None),
                         total: int | None = Form(None),
