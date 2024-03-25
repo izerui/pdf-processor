@@ -233,8 +233,6 @@ class Processor(object):
             target_doc.insert_pdf(docsrc=item_doc)
             if is_item_doc_close:
                 item_doc.close()
-        # 再次压缩结果文档
-        self.compress_doc(target_doc)
         return self.get_doc_bytes_and_close(target_doc)
 
     def generate_from_items(self, items: list[Item], item_call) -> Document:
@@ -266,6 +264,7 @@ class Processor(object):
                 exception = future.exception()
                 if exception:
                     item_call(index, None, exception)
+                    raise exception
                 else:
                     result = future.result()
                     item_docs.append(result)

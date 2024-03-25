@@ -52,7 +52,6 @@ def rotate_from_urls(files: List[SimpleFile]):
             results.append(file_rotations)
         return ORJSONResponse(results)
     except BaseException as err:
-        print(repr(err))
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
@@ -70,7 +69,6 @@ def generate_from_url(items: List[Item]):
                    "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
-        print(repr(err))
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
@@ -113,7 +111,6 @@ def callback_from_urls(callback_items: CallbackItems):
                     print(f'---> 【上传pdf返回结果】: {response.content}')
 
             except BaseException as err:
-                print(repr(err))
                 logger.exception(err)
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items),
                         'err_msg': repr(err)}
@@ -124,7 +121,6 @@ def callback_from_urls(callback_items: CallbackItems):
         thread.start()
         return Response(content=f'已经开始处理,待完成后回调地址: {callback_items.callback_url}', media_type="text/html")
     except BaseException as err:
-        print(repr(err))
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
