@@ -1,3 +1,4 @@
+import datetime
 import threading
 import time
 from typing import List
@@ -11,7 +12,7 @@ from httpx import Timeout
 
 from model import File, SimpleFile, Item, CallbackItems, CallbackProcess
 from pdf import Reader, Processor
-from support import logger, logged
+from support import logger, logged, QiniuClient
 
 app = FastAPI(
     title='pdf生成、合并服务',
@@ -42,6 +43,18 @@ def rotate_from_urls(files: List[SimpleFile]):
         print(repr(err))
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@app.post('/file/upload-url', description='上传文件到测试公有空间并返回url等信息')
+async def file_url(file: UploadFile):
+    profile = 'test'
+    client = QiniuClient()
+    data = await file.read()
+    key = f'pdf-processor/source/{datetime.datetime.now().strftime("%Y-%m-%d")}/{file.filename}'
+    rest = client.upload_data(profile, True, key, data)
+    rest['url'] = client.get_download_url(profile, True, key)
+    print(rest)
+    return Response(content=rest['url'], media_type="text/html")
 
 
 @logged(desc='处理多个pdf文件,并返回结果文档')
@@ -125,9 +138,9 @@ def callback_process(callback_process: CallbackProcess):
 
 @app.post('/callback/file', description='接收文件上传')
 async def callback_file(file: UploadFile | None = None,
-                  request_id: str | None = Form(None),
-                  total: int | None = Form(None),
-                  err_msg: str | None = Form(None)):
+                        request_id: str | None = Form(None),
+                        total: int | None = Form(None),
+                        err_msg: str | None = Form(None)):
     if file:
         print(f'<--- 【接收到回调文件】: request_id:{request_id} filename:{file.filename} filesize:{file.size}')
         with open(f'/Users/liuyuhua/Downloads/pdf/{file.filename}', 'wb') as f:

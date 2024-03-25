@@ -28,6 +28,7 @@ sequenceDiagram
 * pip install uvicorn[standard]
 * pip install tqdm
 * ~~pip install matplotlib~~
+* pip install qiniu
 
 压力测试工具:
 * pip install locust
