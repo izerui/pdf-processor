@@ -124,9 +124,15 @@ def callback_process(callback_process: CallbackProcess):
 
 
 @app.post('/callback/file', description='接收文件上传')
-def callback_file(file: UploadFile = None, request_id: str = Form(), err_msg: str = Form()):
+async def callback_file(file: UploadFile | None = None,
+                  request_id: str | None = Form(None),
+                  total: int | None = Form(None),
+                  err_msg: str | None = Form(None)):
     if file:
         print(f'<--- 【接收到回调文件】: request_id:{request_id} filename:{file.filename} filesize:{file.size}')
+        with open(f'/Users/liuyuhua/Downloads/pdf/{file.filename}', 'wb') as f:
+            data = await file.read()
+            f.write(data)
     else:
         print(f'<--- 【接收到回调文件】: request_id:{request_id} 错误信息:{err_msg}')
     return Response(content='success', media_type="text/html")
