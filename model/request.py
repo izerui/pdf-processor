@@ -19,11 +19,11 @@ class Mark(BaseModel):
     )
     # 右下角x坐标
     x1: float = Field(
-        title="右下角x坐标", examples=[500]
+        title="右下角x坐标", examples=[200]
     )
     # 右下角y坐标
     y1: float = Field(
-        title="右下角y坐标", examples=[500]
+        title="右下角y坐标", examples=[300]
     )
     # 矩形区域如果是图片，则为图片网络url地址
     image_url: str | None = Field(
@@ -139,8 +139,21 @@ class Item(BaseModel):
             self.process_flow += rdm
 
 
-class CallbackItem(BaseModel):
+class CallbackItems(BaseModel):
     items: List[Item]
     request_id: str
-    process_url: str = None
-    callback_url: str = 'http://localhost:8000/callback/file'
+    process_url: str | None = Field(
+        examples=['http://localhost:8000/callback/process']
+    )
+    callback_url: str | None = Field(
+        examples=['http://localhost:8000/callback/file']
+    )
+
+
+class CallbackProcess(BaseModel):
+    total: int | None = None
+    index: int | None = None
+    request_id: str | None = None
+    item_id: str | None = None
+    success: bool | None = None
+    err_msg: str | None = None

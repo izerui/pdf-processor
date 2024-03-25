@@ -1,17 +1,16 @@
-import concurrent
+import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 import fitz
+import httpx
 import uvicorn
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
-from fitz import Document
-from tqdm import tqdm
+from httpx import Timeout
 
-from model import File, SimpleFile, Item
-from pdf import Reader, Editor, Processor
+from model import File, SimpleFile, Item, CallbackItems, CallbackProcess
+from pdf import Reader, Processor
 from support import logger, logged
 
 app = FastAPI(
@@ -25,62 +24,9 @@ app = FastAPI(
     }
 )
 
-executor = ThreadPoolExecutor(max_workers=4)
-
-
-# @app.post('/generate/from-files', description='通过文件生成(仅做测试)')
-# async def generate_from_file(files: List[bytes] = File(),
-#                              qr_code: str = Form('code001', description='二维码内容'),
-#                              doc_no: str = Form('SO202305240001', description='工单号'),
-#                              inventory_code: str = Form('20120527003_001', description='货品编码'),
-#                              inventory_name: str = Form('ios数据线_001', description='货品名称'),
-#                              inventory_spec: str = Form('型号008_001', description='规格型号'),
-#                              quantity: str = Form(12, description='数量'),
-#                              doc_date: str = Form('2024-02-02', description='交期'),
-#                              process_flow: str = Form('生产->包装->装箱', description='工艺路线'),
-#                              marks_str: str = Form(
-#                                  '22➍23➍182➍103➍https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg',
-#                                  description='多文件,多页,多遮罩区域: 坐标及图片url以➍连接[x0➍y0➍x1➍y1➍img_url], 多个遮罩块以➌连接[rect0➌rect1], 每页的遮罩数组以➋连接[page0➋page1], 每个文件以➊连接[file0➊file1]!'),
-#                              rotates_str: str = Form('', description='多文件,每页的旋转角度, 每页以➋连接, 每文件以➊连接')):
-#     try:
-#         processor = Processor(source_files=files)
-#         processor.set_generate_config(
-#             qr_code=qr_code,
-#             doc_no=doc_no,
-#             inventory_code=inventory_code,
-#             inventory_name=inventory_name,
-#             inventory_spec=inventory_spec,
-#             quantity=quantity,
-#             doc_date=doc_date,
-#             process_flow=process_flow,
-#             marks_str=marks_str,
-#             rotates_str=rotates_str,
-#             horizontal_layout=True
-#         )
-#         byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
-#         headers = {"content-type": "application/pdf",
-#                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-#         return Response(content=byte_data, headers=headers, media_type="application/pdf")
-#     except Exception as err:
-#         print(repr(err))
-#         logger.exception(err)
-#         return Response(content=repr(err), media_type="text/html", status_code=500)
-
-
-# @app.post('/roration/for-files', description='通过文件列表获取旋转角度(仅做测试)', response_class=ORJSONResponse)
-# async def rotate_from_file(files: List[bytes] = File()):
-#     try:
-#         processor = Processor(source_files=files)
-#         docs_rotates = processor.get_rotates_for_target_docs()
-#         return ORJSONResponse(docs_rotates)
-#     except Exception as err:
-#         print(repr(err))
-#         logger.exception(err)
-#         return Response(content=repr(err), media_type="text/html", status_code=500)
-
 
 @app.post('/rotations/from-urls', description='通过文件url列表获取旋转角度', response_class=ORJSONResponse)
-async def rotate_from_urls(files: List[SimpleFile]):
+def rotate_from_urls(files: List[SimpleFile]):
     try:
         results = []
         processor = Processor()
@@ -92,68 +38,23 @@ async def rotate_from_urls(files: List[SimpleFile]):
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
         return ORJSONResponse(results)
-    except Exception as err:
+    except BaseException as err:
         print(repr(err))
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-# @app.post('/generate/from-url', description='通过文件url生成')
-# async def generate_from_url(item: Item):
-#     try:
-#         processor = Processor(source_urls=item.file_urls)
-#         processor.set_generate_config(
-#             qr_code=item.qr_code,
-#             doc_no=item.doc_no,
-#             inventory_code=item.inventory_code,
-#             inventory_name=item.inventory_name,
-#             inventory_spec=item.inventory_spec,
-#             quantity=item.quantity,
-#             doc_date=item.doc_date,
-#             process_flow=item.process_flow,
-#             marks_str=item.marks_str,
-#             rotates_str=item.rotates_str,
-#             horizontal_layout=True
-#         )
-#         byte_data = read_temp_file_instant(lambda x: processor.save_to_filepath(x))
-#         headers = {"content-type": "application/pdf",
-#                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-#         return Response(content=byte_data, headers=headers, media_type="application/pdf")
-#     except Exception as err:
-#         print(repr(err))
-#         logger.exception(err)
-#         return Response(content=repr(err), media_type="text/html", status_code=500)
-#
-#
-
-@logged(desc='处理多个pdf文件')
-@app.post('/generate/from-urls', description='通过多个item(单个item可能包含多个文件)生成')
-async def generate_from_url(items: List[Item]):
+@logged(desc='处理多个pdf文件,并返回结果文档')
+@app.post('/generate/from-urls', description='处理多个pdf文件,并返回结果文档')
+def generate_from_url(items: List[Item]):
     try:
-        s_time = int(time.perf_counter() * 1000)
-        file_count = 0
-        processor: Processor = Processor()
-        # 并发下载文件,否则无法使用`file.byte_array`
-        processor.wrap_file_bytes_for_items(items)
-        item_docs = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            futures = []
-            for item in items:
-                file_count += len(item.files)
-                # 如果是测试 传入string则增加不同item之间的批次号
-                item.wrap_batch_number_when_qr_string()
-                # 开始多线程处理
-                future = pool.submit(processor.generate_item_doc_without_close, item)
-                futures.append(future)
-            # 处理进度
-            for future in concurrent.futures.as_completed(futures):  # 并发执行
-                item_docs.append(future.result())
+        def item_call(item_index, item_doc, exception):
+            pass
 
-        target_doc_bytes = processor.get_bytes_by_merge_and_compress_docs(item_docs)
+        processor = Processor()
+        target_doc_bytes = processor.generate_from_items(items, item_call)
         headers = {"content-type": "application/pdf",
-                   "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
-        e_time = time.time()
-        logger.info(f'=======================================> 【处理 {file_count} 个pdf】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
+                   "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
         print(repr(err))
@@ -161,106 +62,74 @@ async def generate_from_url(items: List[Item]):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-#
-#
-#
-#
-#
-# @app.post('/generate/async-callback-from-urls', description='通过多个文件url生成,并回调通知')
-# async def generate_from_url(call_item: CallItem):
-#     # thread = threading.Thread(target=async_generated_with_callback, args=(call_item,))
-#     # thread.start()
-#     executor.submit(async_generated_with_callback, call_item)
-#     return Response(content=f'已经开始处理,完成后回调地址: {call_item.callback_url}', media_type="text/html")
-#
-#
-# def _generate_document_thread(index, item, request, process_bar):
-#     """
-#     处理单个pdf
-#     :param index:
-#     :param item:
-#     :param request:
-#     :param process_bar:
-#     :return:
-#     """
-#     processor = Processor(source_urls=item.file_urls)
-#     success_state = True
-#     error_msg = None
-#     try:
-#         processor.set_generate_config(
-#             qr_code=item.qr_code,
-#             doc_no=item.doc_no,
-#             inventory_code=item.inventory_code,
-#             inventory_name=item.inventory_name,
-#             inventory_spec=item.inventory_spec,
-#             quantity=item.quantity,
-#             doc_date=item.doc_date,
-#             process_flow=item.process_flow,
-#             marks_str=item.marks_str,
-#             rotates_str=item.rotates_str,
-#             horizontal_layout=True
-#         )
-#         document = processor.generate_document()
-#         return document
-#     except BaseException as error:
-#         error_msg = repr(error)
-#         logger.warn(error_msg)
-#         success_state = False
-#         return None
-#     finally:
-#         process_bar.update(1)
-#         if request.process_url:
-#             process_data = {'total': len(request.requests), 'index': index, 'request_id': request.request_id,
-#                             'item_id': item.item_id, 'success': success_state, 'err_msg': error_msg}
-#             thread = threading.Thread(target=async_post_process, args=(request.process_url, process_data))
-#             thread.start()
-#
-#
-# def async_generated_with_callback(call_item: CallItem):
-#     """
-#     异步生成item的pdf，并合并推送到callbackurl
-#     :param call_item:
-#     :return:
-#     """
-#     try:
-#         process_bar = tqdm(total=len(call_item.requests))
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-#             begin_time = time.time()
-#             futures = []
-#             for index, item in enumerate(call_item.requests):
-#                 future = pool.submit(_generate_document_thread, index, item, call_item, process_bar)
-#                 futures.append(future)
-#             documents = []
-#             for future in as_completed(futures):  # 并发执行
-#                 pass
-#             for future in futures:  # 按原始顺序添加页
-#                 documents.append(future.result())
-#             process_bar.close()
-#             logger.info(
-#                 f'合并pdf: requestId:{call_item.request_id} 处理{len(documents)}个PDF耗时: {time.time() - begin_time}')
-#             begin_time = time.time()
-#             combiner = Combiner(documents)
-#             bytes = read_temp_file_instant(lambda x: combiner.save_to_filepath(x))
-#             logger.info(f'requestId:{call_item.request_id} 合并{len(documents)}个PDF耗时: {time.time() - begin_time}')
-#             files = {'file': (f'result-{int(time.time())}.pdf', bytes, 'application/pdf')}
-#             data = {'request_id': call_item.request_id, 'total': len(call_item.requests)}
-#             httpx.post(call_item.callback_url, files=files, data=data)
-#     except Exception as err:
-#         print(f'合并pdf出错: {repr(err)}')
-#         logger.exception(err)
-#         data = {'request_id': call_item.request_id, 'err_msg': repr(err)}
-#         httpx.post(call_item.callback_url, data=data)
-#
-#
-# @app.post('/callback/file', description='接收文件上传')
-# async def generate_from_file(file: UploadFile = File(), request_id: str = Form()):
-#     print('接收到示例文件上传: ', request_id, file.filename, file.size)
-#     return Response(content=request_id, media_type="text/html")
-#
-#
-# def async_post_process(url, data):
-#     if url:
-#         httpx.post(url, data=data, timeout=Timeout(timeout=30.0, connect=10.0))
+@logged(desc='处理多个pdf文件,并回调通知')
+@app.post('/generate/async-callback-from-urls', description='处理多个pdf文件,并回调通知')
+def callback_from_urls(callback_items: CallbackItems):
+    try:
+
+        def item_call(item_index, item_doc, exception):
+            if callback_items.process_url:
+                item = callback_items.items[item_index]
+                process_data = {'total': len(callback_items.items), 'index': item_index,
+                                'request_id': callback_items.request_id,
+                                'item_id': item.item_id, 'success': True, 'err_msg': None}
+                if exception:
+                    process_data['success'] = False
+                    process_data['err_msg'] = repr(exception)
+                thread = threading.Thread(target=async_post_process, args=(callback_items.process_url, process_data))
+                thread.start()
+                pass
+
+        def async_post_process(url, data):
+            if url:
+                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+
+        def async_generate_and_callback(callback_items: CallbackItems):
+            """
+            异步开启处理线程
+            """
+            try:
+                processor = Processor()
+                target_doc_bytes = processor.generate_from_items(callback_items.items, item_call)
+                files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
+                data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
+                # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
+                response = httpx.post(callback_items.callback_url, files=files, data=data,
+                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                if response.is_success:
+                    print(f'---> 【上传pdf返回结果】: {response.content}')
+
+            except BaseException as err:
+                print(repr(err))
+                logger.exception(err)
+                data = {'request_id': callback_items.request_id, 'total': len(callback_items.items),
+                        'err_msg': repr(err)}
+                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                pass
+
+        thread = threading.Thread(target=async_generate_and_callback, args=(callback_items,))
+        thread.start()
+        return Response(content=f'已经开始处理,待完成后回调地址: {callback_items.callback_url}', media_type="text/html")
+    except BaseException as err:
+        print(repr(err))
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@app.post('/callback/process', description='接收进度信息')
+def callback_process(callback_process: CallbackProcess):
+    print(
+        f'<--- 【接收到处理进度】: 共{callback_process.total}个item, 当前第{callback_process.index}个, request_id:{callback_process.request_id}, item_id:{callback_process.item_id} success: {callback_process.success} err_msg:{callback_process.err_msg}')
+    return Response(content='success', media_type="text/html")
+
+
+@app.post('/callback/file', description='接收文件上传')
+def callback_file(file: UploadFile = None, request_id: str = Form(), err_msg: str = Form()):
+    if file:
+        print(f'<--- 【接收到回调文件】: request_id:{request_id} filename:{file.filename} filesize:{file.size}')
+    else:
+        print(f'<--- 【接收到回调文件】: request_id:{request_id} 错误信息:{err_msg}')
+    return Response(content='success', media_type="text/html")
 
 
 if __name__ == "__main__":
@@ -268,4 +137,3 @@ if __name__ == "__main__":
     fitz.restore_aliases()
     print('文档地址: http://localhost:8000/docs')
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)
-

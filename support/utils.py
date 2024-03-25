@@ -10,7 +10,7 @@ import httpx
 import psutil
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-logging.basicConfig(format=LOG_FORMAT, level=logging.ERROR)
+logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
 logger = logging.getLogger()
 
 a4_dpi = 150

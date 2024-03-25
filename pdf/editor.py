@@ -22,7 +22,7 @@ class Editor(Reader):
         super().__init__(bytes, is_rewrap)
 
     @logged(desc='批量下载遮罩区域图片')
-    def get_image_url_pixmap_dict(self, marks: list[Mark]):
+    def get_image_url_pixmap_dict(self, marks: list[Mark]) -> dict:
         """
         从遮罩区域数组中提取图片url，并发下载，放到 url-pixmap 作为kv的字典中
         :param marks: 遮罩区域数组
@@ -48,7 +48,7 @@ class Editor(Reader):
         return image_pixmap_dict
 
     @logged(desc='给源文件所有页添加遮罩区域')
-    def wrap_doc_with_marks(self, zoom: float, marks: list[Mark]):
+    def wrap_doc_with_marks(self, zoom: float, marks: list[Mark]) -> None:
         """
         给当前source文档添加遮罩区域
         :param zoom: 每页统一的缩放比例
@@ -80,7 +80,7 @@ class Editor(Reader):
                     shape.commit()
 
     @logged(desc='合并头内容和源内容到新页面')
-    def wrap_target_doc_with_header(self, rotations: list[float], header_doc: Document, target_doc: Document):
+    def wrap_target_doc_with_header(self, rotations: list[float], header_doc: Document, target_doc: Document) -> None:
         """
         将头内容和源内容合并到target_doc文件中
         :param rotations: 源文件的旋转角度集合

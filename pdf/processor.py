@@ -1,5 +1,6 @@
 import concurrent
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 
@@ -116,7 +117,6 @@ class Processor(object):
                 source_editor.wrap_doc_with_marks(file.zoom, file.marks)
             # 合并到target_doc
             source_editor.wrap_target_doc_with_header(file.rotations, header_doc, target_item_doc)
-            source_editor.close()
         header_doc.close()
         return target_item_doc
 
@@ -145,7 +145,7 @@ class Processor(object):
         return editor
 
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
-    def get_doc_bytes_and_close(self, doc: Document):
+    def get_doc_bytes_and_close(self, doc: Document) -> bytes:
         """
         生成pdf文件的字节数组,并关闭文档已打开的句柄
         :return:
@@ -155,7 +155,7 @@ class Processor(object):
         return pdf_bytes
 
     @logged(desc='并发下载请求的多个item的多个文件')
-    def wrap_file_bytes_for_items(self, items: list[Item]):
+    def wrap_file_bytes_for_items(self, items: list[Item]) -> None:
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
@@ -174,7 +174,7 @@ class Processor(object):
         pass
 
     @logged(desc='批量从请求的files的url列表中下载文件并补全到bytes_array中')
-    def wrap_file_bytes_for_files(self, files: list[File]):
+    def wrap_file_bytes_for_files(self, files: list[File]) -> None:
         """
         批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
@@ -192,7 +192,7 @@ class Processor(object):
         pass
 
     # @logged(desc='下载单个pdf文件')
-    def wrap_file_bytes_for_file(self, file: File):
+    def wrap_file_bytes_for_file(self, file: File) -> None:
         """
         下载单个pdf文件
         :param file:
@@ -201,7 +201,7 @@ class Processor(object):
         file.byte_array = get_url_content_retry(file.url, 5)
         pass
 
-    def compress_doc(self, doc: Document):
+    def compress_doc(self, doc: Document) -> None:
         """
         创建字体的子集，减少文档大小，前提必须在主线程中调用,否则会导致文件找不到异常
         参考：https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
@@ -219,7 +219,7 @@ class Processor(object):
         logger.warn(f'5次重试未成功压缩!')
 
     @logged(desc='压缩合并多个item文档到一个结果文档')
-    def get_bytes_by_merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True):
+    def get_bytes_by_merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> bytes:
         """
         合并多个文档并压缩
         :param docs: 多个文档
@@ -236,3 +236,42 @@ class Processor(object):
         # 再次压缩结果文档
         self.compress_doc(target_doc)
         return self.get_doc_bytes_and_close(target_doc)
+
+    def generate_from_items(self, items: list[Item], item_call) -> Document:
+        """
+        通过多个items处理成一个结果文档
+        :param items: item任务列表
+        :param item_call: 单个item处理完回调: `item_call(item_index, result, exception)`
+        :return: result_doc
+        """
+        s_time = int(time.perf_counter() * 1000)
+        file_count = 0
+        # 并发下载文件,否则无法使用`file.byte_array`
+        self.wrap_file_bytes_for_items(items)
+        item_docs = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            for item in items:
+                file_count += len(item.files)
+                # 如果是测试 传入string则增加不同item之间的批次号
+                item.wrap_batch_number_when_qr_string()
+                # 开始多线程处理
+                future = pool.submit(self.generate_item_doc_without_close, item)
+                futures.append(future)
+            # 处理进度
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                pass
+            # 按原始顺序添加页
+            for index, future in enumerate(futures):
+                exception = future.exception()
+                if exception:
+                    item_call(index, None, exception)
+                else:
+                    result = future.result()
+                    item_docs.append(result)
+                    item_call(index, result, None)
+
+        target_doc_bytes = self.get_bytes_by_merge_and_compress_docs(item_docs)
+        print(
+            f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
+        return target_doc_bytes
