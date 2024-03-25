@@ -227,12 +227,12 @@ class Processor(object):
         """
         target_doc = fitz.open()
         for item_doc in item_docs:
-            # 先压缩
+            # 先压缩item文档
             self.compress_doc(item_doc)
             # 每个item生成独立的document，然后插入到target中
             target_doc.insert_pdf(docsrc=item_doc)
             if is_item_doc_close:
                 item_doc.close()
-        # 再次压缩
+        # 再次压缩结果文档
         self.compress_doc(target_doc)
         return self.get_doc_bytes_and_close(target_doc)
