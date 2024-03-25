@@ -99,7 +99,7 @@ class Processor(object):
 
         return header_doc
 
-    @logged(desc='每个item生成独立包含header和原页面的文档')
+    @logged(desc='处理单个item_doc')
     def generate_item_doc_without_close(self, item: Item) -> Document:
         """
         生成独立包含header和原页面的文档
@@ -116,6 +116,7 @@ class Processor(object):
                 source_editor.wrap_doc_with_marks(file.zoom, file.marks)
             # 合并到target_doc
             source_editor.wrap_target_doc_with_header(file.rotations, header_doc, target_item_doc)
+            source_editor.close()
         header_doc.close()
         return target_item_doc
 
@@ -131,7 +132,7 @@ class Processor(object):
         reader = Reader(bytes, is_rewrap)
         return reader
 
-    @logged(desc='初始化一个pdf文件编辑器')
+    @logged(desc='初始化源pdf文件编辑器实例')
     def create_editor(self, bytes: bytes, is_rewrap: bool) -> Editor:
         """
         初始化一个pdf文件编辑器(包含查看器功能)
@@ -143,7 +144,7 @@ class Processor(object):
         editor = Editor(bytes, is_rewrap)
         return editor
 
-    @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
+    # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document):
         """
         生成pdf文件的字节数组,并关闭文档已打开的句柄
@@ -216,3 +217,22 @@ class Processor(object):
                 logger.warn(f'压缩文档处理进程冲突: 第{_}次')
                 continue
         logger.warn(f'5次重试未成功压缩!')
+
+    @logged(desc='压缩合并多个item文档到一个结果文档')
+    def get_bytes_by_merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True):
+        """
+        合并多个文档并压缩
+        :param docs: 多个文档
+        :return: 一个文档
+        """
+        target_doc = fitz.open()
+        for item_doc in item_docs:
+            # 先压缩
+            self.compress_doc(item_doc)
+            # 每个item生成独立的document，然后插入到target中
+            target_doc.insert_pdf(docsrc=item_doc)
+            if is_item_doc_close:
+                item_doc.close()
+        # 再次压缩
+        self.compress_doc(target_doc)
+        return self.get_doc_bytes_and_close(target_doc)

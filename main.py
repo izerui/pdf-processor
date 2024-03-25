@@ -132,8 +132,6 @@ async def generate_from_url(items: List[Item]):
     try:
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
-        # 要生成的目的pdf
-        target_doc = fitz.open()
         processor: Processor = Processor()
         # 并发下载文件,否则无法使用`file.byte_array`
         processor.wrap_file_bytes_for_items(items)
@@ -150,14 +148,8 @@ async def generate_from_url(items: List[Item]):
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 item_docs.append(future.result())
-        for item_doc in item_docs:
-            # 先压缩
-            processor.compress_doc(item_doc)
-            # 每个item生成独立的document，然后插入到target中
-            target_doc.insert_pdf(docsrc=item_doc)
-        # 再次压缩
-        processor.compress_doc(target_doc)
-        target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
+
+        target_doc_bytes = processor.get_bytes_by_merge_and_compress_docs(item_docs)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.time())}.pdf'}
         e_time = time.time()

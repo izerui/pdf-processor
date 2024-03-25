@@ -1,7 +1,6 @@
 import concurrent
 
 from fitz import Document, fitz, Shape
-from tqdm import tqdm
 
 from model import Mark
 from pdf import Reader
@@ -80,7 +79,7 @@ class Editor(Reader):
                     )
                     shape.commit()
 
-    @logged(desc='将头内容和源内容合并到target_doc文件中')
+    @logged(desc='合并头内容和源内容到新页面')
     def wrap_target_doc_with_header(self, rotations: list[float], header_doc: Document, target_doc: Document):
         """
         将头内容和源内容合并到target_doc文件中

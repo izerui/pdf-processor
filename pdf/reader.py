@@ -20,7 +20,7 @@ class Reader(object):
         if is_rewrap:
             self.rewrap_doc()
 
-    @logged(desc='重新包装当前的doc')
+    # @logged(desc='重新包装当前的doc')
     def rewrap_doc(self):
         """
         重新包装当前的doc,避免一些识别处理问题, 注意这里转换后文档页面的rotation会重置为0
@@ -43,13 +43,16 @@ class Reader(object):
         except BaseException as e:
             logger.warn(f'重新包装转换失败: {repr(e)}')
 
-    def __del__(self):
+    def close(self):
         try:
             if self.doc:
                 self.doc.close()
         except BaseException as err:
             logger.warn(repr(err))
             pass
+
+    def __del__(self):
+        self.close()
 
     # @logged(desc='获取单个页面转成横版所需的角度')
     def get_page_roration_for_cropbox(self, index: int) -> float:
