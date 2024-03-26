@@ -122,8 +122,8 @@ class Editor(Reader):
         """
 
         # 考虑下面两个方法的区别：貌似第二个快，但是会清理不完整，导致坐标还是存在偏差
-        # https://pymupdf.readthedocs.io/en/latest/functions.html#Page.clean_contents
-        # https://pymupdf.readthedocs.io/en/latest/functions.html#Page.wrap_contents
+        # 1. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.clean_contents
+        # 2. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.wrap_contents
         # page.wrap_contents()
 
         for page in self.doc:
