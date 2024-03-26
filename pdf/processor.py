@@ -120,7 +120,7 @@ class Processor(object):
         header_doc.close()
         return target_item_doc
 
-    @logged(desc='初始化一个pdf文件读取器')
+    @logged(desc='初始化pdf文件读取器实例')
     def create_reader(self, bytes: bytes, is_rewrap: bool) -> Reader:
         """
         初始化一个pdf文件读取器
@@ -132,7 +132,7 @@ class Processor(object):
         reader = Reader(bytes, is_rewrap)
         return reader
 
-    @logged(desc='初始化源pdf文件编辑器实例')
+    @logged(desc='初始化源pdf编辑器实例')
     def create_editor(self, bytes: bytes, is_rewrap: bool) -> Editor:
         """
         初始化一个pdf文件编辑器(包含查看器功能)
