@@ -64,7 +64,8 @@ class Editor(Reader):
             zoom = 1
         for index, page in enumerate(self.doc):
             for mark in marks:
-                print('rotation: ', rotations[index], 'mark: ', mark)
+                # print('rotation: ', rotations[index], 'mark: ', mark)
+
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                 rect = fitz.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
                                  float(mark.y1) / zoom)
