@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 
-@app.post('/file/upload-url', summary='上传文件到测试公有空间并返回url等信息')
+@app.post('/file/upload-url', summary='测试示例-上传文件到测试公有空间并返回url等信息')
 async def file_url(file: UploadFile):
     profile = 'test'
     client = QiniuClient()
