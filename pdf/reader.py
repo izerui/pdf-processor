@@ -104,14 +104,14 @@ class Reader(object):
         return rotate_for_cropbox
 
     @logged(desc='获取所有页面转成横版所需的角度')
-    def get_rotations_for_cropbox(self) -> list[float]:
+    def get_horizontal_transform_rotations(self) -> list[float]:
         """
         获取每页针对未旋转前的`cropbox`区域,转成横版所需的角度
         :return: 旋转角度数组
         """
         # 如果不是pdf，一般情况下都是图片，所以默认返回0
         if not self.doc.is_pdf:
-            return [0.0]
+            return [0]
         rotations = []
         for index, page in enumerate(self.doc):
             rotations.append(self.get_page_roration_for_cropbox(index))

@@ -72,8 +72,8 @@ class File(BaseModel):
     )
 
     # 每个页面的旋转角度
-    rotations: List[float] | None = Field(
-        None, title="页面缩放大小 0 ~ 1 (0.8 表示缩小1/4)", examples=[[0]]
+    rotations: List[int] | None = Field(
+        None, title="旋转角度", examples=[[0]]
     )
 
 

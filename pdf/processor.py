@@ -114,11 +114,16 @@ class Processor(object):
         for file in item.files:
             source_editor: Editor = self.create_editor(file.byte_array, False)
             source_editor.clean_pages()
+            rotations = None
+            if file.rotations:
+                rotations = file.rotations
+            else:
+                rotations = source_editor.get_horizontal_transform_rotations()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
-                source_editor.wrap_doc_with_marks(file.zoom, file.marks)
+                source_editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
             # 合并到target_doc
-            source_editor.wrap_target_doc_with_header(file.rotations, header_doc, target_item_doc)
+            source_editor.wrap_target_doc_with_header(rotations, header_doc, target_item_doc)
         header_doc.close()
         return target_item_doc
 

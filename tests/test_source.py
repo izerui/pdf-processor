@@ -53,10 +53,10 @@ class TestTable(unittest.TestCase):
         for page in doc:
             page.clean_contents()
 
-            mark_img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
+            mark_img_url = 'https://tfile.yj2025.com/360826a9-27d4-4121-8ede-b3938a2ed6be.jpg'
             mark_img_bytes = get_url_content_retry(mark_img_url)
             img_pixmap = fitz.Pixmap(mark_img_bytes)
-            rect = fitz.Rect(0, 0, 200, 300)
+            rect = fitz.Rect(140, 561, 290, 652)
             page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
 
             new_page = target.new_page(width=page.cropbox.width, height=page.cropbox.height)

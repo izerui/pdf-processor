@@ -47,7 +47,7 @@ def rotate_from_urls(files: List[SimpleFile]):
         processor.wrap_file_bytes_for_files(down_files)
         for index, file in enumerate(down_files):
             reader: Reader = processor.create_reader(file.byte_array, False)
-            rotations = reader.get_rotations_for_cropbox()
+            rotations = reader.get_horizontal_transform_rotations()
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
         return ORJSONResponse(results)

@@ -48,7 +48,7 @@ class Editor(Reader):
         return image_pixmap_dict
 
     @logged(desc='给源文件所有页添加遮罩区域')
-    def wrap_doc_with_marks(self, zoom: float, marks: list[Mark]) -> None:
+    def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark]) -> None:
         """
         给当前source文档添加遮罩区域
         :param zoom: 每页统一的缩放比例
@@ -67,6 +67,8 @@ class Editor(Reader):
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                 rect = fitz.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
                                  float(mark.y1) / zoom)
+                # 设置旋转角度，防止显示效果不一致
+                page.set_rotation(rotations[index])
                 if mark.image_url:
                     img_pixmap = image_url_dict[mark.image_url]
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
@@ -98,17 +100,9 @@ class Editor(Reader):
             r2 = fitz.Rect(0, header_height, a4_width, a4_height)
             # 将header-pdf首页贴到顶部区域
             new_page.show_pdf_page(r1, header_doc, 0)
-            # 转横版 (针对`cropbox`区域，在贴到下部区域前要旋转的角度)
-            rotation = 0.0
-            # 如果传递进来的有旋转角度,则优先使用(如果传递的旋转角度是针对原始pdf未旋转页面，则不用特殊处理)
-            if rotations and len(rotations) > p_index:
-                rotation = rotations[p_index]
-            else:
-                # 获取页面应该回正的旋转角度
-                rotation = self.get_page_roration_for_cropbox(p_index)
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
             usage_page.set_rotation(0)
-            new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotation, keep_proportion=True,
+            new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotations[p_index], keep_proportion=True,
                                    clip=usage_page.cropbox)
             # usage_pdf.save('333.pdf')
 
