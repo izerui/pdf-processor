@@ -111,7 +111,8 @@ class Processor(object):
         # 每个item的头部区域pdf
         header_doc: Document = self.generate_header_doc_without_close(item)
         for file in item.files:
-            source_editor: Editor = self.create_editor(file.byte_array, True)
+            source_editor: Editor = self.create_editor(file.byte_array, False)
+            source_editor.clean_pages()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
                 source_editor.wrap_doc_with_marks(file.zoom, file.marks)

@@ -112,3 +112,13 @@ class Editor(Reader):
                                    clip=usage_page.cropbox)
             # 清理无效链接，针对页面缩容
             # new_page.clean_contents()
+
+    def clean_pages(self):
+        """
+        循环每页清理：
+            清理并连接与此页面关联的所有contents对象
+        参考：https://pymupdf.readthedocs.io/en/latest/functions.html#Page.clean_contents
+        :return:
+        """
+        for page in self.doc:
+            page.clean_contents()

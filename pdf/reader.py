@@ -17,7 +17,8 @@ class Reader(object):
         :param bytes: 单个pdf对象的内容字节数组
         """
         self.doc = fitz.open("pdf", bytes)
-        if is_rewrap:
+        # 如果doc不是pdf或者强制进行二次转换
+        if is_rewrap or not self.doc.is_pdf:
             self.rewrap_doc()
 
     # @logged(desc='重新包装当前的doc')
