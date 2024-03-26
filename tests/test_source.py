@@ -45,22 +45,28 @@ class TestTable(unittest.TestCase):
         doc.close()
 
     def test_open_show_page_new(self):
-        url = 'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf'
+        url = 'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/CS01-P3-001.pdf'
         bytes = get_url_content_retry(url)
         target = fitz.open()
         doc = fitz.open('pdf', bytes)
         # doc = fitz.open('pdf', doc.convert_to_pdf())
         for page in doc:
             page.clean_contents()
-
             mark_img_url = 'https://tfile.yj2025.com/360826a9-27d4-4121-8ede-b3938a2ed6be.jpg'
             mark_img_bytes = get_url_content_retry(mark_img_url)
             img_pixmap = fitz.Pixmap(mark_img_bytes)
-            rect = fitz.Rect(140, 561, 290, 652)
-            page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
+            rect = fitz.Rect(140 / 0.2, 561 / 0.2, 290 / 0.2, 652 / 0.2)
+
+            rotation = 90
+
+            page.set_rotation(rotation)
+            rect = rect.transform(page.rotation_matrix)
+            page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, rotate = rotation)
 
             new_page = target.new_page(width=page.cropbox.width, height=page.cropbox.height)
-            new_page.show_pdf_page(page.cropbox, doc, keep_proportion=True,
+
+            page.set_rotation(0)
+            new_page.show_pdf_page(page.cropbox, doc, keep_proportion=True, rotate=rotation,
                                    clip=new_page.cropbox)
             new_page.set_rotation(page.rotation)
         target.save(f'result-new-show-{int(time.perf_counter() * 1000)}.pdf')

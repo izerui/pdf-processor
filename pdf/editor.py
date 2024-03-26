@@ -64,14 +64,21 @@ class Editor(Reader):
             zoom = 1
         for index, page in enumerate(self.doc):
             for mark in marks:
+                print('rotation: ', rotations[index], 'mark: ', mark)
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                 rect = fitz.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
                                  float(mark.y1) / zoom)
-                # 设置旋转角度，防止显示效果不一致
+                # 记录原来的旋转角度
+                _rotation = page.rotation
+                # 设置为传入的旋转角度，防止显示效果不一致
                 page.set_rotation(rotations[index])
+                # 通过设置的旋转角度通过反向计算区域块实际位置
+                rect = rect.transform(page.derotation_matrix)
                 if mark.image_url:
                     img_pixmap = image_url_dict[mark.image_url]
-                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
+                    # 跟随页面旋转角度进行旋转，否则图片方向不对
+                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
+                                      rotate=rotations[index])
                 else:
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
@@ -80,6 +87,8 @@ class Editor(Reader):
                         color=0  # line color
                     )
                     shape.commit()
+                # 还原原来的旋转角度
+                page.set_rotation(_rotation)
 
     @logged(desc='合并头内容和源内容到新页面')
     def wrap_target_doc_with_header(self, rotations: list[float], header_doc: Document, target_doc: Document) -> None:
