@@ -12,6 +12,7 @@ RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
 RUN pip install PyMuPDF qrcode fastapi[all] uvicorn[standard]
 RUN pip install fonttools
 RUN pip install tqdm
+RUN pip install qiniu
 
 COPY *.py ./
 COPY ./model/ ./model/
