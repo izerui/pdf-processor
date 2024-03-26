@@ -173,7 +173,7 @@ class Processor(object):
                 pass
         pass
 
-    @logged(desc='批量从请求的files的url列表中下载文件并补全到bytes_array中')
+    @logged(desc='并发下载请求的多个File的多个文件')
     def wrap_file_bytes_for_files(self, files: list[File]) -> None:
         """
         批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
