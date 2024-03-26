@@ -21,4 +21,4 @@ COPY ./support/ ./support/
 COPY ./tests/ ./tests/
 COPY ./view/ ./view/
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0",  "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--timeout-keep-alive", "60", "--workers", "16"]
