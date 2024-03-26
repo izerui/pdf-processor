@@ -110,8 +110,7 @@ class Editor(Reader):
             usage_page.set_rotation(0)
             new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotation, keep_proportion=True,
                                    clip=usage_page.cropbox)
-            # 清理无效链接，针对页面缩容
-            # new_page.clean_contents()
+            # usage_pdf.save('333.pdf')
 
     def clean_pages(self):
         """

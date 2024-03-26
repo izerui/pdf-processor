@@ -144,11 +144,9 @@ class TestTable(unittest.TestCase):
                     # img_url = None
                     img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
                     if img_url:
-                        response = get_url_content_retry(img_url)
-                        if not response.is_success:
-                            raise IOError(f'图片下载失败, url: {img_url}')
+                        bytes = get_url_content_retry(img_url)
                         # page.set_rotation(0)
-                        img_pixmap = fitz.Pixmap(response.content)
+                        img_pixmap = fitz.Pixmap(bytes)
                         mark_page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0)
                     else:
                         shape: Shape = mark_page.new_shape()

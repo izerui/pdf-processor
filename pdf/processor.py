@@ -11,7 +11,8 @@ from qrcode.image.pil import PilImage
 from model import Item, File
 from pdf import Editor
 from pdf import Reader
-from support import a4_width, header_height, logger, get_url_content_retry, logged, read_bytes_from_file
+from support import a4_width, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
+    read_temp_file_instant
 
 debugger = False
 
@@ -151,8 +152,8 @@ class Processor(object):
         生成pdf文件的字节数组,并关闭文档已打开的句柄
         :return:
         """
-        pdf_bytes = doc.convert_to_pdf()
-        # pdf_bytes = read_temp_file_instant(lambda x: doc.save(x) and doc.close())
+        # pdf_bytes = doc.convert_to_pdf()
+        pdf_bytes = read_temp_file_instant(lambda x: doc.save(x, garbage=3, deflate=True) and doc.close())
         return pdf_bytes
 
     @logged(desc='并发下载请求的多个item的多个文件')
