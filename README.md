@@ -44,5 +44,6 @@ test file:
 * https://file.yj2025.com/PD5060-GL-016T%20%E9%95%9C%E6%9E%B6%E6%8A%A4%E7%BD%A9.pdf
 * https://file.yj2025.com/CS01-P3-001.pdf
 * https://file.yj2025.com/CS01-P3-002.pdf
-* https://file.yj2025.com/CS01-P3-003.pdf
-* 丢失内容: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
+* mark区域坐标不对: https://file.yj2025.com/CS01-P3-003.pdf
+* 丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
+* 带管子图: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf
