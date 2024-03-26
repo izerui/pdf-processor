@@ -152,7 +152,10 @@ class Processor(object):
         生成pdf文件的字节数组,并关闭文档已打开的句柄
         :return:
         """
+
         # pdf_bytes = doc.convert_to_pdf()
+
+        # https://pymupdf.readthedocs.io/en/latest/document.html#Document.save
         pdf_bytes = read_temp_file_instant(lambda x: doc.save(x, garbage=3, deflate=True) and doc.close())
         return pdf_bytes
 
