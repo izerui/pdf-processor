@@ -24,19 +24,59 @@ class TestAsync(TaskSet):
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
+                            {
+                                "x0": 0,
+                                "y0": 0,
+                                "x1": 200,
+                                "y1": 300,
+                                "image_url": "https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg"
+                            }
                         ],
-                        "rotations": []
+                        "rotations": [
+                            0
+                        ]
                     }
                 ],
-                "item_id": "string",
-                "qr_code": "string",
-                "doc_no": "string",
-                "inventory_code": "string",
-                "inventory_name": "string",
-                "inventory_spec": "string",
-                "quantity": "string",
-                "doc_date": "string",
-                "process_flow": "string"
+                "item_id": "当前请求的item的标识ID",
+                "qr_code": "二维码内容",
+                "doc_no": "卧室一个 DOC100",
+                "inventory_code": "你以为的是 Ivne002，。",
+                "inventory_name": "货品是 se名称！3",
+                "inventory_spec": "货品规 *6ds格型号",
+                "quantity": "数量 - 120",
+                "doc_date": "2024年03月24日",
+                "process_flow": "工艺路线1 》工艺路线 2"
+            },
+            {
+                "files": [
+                    {
+                        "name": "单页.pdf",
+                        "url": "https://tfile.yj2025.com/pdf-processor/source/2024-03-25/客户文件禁止外传.pdf",
+                        "byte_array": "string",
+                        "zoom": 1,
+                        "marks": [
+                            {
+                                "x0": 0,
+                                "y0": 0,
+                                "x1": 200,
+                                "y1": 300,
+                                "image_url": "https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg"
+                            }
+                        ],
+                        "rotations": [
+                            0
+                        ]
+                    }
+                ],
+                "item_id": "当前请求的item的标识ID",
+                "qr_code": "二维码内容",
+                "doc_no": "卧室一个 DOC100",
+                "inventory_code": "你以为的是 Ivne002，。",
+                "inventory_name": "货品是 se名称！3",
+                "inventory_spec": "货品规 *6ds格型号",
+                "quantity": "数量 - 120",
+                "doc_date": "2024年03月24日",
+                "process_flow": "工艺路线1 》工艺路线 2"
             },
             {
                 "files": [
@@ -46,63 +86,58 @@ class TestAsync(TaskSet):
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
+                            {
+                                "x0": 0,
+                                "y0": 0,
+                                "x1": 200,
+                                "y1": 300,
+                                "image_url": "https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg"
+                            }
                         ],
-                        "rotations": []
+                        "rotations": [
+                            0
+                        ]
                     }
                 ],
-                "item_id": "string",
-                "qr_code": "string",
-                "doc_no": "string",
-                "inventory_code": "string",
-                "inventory_name": "string",
-                "inventory_spec": "string",
-                "quantity": "string",
-                "doc_date": "string",
-                "process_flow": "string"
-            },
-            {
+                "item_id": "当前请求的item的标识ID",
+                "qr_code": "二维码内容",
+                "doc_no": "卧室一个 DOC100",
+                "inventory_code": "你以为的是 Ivne002，。",
+                "inventory_name": "货品是 se名称！3",
+                "inventory_spec": "货品规 *6ds格型号",
+                "quantity": "数量 - 120",
+                "doc_date": "2024年03月24日",
+                "process_flow": "工艺路线1 》工艺路线 2"
+            }, {
                 "files": [
                     {
                         "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
+                        "url": "https://file.yj2025.com/CS01-P3-003.pdf",
                         "byte_array": "string",
                         "zoom": 1,
                         "marks": [
+                            {
+                                "x0": 0,
+                                "y0": 0,
+                                "x1": 200,
+                                "y1": 300,
+                                "image_url": "https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg"
+                            }
                         ],
-                        "rotations": []
+                        "rotations": [
+                            0
+                        ]
                     }
                 ],
-                "item_id": "string",
-                "qr_code": "string",
-                "doc_no": "string",
-                "inventory_code": "string",
-                "inventory_name": "string",
-                "inventory_spec": "string",
-                "quantity": "string",
-                "doc_date": "string",
-                "process_flow": "string"
-            },
-            {
-                "files": [
-                    {
-                        "name": "单页.pdf",
-                        "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
-                        "byte_array": "string",
-                        "zoom": 1,
-                        "marks": [
-                        ],
-                        "rotations": []
-                    }
-                ],
-                "item_id": "string",
-                "qr_code": "string",
-                "doc_no": "string",
-                "inventory_code": "string",
-                "inventory_name": "string",
-                "inventory_spec": "string",
-                "quantity": "string",
-                "doc_date": "string",
-                "process_flow": "string"
+                "item_id": "当前请求的item的标识ID",
+                "qr_code": "二维码内容",
+                "doc_no": "卧室一个 DOC100",
+                "inventory_code": "你以为的是 Ivne002，。",
+                "inventory_name": "货品是 se名称！3",
+                "inventory_spec": "货品规 *6ds格型号",
+                "quantity": "数量 - 120",
+                "doc_date": "2024年03月24日",
+                "process_flow": "工艺路线1 》工艺路线 2"
             }
         ]
         header = {"Content-Type": "application/json;charset=UTF-8"}

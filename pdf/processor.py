@@ -69,8 +69,8 @@ class Processor(object):
             overlay=False)
 
         # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
-        page.insert_font(fontname=chn_fontname,
-                         fontbuffer=font.buffer)
+        # page.insert_font(fontname=chn_fontname,
+        #                  fontbuffer=font.buffer)
 
         # 字体大小
         fontsize = 20
