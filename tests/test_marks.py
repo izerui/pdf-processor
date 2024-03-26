@@ -21,33 +21,26 @@ def convert_doc(doc: Document):
 # 测试主入口
 class TestTable(unittest.TestCase):
 
-    def __init__(self) -> None:
-        self.dir = '扫码报工PDF/遮罩有问题'
-        files = []
-        for filename in os.listdir(self.dir):
-            if filename.startswith('_'):
-                os.remove(os.path.join(self.dir, filename))
-            else:
-                file_path = os.path.join(self.dir, filename)
-                if not (os.path.isfile(file_path) and (file_path.endswith('.pdf') or file_path.endswith('.PDF'))):
-                    continue
-                files.append((filename, fitz.open(file_path)))
-        self.sources = []
-        for file in files:
-            self.sources.append((file[0], convert_doc(file[1])))
-        pass
-
     def setUp(self):
         pass
 
     def tearDown(self) -> None:
-        for source in self.sources:
-            source.close()
         pass
 
     # 插入图片
     def test_insert_image_01(self):
-        for filename, doc in self.sources:
+        dir = '扫码报工PDF/遮罩有问题'
+        files = []
+        for filename in os.listdir(dir):
+            if filename.startswith('_'):
+                os.remove(os.path.join(dir, filename))
+            else:
+                file_path = os.path.join(dir, filename)
+                if not (os.path.isfile(file_path) and (file_path.endswith('.pdf') or file_path.endswith('.PDF'))):
+                    continue
+                files.append((filename, fitz.open(file_path)))
+
+        for filename, doc in files:
             for index, page in enumerate(doc):
                 page: Page = page
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
@@ -85,11 +78,9 @@ class TestTable(unittest.TestCase):
                 # img_url = None
                 img_url = 'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg'
                 if img_url:
-                    response = get_url_content_retry(img_url)
-                    if not response.is_success:
-                        raise IOError(f'图片下载失败, url: {img_url}')
+                    bytes = get_url_content_retry(img_url)
                     # page.set_rotation(0)
-                    img_pixmap = fitz.Pixmap(response.content)
+                    img_pixmap = fitz.Pixmap(bytes)
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
                 else:
                     shape: Shape = page.new_shape()
@@ -99,7 +90,7 @@ class TestTable(unittest.TestCase):
                         color=0  # line color
                     )
                     shape.commit()
-            doc.save(os.path.join(self.dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
+            doc.save(os.path.join(dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))
 
     # 插入图片
     def test_insert_image_02(self):
