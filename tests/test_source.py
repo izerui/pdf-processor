@@ -57,10 +57,15 @@ class TestTable(unittest.TestCase):
             img_pixmap = fitz.Pixmap(mark_img_bytes)
             rect = fitz.Rect(140 / 0.2, 561 / 0.2, 290 / 0.2, 652 / 0.2)
 
+            # 记录原来的旋转角度
+            _rotation = page.rotation
+            # 传入的旋转角度
             rotation = 90
-
+            # 设置为传入的旋转角度，防止显示效果不一致
             page.set_rotation(rotation)
-            rect = rect.transform(page.rotation_matrix)
+            # 通过设置的旋转角度通过反向计算区域块实际位置
+            rect = rect.transform(page.derotation_matrix)
+            # 跟随页面旋转角度进行旋转，否则图片方向不对
             page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, rotate = rotation)
 
             new_page = target.new_page(width=page.cropbox.width, height=page.cropbox.height)
@@ -68,7 +73,11 @@ class TestTable(unittest.TestCase):
             page.set_rotation(0)
             new_page.show_pdf_page(page.cropbox, doc, keep_proportion=True, rotate=rotation,
                                    clip=new_page.cropbox)
-            new_page.set_rotation(page.rotation)
+            # 还原原来的旋转角度
+            page.set_rotation(0)
+
+            # 新页面使用原来的旋转角度
+            new_page.set_rotation(_rotation)
         target.save(f'result-new-show-{int(time.perf_counter() * 1000)}.pdf')
         doc.close()
         target.close()
