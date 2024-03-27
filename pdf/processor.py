@@ -77,9 +77,10 @@ class Processor(object):
         # 字体大小
         fontsize = 16
 
-        page.insert_text(point=fitz.Point(1754 - 120, 50), text=f'{item.item_no}',
-                         fontsize=fontsize,
-                         fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
+        if item.item_no:
+            page.insert_text(point=fitz.Point(1754 - 120, 50), text=f'{item.item_no}',
+                             fontsize=fontsize,
+                             fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
 
         # 第一列
         page.insert_text(point=fitz.Point(280, 50), text=f'工单号: {item.doc_no}',
