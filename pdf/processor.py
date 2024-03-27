@@ -35,6 +35,9 @@ font = Font(fontname=chn_fontname,
 
 
 class Processor(object):
+    """
+    针对单个或多个文档处理类
+    """
 
     def __init__(self):
         """
