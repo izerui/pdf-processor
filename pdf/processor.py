@@ -131,7 +131,7 @@ class Processor(object):
 
     def generate_bytes_from_file(self, file: File) -> bytes:
         """
-        单文档处理(该方法不复用)
+        单文档处理(该方法不复用),如果不涉及到字体添加，则不压缩
         :param file: 单个pdf文档
         :return:
         """
