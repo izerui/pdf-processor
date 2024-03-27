@@ -79,7 +79,7 @@ class Processor(object):
 
         # 序号
         if item.item_no:
-            page.insert_text(point=fitz.Point(1754 - 80, 50), text=f'{item.item_no}',
+            page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
                              fontsize=fontsize,
                              fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
 
