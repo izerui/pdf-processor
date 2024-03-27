@@ -1,5 +1,4 @@
-from fitz import Page, fitz
-
+from fitz import Document
 from fitz import Page, fitz
 
 from support import logger, logged
@@ -10,21 +9,27 @@ class Reader(object):
     pdf读取器
     """
 
-    def __init__(self, bytes: bytes, is_rewrap: bool = False):
+    def __init__(self, data: bytes, is_convert: bool = False):
         """
         构造函数
-        :param is_rewrap: 是否需要针对文档进行二次包装处理
-        :param bytes: 单个pdf对象的内容字节数组
+        :param data: 单个pdf对象的内容字节数组
+        :param is_convert: 单个pdf对象的内容字节数组
         """
-        self.doc = fitz.open("pdf", bytes)
+        self.doc = fitz.open("pdf", data)
         # 如果doc不是pdf或者强制进行二次转换
-        if is_rewrap or not self.doc.is_pdf:
-            self.rewrap_doc()
+        if is_convert or not self.doc.is_pdf:
+            self.convert_doc()
+
+    def get_doc_without_close(self) -> Document:
+        """
+        获取当前的doc文档
+        """
+        return self.doc
 
     # @logged(desc='重新包装当前的doc')
-    def rewrap_doc(self) -> None:
+    def convert_doc(self) -> None:
         """
-        重新包装当前的doc,避免一些识别处理问题, 注意这里转换后文档页面的rotation会重置为0
+        重新包装转换当前的doc,避免一些识别处理问题, 注意这里转换后文档页面的rotation会重置为0
         :return:
         """
         try:
@@ -35,9 +40,11 @@ class Reader(object):
 
             # 将原pdf重新转换下，保证注释可见
             # 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-            rewrap_pdf = fitz.open('pdf', self.doc.convert_to_pdf())
+            convert_pdf = fitz.open('pdf', self.doc.convert_to_pdf())
+            # 把原来的doc关闭
             self.doc.close()
-            self.doc = rewrap_pdf
+            # 将转换后的文档设置到self.doc
+            self.doc = convert_pdf
             # 还原转换前的旋转角度
             for index, page in enumerate(self.doc):
                 page.set_rotation(rotations[index])
@@ -104,7 +111,7 @@ class Reader(object):
         return rotate_for_cropbox
 
     @logged(desc='获取所有页面转成横版所需的角度')
-    def get_horizontal_transform_rotations(self) -> list[float]:
+    def get_horizontal_transform_rotations(self, input_rotations: list[float] = None) -> list[float]:
         """
         获取每页针对未旋转前的`cropbox`区域,转成横版所需的角度
         :return: 旋转角度数组
@@ -113,6 +120,9 @@ class Reader(object):
         if not self.doc.is_pdf:
             return [0]
         rotations = []
-        for index, page in enumerate(self.doc):
-            rotations.append(self.get_page_roration_for_cropbox(index))
+        if input_rotations:
+            rotations = input_rotations
+        else:
+            for index, page in enumerate(self.doc):
+                rotations.append(self.get_page_roration_for_cropbox(index))
         return rotations

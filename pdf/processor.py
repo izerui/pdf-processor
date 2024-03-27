@@ -3,6 +3,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
+from symtable import Function
 
 import qrcode
 from fitz import fitz, Font, Document
@@ -10,11 +11,8 @@ from qrcode.image.pil import PilImage
 
 from model import Item, File
 from pdf import Editor
-from pdf import Reader
-from support import a4_width, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
+from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
     read_temp_file_instant
-
-debugger = False
 
 # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
 # 其他字体下载: http://www.ae-sys.com/China/Fonts/
@@ -102,7 +100,7 @@ class Processor(object):
         return header_doc
 
     @logged(desc='处理单个item_doc')
-    def generate_item_doc_without_close(self, item: Item) -> Document:
+    def generate_from_item_without_close(self, item: Item) -> Document:
         """
         生成独立包含header和原页面的文档
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
@@ -112,44 +110,44 @@ class Processor(object):
         # 每个item的头部区域pdf
         header_doc: Document = self.generate_header_doc_without_close(item)
         for file in item.files:
-            source_editor: Editor = self.create_editor(file.byte_array, False)
+            source_editor: Editor = Editor(file.data, False)
+            rotations = source_editor.get_horizontal_transform_rotations(file.rotations)
             source_editor.clean_pages()
-            rotations = None
-            if file.rotations:
-                rotations = file.rotations
-            else:
-                rotations = source_editor.get_horizontal_transform_rotations()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
                 source_editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+
+            source_file_doc = source_editor.get_doc_without_close()
             # 合并到target_doc
-            source_editor.wrap_target_doc_with_header(rotations, header_doc, target_item_doc)
+            self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
         header_doc.close()
         return target_item_doc
 
-    @logged(desc='初始化pdf文件读取器实例')
-    def create_reader(self, bytes: bytes, is_rewrap: bool) -> Reader:
+    @logged(desc='合并头内容和源内容到新页面')
+    def wrap_target_doc_with_header(self, rotations: list[float], source_file_doc: Document, header_doc: Document,
+                                    target_doc: Document) -> None:
         """
-        初始化一个pdf文件读取器
-        对象销毁的时候会自动关闭文件打开的句柄
-        :param is_rewrap: 是否针对文档进行二次包装处理
-        :param bytes: pdf文件内容字节数组
+        将头内容和源内容合并到target_doc文件中
+        :param rotations: 源文件的旋转角度集合
+        :param header_doc: 头文件
+        :param target_doc: 目标文件
         :return:
         """
-        reader = Reader(bytes, is_rewrap)
-        return reader
-
-    @logged(desc='初始化源pdf编辑器实例')
-    def create_editor(self, bytes: bytes, is_rewrap: bool) -> Editor:
-        """
-        初始化一个pdf文件编辑器(包含查看器功能)
-        对象销毁的时候会自动关闭文件打开的句柄
-        :param is_rewrap: 是否针对文档进行二次包装处理
-        :param bytes: pdf文件内容字节数组
-        :return:
-        """
-        editor = Editor(bytes, is_rewrap)
-        return editor
+        usage_pdf: Document = source_file_doc
+        for p_index, usage_page in enumerate(usage_pdf):
+            # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
+            new_page = target_doc.new_page(width=a4_width, height=a4_height)
+            # 顶部区域
+            r1 = fitz.Rect(0, 0, a4_width, header_height)
+            # 下部区域
+            r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+            # 将header-pdf首页贴到顶部区域
+            new_page.show_pdf_page(r1, header_doc, 0)
+            # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
+            usage_page.set_rotation(0)
+            new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotations[p_index], keep_proportion=True,
+                                   clip=usage_page.cropbox)
+            # usage_pdf.save('333.pdf')
 
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document) -> bytes:
@@ -158,6 +156,7 @@ class Processor(object):
         :return:
         """
 
+        # 不建议直接转二进制，会出现一些莫名其妙的问题
         # pdf_bytes = doc.convert_to_pdf()
 
         # https://pymupdf.readthedocs.io/en/latest/document.html#Document.save
@@ -165,7 +164,7 @@ class Processor(object):
         return pdf_bytes
 
     @logged(desc='并发下载请求的多个item的多个文件')
-    def wrap_file_bytes_for_items(self, items: list[Item]) -> None:
+    def wrap_file_data_for_items(self, items: list[Item]) -> None:
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
@@ -175,7 +174,7 @@ class Processor(object):
             futures = []
             for item in items:
                 for f_index, file in enumerate(item.files):
-                    future = pool.submit(self.wrap_file_bytes_for_file, file)
+                    future = pool.submit(self.wrap_file_data_for_file, file)
                     futures.append(future)
             # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
@@ -184,7 +183,7 @@ class Processor(object):
         pass
 
     @logged(desc='并发下载请求的多个File的多个文件')
-    def wrap_file_bytes_for_files(self, files: list[File]) -> None:
+    def wrap_file_data_for_files(self, files: list[File]) -> None:
         """
         批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
@@ -193,7 +192,7 @@ class Processor(object):
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
             for file in files:
-                future = pool.submit(self.wrap_file_bytes_for_file, file)
+                future = pool.submit(self.wrap_file_data_for_file, file)
                 futures.append(future)
             # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
@@ -202,13 +201,13 @@ class Processor(object):
         pass
 
     # @logged(desc='下载单个pdf文件')
-    def wrap_file_bytes_for_file(self, file: File) -> None:
+    def wrap_file_data_for_file(self, file: File) -> None:
         """
         下载单个pdf文件
         :param file:
         :return:
         """
-        file.byte_array = get_url_content_retry(file.url, 5)
+        file.data = get_url_content_retry(file.url, 5)
         pass
 
     def compress_doc(self, doc: Document) -> None:
@@ -229,10 +228,11 @@ class Processor(object):
         logger.warn(f'5次重试未成功压缩!')
 
     @logged(desc='压缩合并多个item文档到一个结果文档')
-    def get_bytes_by_merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> bytes:
+    def merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> Document:
         """
         合并多个文档并压缩
-        :param docs: 多个文档
+        :param item_docs: 多个子文档
+        :param is_item_doc_close: 是否关闭子文档
         :return: 一个文档
         """
         target_doc = fitz.open()
@@ -243,19 +243,25 @@ class Processor(object):
             target_doc.insert_pdf(docsrc=item_doc)
             if is_item_doc_close:
                 item_doc.close()
-        return self.get_doc_bytes_and_close(target_doc)
+        return target_doc
 
-    def generate_from_items(self, items: list[Item], item_call) -> Document:
+    def generate_from_items_without_close(self, items: list[Item], item_call: Function = None) -> Document:
         """
         通过多个items处理成一个结果文档
         :param items: item任务列表
         :param item_call: 单个item处理完回调: `item_call(item_index, result, exception)`
         :return: result_doc
         """
+        if not item_call:
+            def _item_call(item_index, item_doc, exception):
+                pass
+
+            item_call = _item_call
+
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
         # 并发下载文件,否则无法使用`file.byte_array`
-        self.wrap_file_bytes_for_items(items)
+        self.wrap_file_data_for_items(items)
         item_docs = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
@@ -264,7 +270,7 @@ class Processor(object):
                 # 如果是测试 传入string则增加不同item之间的批次号
                 item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
-                future = pool.submit(self.generate_item_doc_without_close, item)
+                future = pool.submit(self.generate_from_item_without_close, item)
                 futures.append(future)
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
@@ -279,8 +285,7 @@ class Processor(object):
                     result = future.result()
                     item_docs.append(result)
                     item_call(index, result, None)
-
-        target_doc_bytes = self.get_bytes_by_merge_and_compress_docs(item_docs)
         print(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
-        return target_doc_bytes
+        target_doc = self.merge_and_compress_docs(item_docs)
+        return target_doc

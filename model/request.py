@@ -57,7 +57,7 @@ class File(BaseModel):
     )
 
     # 不需要传值,内容会自动通过url下载
-    byte_array: bytes | None = Field(
+    data: bytes | None = Field(
         None, title="文件内容字节数组,不需要传值", exclude=True
     )
 

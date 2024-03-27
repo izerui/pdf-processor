@@ -4,22 +4,20 @@ from fitz import Document, fitz, Shape
 
 from model import Mark
 from pdf import Reader
-from support import a4_width, a4_height, header_height, logged, get_url_content_retry
-
-debugger = False
-
+from support import logged, get_url_content_retry
 
 class Editor(Reader):
     """
     pdf修改器
     """
 
-    def __init__(self, bytes: bytes, is_rewrap: bool = False):
+    def __init__(self, data: bytes, is_convert: bool = False):
         """
         构造函数
-        :param bytes: 单个pdf对象的内容字节数组
+        :param data: 单个pdf对象的内容字节数组
+        :param is_convert: 单个pdf对象的内容字节数组
         """
-        super().__init__(bytes, is_rewrap)
+        super().__init__(data, is_convert)
 
     @logged(desc='批量下载遮罩区域图片')
     def get_image_url_pixmap_dict(self, marks: list[Mark]) -> dict:
@@ -51,9 +49,9 @@ class Editor(Reader):
     def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark]) -> None:
         """
         给当前source文档添加遮罩区域
-        :param zoom: 每页统一的缩放比例
         :param rotations: 每页的旋转角度
-        :param page_marks: 每页的遮罩区域数组
+        :param zoom: 每页统一的缩放比例
+        :param marks: 每页的遮罩区域数组
         :return:
         """
         if not marks or len(marks) == 0:
@@ -90,31 +88,6 @@ class Editor(Reader):
                     shape.commit()
                 # 还原原来的旋转角度
                 page.set_rotation(_rotation)
-
-    @logged(desc='合并头内容和源内容到新页面')
-    def wrap_target_doc_with_header(self, rotations: list[float], header_doc: Document, target_doc: Document) -> None:
-        """
-        将头内容和源内容合并到target_doc文件中
-        :param rotations: 源文件的旋转角度集合
-        :param header_doc: 头文件
-        :param target_doc: 目标文件
-        :return:
-        """
-        usage_pdf: Document = self.doc
-        for p_index, usage_page in enumerate(usage_pdf):
-            # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
-            new_page = target_doc.new_page(width=a4_width, height=a4_height)
-            # 顶部区域
-            r1 = fitz.Rect(0, 0, a4_width, header_height)
-            # 下部区域
-            r2 = fitz.Rect(0, header_height, a4_width, a4_height)
-            # 将header-pdf首页贴到顶部区域
-            new_page.show_pdf_page(r1, header_doc, 0)
-            # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
-            usage_page.set_rotation(0)
-            new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotations[p_index], keep_proportion=True,
-                                   clip=usage_page.cropbox)
-            # usage_pdf.save('333.pdf')
 
     def clean_pages(self):
         """

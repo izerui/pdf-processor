@@ -11,7 +11,7 @@ from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 
 from model import File, SimpleFile, Item, CallbackItems, CallbackProcess
-from pdf import Reader, Processor
+from pdf import Reader, Processor, Editor
 from support import logger, logged, QiniuClient
 
 app = FastAPI(
@@ -44,9 +44,9 @@ def rotate_from_urls(files: List[SimpleFile]):
         results = []
         processor = Processor()
         down_files = list(map(lambda x: File(name=x.name, url=x.url), files))
-        processor.wrap_file_bytes_for_files(down_files)
+        processor.wrap_file_data_for_files(down_files)
         for index, file in enumerate(down_files):
-            reader: Reader = processor.create_reader(file.byte_array, False)
+            reader: Reader = Reader(file.data, False)
             rotations = reader.get_horizontal_transform_rotations()
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
@@ -58,13 +58,11 @@ def rotate_from_urls(files: List[SimpleFile]):
 
 @logged(desc='处理多个pdf文件,并返回结果文档')
 @app.post('/generate/from-urls', summary='处理多个pdf文件,并返回结果文档')
-def generate_from_url(items: List[Item]):
+def generate_from_urls(items: List[Item]):
     try:
-        def item_call(item_index, item_doc, exception):
-            pass
-
         processor = Processor()
-        target_doc_bytes = processor.generate_from_items(items, item_call)
+        target_doc = processor.generate_from_items_without_close(items, None)
+        target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
@@ -101,7 +99,8 @@ def callback_from_urls(callback_items: CallbackItems):
             """
             try:
                 processor = Processor()
-                target_doc_bytes = processor.generate_from_items(callback_items.items, item_call)
+                target_doc = processor.generate_from_items_without_close(callback_items.items, item_call)
+                target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
@@ -121,6 +120,28 @@ def callback_from_urls(callback_items: CallbackItems):
         thread.start()
         return Response(content=f'已经开始处理,待完成后回调地址: {callback_items.callback_url}', media_type="text/html")
     except BaseException as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@logged(desc='处理单个pdf文件，返回加遮罩后的文档')
+@app.post('/generate/from-file', summary='处理单个pdf文件，返回加遮罩后的文档')
+def generate_from_file(file: File):
+    try:
+        processor = Processor()
+        processor.wrap_file_data_for_file(file)
+        source_editor: Editor = Editor(file.data, False)
+        rotations = source_editor.get_horizontal_transform_rotations(file.rotations)
+        source_editor.clean_pages()
+        if file.marks and len(file.marks) > 0:
+            # 添加遮罩区域
+            source_editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+        source_file_doc = source_editor.get_doc_without_close()
+        file_doc_bytes = processor.get_doc_bytes_and_close(source_file_doc)
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=file-{int(time.perf_counter() * 1000)}.pdf'}
+        return Response(content=file_doc_bytes, headers=headers, media_type="application/pdf")
+    except Exception as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
