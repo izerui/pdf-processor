@@ -91,6 +91,8 @@ class Editor(Reader):
 
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
+                    # 颜色对照表 (217 / 255, 217 / 255, 217 / 255) 对应  #D9D9D9
+                    # https://sunpma.com/other/rgb/
                     shape.finish(
                         fill=(217 / 255, 217 / 255, 217 / 255),  # fill color
                         color=(217 / 255, 217 / 255, 217 / 255)  # line color
