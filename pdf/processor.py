@@ -75,7 +75,12 @@ class Processor(object):
                          fontbuffer=font.buffer)
 
         # 字体大小
-        fontsize = 20
+        fontsize = 16
+
+        page.insert_text(point=fitz.Point(1754 - 120, 50), text=f'序号: {item.item_no}',
+                         fontsize=fontsize,
+                         fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
+
         # 第一列
         page.insert_text(point=fitz.Point(280, 50), text=f'工单号: {item.doc_no}',
                          fontsize=fontsize,
@@ -88,15 +93,15 @@ class Processor(object):
                          fontname=chn_fontname, color=(0, 0, 0))
 
         # 第二列
-        page.insert_text(point=fitz.Point(580, 50), text=f'货品编码: {item.inventory_code}',
+        page.insert_text(point=fitz.Point(680, 50), text=f'货品编码: {item.inventory_code}',
                          fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-        page.insert_text(point=fitz.Point(580, 100), text=f'数量: {item.quantity}',
+        page.insert_text(point=fitz.Point(680, 100), text=f'数量: {item.quantity}',
                          fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
 
         # 第三列
-        page.insert_text(point=fitz.Point(900, 50), text=f'货品名称: {item.inventory_name}',
+        page.insert_text(point=fitz.Point(1080, 50), text=f'货品名称: {item.inventory_name}',
                          fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-        page.insert_text(point=fitz.Point(900, 100), text=f'规格型号: {item.inventory_spec}',
+        page.insert_text(point=fitz.Point(1080, 100), text=f'规格型号: {item.inventory_spec}',
                          fontsize=fontsize,
                          fontname=chn_fontname, color=(0, 0, 0))
 

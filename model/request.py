@@ -81,6 +81,11 @@ class Item(BaseModel):
     # 传入的原始pdf文件对象列表
     files: List[File]
 
+    # 序号
+    item_no: str = Field(
+        None, title='序号', examples=['29']
+    )
+
     # 当前请求的item的标识ID
     item_id: str = Field(
         None, title='当前请求的item的标识ID', examples=['当前请求的item的标识ID']
