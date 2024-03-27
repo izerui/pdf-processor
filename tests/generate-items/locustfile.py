@@ -21,7 +21,7 @@ class TestAsync(TaskSet):
                     {
                         "name": "单页.pdf",
                         "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
-                        "byte_array": "string",
+                        "data": "string",
                         "zoom": 1,
                         "marks": [
                             {
@@ -52,7 +52,7 @@ class TestAsync(TaskSet):
                     {
                         "name": "单页.pdf",
                         "url": "https://tfile.yj2025.com/pdf-processor/source/2024-03-25/客户文件禁止外传.pdf",
-                        "byte_array": "string",
+                        "data": "string",
                         "zoom": 1,
                         "marks": [
                             {
@@ -83,7 +83,7 @@ class TestAsync(TaskSet):
                     {
                         "name": "单页.pdf",
                         "url": "https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf",
-                        "byte_array": "string",
+                        "data": "string",
                         "zoom": 1,
                         "marks": [
                             {
@@ -113,7 +113,7 @@ class TestAsync(TaskSet):
                     {
                         "name": "单页.pdf",
                         "url": "https://file.yj2025.com/CS01-P3-003.pdf",
-                        "byte_array": "string",
+                        "data": "string",
                         "zoom": 1,
                         "marks": [
                             {
