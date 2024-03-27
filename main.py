@@ -10,7 +10,7 @@ from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 
-from model import File, SimpleFile, Item, CallbackItems, CallbackProcess
+from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile
 from pdf import Reader, Processor
 from support import logger, logged, QiniuClient
 
@@ -135,6 +135,45 @@ def generate_from_file(file: File):
                    "content-disposition": f'attachment;filename=file-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=file_doc_bytes, headers=headers, media_type="application/pdf")
     except Exception as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@logged(desc='处理单个pdf文件, 加遮罩后, 异步回调')
+@app.post('/generate/async-callback-from-file', summary='处理单个pdf文件, 加遮罩后, 异步回调')
+def callback_from_urls(callback_file: CallbackFile):
+    try:
+
+        def async_post_process(url, data):
+            if url:
+                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+
+        def async_generate_and_callback(callback_items: CallbackItems):
+            """
+            异步开启处理线程
+            """
+            try:
+                processor = Processor()
+                processor.wrap_file_data_for_file(callback_file.file)
+                file_doc_bytes = processor.generate_bytes_from_file(callback_file.file)
+                files = {'file': (f'file-{int(time.perf_counter() * 1000)}.pdf', file_doc_bytes, 'application/pdf')}
+                data = {'request_id': callback_items.request_id}
+                # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
+                response = httpx.post(callback_items.callback_url, files=files, data=data,
+                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                if response.is_success:
+                    print(f'---> 【上传单个处理的原pdf返回结果】: {response.content}')
+
+            except BaseException as err:
+                logger.exception(err)
+                data = {'request_id': callback_items.request_id, 'err_msg': repr(err)}
+                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                pass
+
+        thread = threading.Thread(target=async_generate_and_callback, args=(callback_file,))
+        thread.start()
+        return Response(content=f'已经开始处理,待完成后回调地址: {callback_file.callback_url}', media_type="text/html")
+    except BaseException as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 

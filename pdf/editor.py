@@ -1,10 +1,16 @@
 import concurrent
+import os
 
-from fitz import Document, fitz, Shape
+from fitz import fitz, Shape
 
 from model import Mark
 from pdf import Reader
-from support import logged, get_url_content_retry
+from support import logged, get_url_content_retry, read_bytes_from_file
+
+hui_img_buffer = read_bytes_from_file(
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'img', 'gray.png'))
+
+hui_pixmap = fitz.Pixmap(hui_img_buffer)
 
 class Editor(Reader):
     """
@@ -79,6 +85,9 @@ class Editor(Reader):
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
                 else:
+                    # 跟随页面旋转角度进行旋转，否则图片方向不对
+                    # page.insert_image(rect, pixmap=hui_pixmap, keep_proportion=False, alpha=0, xref=0,
+                    #                   rotate=rotations[index])
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
                     shape.finish(
@@ -89,6 +98,7 @@ class Editor(Reader):
                 # 还原原来的旋转角度
                 page.set_rotation(_rotation)
 
+    @logged(desc='清理页面')
     def clean_pages(self):
         """
         循环每页清理：

@@ -1,3 +1,3 @@
-from model.request import Mark, File, Item, CallbackItems, SimpleFile, CallbackProcess
+from model.request import Mark, File, Item, CallbackItems, SimpleFile, CallbackProcess, CallbackFile
 
-__all__ = [Mark, File, SimpleFile, Item, CallbackItems, CallbackProcess]
+__all__ = [Mark, File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile]

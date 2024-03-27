@@ -129,6 +129,7 @@ class Processor(object):
         header_doc.close()
         return target_item_doc
 
+    @logged(desc='处理单个文档加遮罩')
     def generate_bytes_from_file(self, file: File) -> bytes:
         """
         单文档处理(该方法不复用),如果不涉及到字体添加，则不压缩
@@ -276,6 +277,7 @@ class Processor(object):
                 item_doc.close()
         return target_doc
 
+    @logged(desc='通过多个items处理成一个结果文档')
     def generate_from_items_without_close(self, items: list[Item], item_call: Function = None) -> Document:
         """
         通过多个items处理成一个结果文档

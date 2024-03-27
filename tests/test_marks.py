@@ -86,8 +86,8 @@ class TestTable(unittest.TestCase):
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
                     shape.finish(
-                        fill=0,  # fill color
-                        color=0  # line color
+                        fill=(217, 217, 217),  # fill color
+                        color=(217, 217, 217)  # line color
                     )
                     shape.commit()
             doc.save(os.path.join(dir, f'__|{p[0]}|{p[1]}|{p[2]}|{p[3]}|_{filename}'))

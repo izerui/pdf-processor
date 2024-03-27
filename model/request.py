@@ -144,6 +144,13 @@ class Item(BaseModel):
             self.process_flow += rdm
 
 
+class CallbackFile(BaseModel):
+    file: File
+    request_id: str
+    callback_url: str | None = Field(
+        None, examples=['http://localhost:8000/callback/file']
+    )
+
 class CallbackItems(BaseModel):
     items: List[Item]
     request_id: str
