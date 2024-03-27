@@ -11,7 +11,7 @@ from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 
 from model import File, SimpleFile, Item, CallbackItems, CallbackProcess
-from pdf import Reader, Processor, Editor
+from pdf import Reader, Processor
 from support import logger, logged, QiniuClient
 
 app = FastAPI(
@@ -62,7 +62,7 @@ def generate_from_urls(items: List[Item]):
     try:
         processor = Processor()
         target_doc = processor.generate_from_items_without_close(items, None)
-        target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
+        target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
@@ -100,7 +100,7 @@ def callback_from_urls(callback_items: CallbackItems):
             try:
                 processor = Processor()
                 target_doc = processor.generate_from_items_without_close(callback_items.items, item_call)
-                target_doc_bytes = processor.get_doc_bytes_and_close(target_doc)
+                target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
@@ -130,14 +130,7 @@ def generate_from_file(file: File):
     try:
         processor = Processor()
         processor.wrap_file_data_for_file(file)
-        source_editor: Editor = Editor(file.data, False)
-        rotations = source_editor.get_horizontal_transform_rotations(file.rotations)
-        source_editor.clean_pages()
-        if file.marks and len(file.marks) > 0:
-            # 添加遮罩区域
-            source_editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
-        source_file_doc = source_editor.get_doc_without_close()
-        file_doc_bytes = processor.get_doc_bytes_and_close(source_file_doc)
+        file_doc_bytes = processor.generate_bytes_from_file(file)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=file-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=file_doc_bytes, headers=headers, media_type="application/pdf")

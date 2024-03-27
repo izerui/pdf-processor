@@ -113,18 +113,36 @@ class Processor(object):
         # 每个item的头部区域pdf
         header_doc: Document = self.generate_header_doc_without_close(item)
         for file in item.files:
-            source_editor: Editor = Editor(file.data, False)
-            rotations = source_editor.get_horizontal_transform_rotations(file.rotations)
-            source_editor.clean_pages()
+
+            #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
+            editor: Editor = Editor(file.data, False)
+            rotations = editor.get_horizontal_transform_rotations(file.rotations)
+            editor.clean_pages()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
-                source_editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+            source_file_doc = editor.get_doc_without_close()
+            #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
 
-            source_file_doc = source_editor.get_doc_without_close()
-            # 合并到target_doc
+            # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
             self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
         header_doc.close()
         return target_item_doc
+
+    def generate_bytes_from_file(self, file: File) -> bytes:
+        """
+        单文档处理(该方法不复用)
+        :param file: 单个pdf文档
+        :return:
+        """
+        editor: Editor = Editor(file.data, False)
+        rotations = editor.get_horizontal_transform_rotations(file.rotations)
+        editor.clean_pages()
+        if file.marks and len(file.marks) > 0:
+            # 添加遮罩区域
+            editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+        source_file_doc = editor.get_doc_without_close()
+        return self.get_doc_bytes_and_close(source_file_doc, auto_close=False)
 
     @logged(desc='合并头内容和源内容到新页面')
     def wrap_target_doc_with_header(self, rotations: list[float], source_file_doc: Document, header_doc: Document,
@@ -136,8 +154,7 @@ class Processor(object):
         :param target_doc: 目标文件
         :return:
         """
-        usage_pdf: Document = source_file_doc
-        for p_index, usage_page in enumerate(usage_pdf):
+        for p_index, source_page in enumerate(source_file_doc):
             # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
             new_page = target_doc.new_page(width=a4_width, height=a4_height)
             # 顶部区域
@@ -146,16 +163,22 @@ class Processor(object):
             r2 = fitz.Rect(0, header_height, a4_width, a4_height)
             # 将header-pdf首页贴到顶部区域
             new_page.show_pdf_page(r1, header_doc, 0)
+            # 记录原来的旋转角度
+            _source_page_rotation = source_page.rotation
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
-            usage_page.set_rotation(0)
-            new_page.show_pdf_page(r2, usage_pdf, p_index, rotate=rotations[p_index], keep_proportion=True,
-                                   clip=usage_page.cropbox)
+            source_page.set_rotation(0)
+            new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=rotations[p_index], keep_proportion=True,
+                                   clip=source_page.cropbox)
+            # 还原旋转角度
+            source_page.set_rotation(_source_page_rotation)
             # usage_pdf.save('333.pdf')
 
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
-    def get_doc_bytes_and_close(self, doc: Document) -> bytes:
+    def get_doc_bytes_and_close(self, doc: Document, auto_close: bool = True) -> bytes:
         """
         生成pdf文件的字节数组,并关闭文档已打开的句柄
+        :param doc: 文档
+        :param auto_close: 是否使用完自动关闭文档,如果是reader/editor对象返回的doc可以为False，因为实例消亡，文档会自动关闭
         :return:
         """
 
@@ -163,7 +186,12 @@ class Processor(object):
         # pdf_bytes = doc.convert_to_pdf()
 
         # https://pymupdf.readthedocs.io/en/latest/document.html#Document.save
-        pdf_bytes = read_temp_file_instant(lambda x: doc.save(x, garbage=3, deflate=True) and doc.close())
+        def write_file_path(filepath: str):
+            doc.save(filepath, garbage=3, deflate=True)
+            if auto_close:
+                doc.close()
+
+        pdf_bytes = read_temp_file_instant(write_file_path)
         return pdf_bytes
 
     @logged(desc='并发下载请求的多个item的多个文件')

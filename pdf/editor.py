@@ -8,7 +8,7 @@ from support import logged, get_url_content_retry
 
 class Editor(Reader):
     """
-    pdf修改器
+    pdf修改器, 会跟随实例消亡自动关闭文档
     """
 
     def __init__(self, data: bytes, is_convert: bool = False):

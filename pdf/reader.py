@@ -6,7 +6,7 @@ from support import logger, logged
 
 class Reader(object):
     """
-    pdf读取器
+    pdf读取器, 会跟随实例消亡自动关闭文档
     """
 
     def __init__(self, data: bytes, is_convert: bool = False):
