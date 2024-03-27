@@ -77,6 +77,7 @@ class Processor(object):
         # 字体大小
         fontsize = 16
 
+        # 序号
         if item.item_no:
             page.insert_text(point=fitz.Point(1754 - 120, 50), text=f'{item.item_no}',
                              fontsize=fontsize,
