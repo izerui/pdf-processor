@@ -80,13 +80,10 @@ class Editor(Reader):
                 page.set_rotation(rotations[index])
                 # 通过设置的旋转角度通过反向计算区域块实际位置
                 rect = rect.transform(page.derotation_matrix)
-                overlay = False
-                if mark.overlay:
-                    overlay = bool(mark.overlay)
                 if mark.image_url:
                     img_pixmap = image_url_dict[mark.image_url]
                     # 跟随页面旋转角度进行旋转，否则图片方向不对
-                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, overlay=overlay,
+                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
                 else:
                     # 跟随页面旋转角度进行旋转，否则图片方向不对

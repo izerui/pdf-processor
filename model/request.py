@@ -31,10 +31,6 @@ class Mark(BaseModel):
         title="矩形区域如果是图片，则为图片网络url地址,否则留空",
         examples=['https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg']
     )
-    # 是否透明
-    overlay: bool | None = Field(
-        title="是否透明", examples=['False']
-    )
 
 
 class SimpleFile(BaseModel):
