@@ -349,7 +349,7 @@ class Processor(object):
                 # 开始多线程处理
                 future = pool.submit(self.generate_from_item_without_close, item, url_datas)
                 futures.append(future)
-            # 处理进度
+            # 处理进度 TODO 这里应该触发回调，否则就是一下子批量通知了
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 pass
             # 按原始顺序添加页
