@@ -397,7 +397,7 @@ class Processor(object):
                     result = future.result()
                     item_docs.append(result)
                     item_call(index, result, None)
-        print(
+        logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
         target_doc = self.merge_and_compress_docs(item_docs)
         return target_doc
