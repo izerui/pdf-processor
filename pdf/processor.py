@@ -1,4 +1,5 @@
 import concurrent
+import io
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -6,10 +7,11 @@ from io import BytesIO
 from symtable import Function
 
 import qrcode
+from PIL import Image
 from fitz import fitz, Font, Document
 from qrcode.image.pil import PilImage
 
-from model import Item, File
+from model import Item, File, Mark
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
     read_temp_file_instant
@@ -45,6 +47,8 @@ class Processor(object):
         :param header_height:
         """
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
+        self.url_file_data_cache = {}
+        self.url_image_pixmap_cache = {}
 
     @logged(desc='生成header头信息pdf对象')
     def generate_header_doc_without_close(self, item: Item) -> Document:
@@ -110,11 +114,11 @@ class Processor(object):
         return header_doc
 
     @logged(desc='处理单个item_doc')
-    def generate_from_item_without_close(self, item: Item, marks_images_cache: dict = {}) -> Document:
+    def generate_from_item_without_close(self, item: Item, url_datas: dict) -> Document:
         """
         生成独立包含header和原页面的文档
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
-        :param marks_images_cache: 遮罩区域缓存
+        :param url_datas: url_data 对照表
         :return:
         """
         target_item_doc = fitz.open()
@@ -123,12 +127,12 @@ class Processor(object):
         for file in item.files:
 
             #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
-            editor: Editor = Editor(file.data, False)
+            editor: Editor = Editor(url_datas[file.url], False)
             rotations = editor.get_horizontal_transform_rotations(file.rotations)
             editor.clean_pages()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
-                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, marks_images_cache)
+                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
             source_file_doc = editor.get_doc_without_close()
             #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
 
@@ -138,10 +142,11 @@ class Processor(object):
         return target_item_doc
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
-    def generate_source_bytes_from_file(self, file: File) -> bytes:
+    def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:
         """
         单文档处理(该方法不复用),如果不涉及到字体添加，则不压缩
         :param file: 单个pdf文档
+        :param url_datas: url_data对照表
         :return:
         """
         editor: Editor = Editor(file.data, False)
@@ -149,7 +154,7 @@ class Processor(object):
         editor.clean_pages()
         if file.marks and len(file.marks) > 0:
             # 添加遮罩区域
-            editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+            editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
         source_file_doc = editor.get_doc_without_close()
         return self.get_doc_bytes_and_close(source_file_doc, auto_close=False)
 
@@ -203,58 +208,114 @@ class Processor(object):
         pdf_bytes = read_temp_file_instant(write_file_path)
         return pdf_bytes
 
-    @logged(desc='并发下载请求的多个item的多个文件')
-    def wrap_file_data_for_items(self, items: list[Item]) -> None:
+    def download_urls_from_items(self, items: list[Item]):
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
         :return:
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            futures = []
-            for item in items:
-                for f_index, file in enumerate(item.files):
-                    future = pool.submit(self.wrap_file_data_for_file, file)
-                    futures.append(future)
-            # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
-            for future in concurrent.futures.as_completed(futures):  # 并发执行
-                # process_bar.update(1)
-                exception = future.exception()
-                if exception:
-                    logger.exception(exception)
-                pass
-        pass
+        urls = []
+        for item in items:
+            for file in item.files:
+                assert file.url, f'{file.name} 的url不能为空!'
+                if file.url not in urls:
+                    urls.append(file.url)
+                if file.marks:
+                    for mark in file.marks:
+                        if mark.image_url and mark.image_url not in urls:
+                            urls.append(mark.image_url)
+        return self.download_urls(urls)
 
-    @logged(desc='并发下载请求的多个File的多个文件')
-    def wrap_file_data_for_files(self, files: list[File]) -> None:
+    def download_urls_from_files(self, files: list[File]):
         """
-        批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
+        批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
         :return:
         """
+        urls = []
+        for file in files:
+            assert file.url, f'{file.name} 的url不能为空!'
+            if file.url not in urls:
+                urls.append(file.url)
+            if file.marks:
+                for mark in file.marks:
+                    if mark.image_url and mark.image_url not in urls:
+                        urls.append(mark.image_url)
+        return self.download_urls(urls)
+
+    def download_urls(self, urls: list[str]):
+
+        def append_url_data(url: str, url_datas: dict):
+            data = get_url_content_retry(url, 5)
+            if url not in url_datas:
+                url_datas[url] = data
+
+        url_datas = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
-            for file in files:
-                future = pool.submit(self.wrap_file_data_for_file, file)
-                futures.append(future)
-            # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
+            for url in urls:
+                futures.append(pool.submit(append_url_data, url, url_datas))
             for future in concurrent.futures.as_completed(futures):  # 并发执行
-                # process_bar.update(1)
+                exception = future.exception()
+                if exception:
+                    logger.exception(exception)
+                pass
+        return url_datas
+
+    @logged(desc='并发下载请求的多个File的多个文件及遮罩图')
+    def wrap_file(self, file: File) -> None:
+        """
+        批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
+        :param file:
+        :return:
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            futures.append(pool.submit(self._wrap_file_by_cache, file))
+            if file.marks:
+                for mark in file.marks:
+                    futures.append(pool.submit(self._wrap_mark_by_cache, mark))
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
                 exception = future.exception()
                 if exception:
                     logger.exception(exception)
                 pass
         pass
 
-    # @logged(desc='下载单个pdf文件')
-    def wrap_file_data_for_file(self, file: File) -> None:
+    def _wrap_file_by_cache(self, file: File):
         """
-        下载单个pdf文件
+        通过缓存补充文件内容
         :param file:
+        :param file_cache: 缓存
         :return:
         """
-        file.data = get_url_content_retry(file.url, 5)
-        pass
+        if file.url in self.url_file_data_cache:
+            print('已经存在')
+            file.data = self.url_file_data_cache[file.url]
+        else:
+            data = get_url_content_retry(file.url, 5)
+            self.url_file_data_cache[file.url] = data
+            file.data = data
+
+    def _wrap_mark_by_cache(self, mark: Mark):
+        """
+        通过缓存补充遮罩图data
+        :param mark:
+        :param mark_img_cache: 缓存
+        :return:
+        """
+        if mark.image_url:
+            if mark.image_url in self.url_image_pixmap_cache:
+                mark.image_data = self.url_image_pixmap_cache[mark.image_url]
+            else:
+                # PIL加载网络图片，并转换成统一jpeg格式的二进制
+                img = Image.open(io.BytesIO(get_url_content_retry(mark.image_url))).convert("RGB")
+                img_stream = io.BytesIO()
+                img.save(img_stream, format='JPEG')
+                # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
+                img_pixmap = fitz.Pixmap(img_stream)
+                self.url_image_pixmap_cache[mark.image_url] = img_pixmap
+                mark.image_data = img_pixmap
 
     def compress_doc(self, doc: Document) -> None:
         """
@@ -292,10 +353,12 @@ class Processor(object):
         return target_doc
 
     @logged(desc='通过多个items处理成一个结果文档')
-    def generate_from_items_without_close(self, items: list[Item], item_call: Function = None) -> Document:
+    def generate_from_items_without_close(self, items: list[Item], url_datas: dict,
+                                          item_call: Function = None) -> Document:
         """
         通过多个items处理成一个结果文档
         :param items: item任务列表
+        :param url_datas: url_data的对照表
         :param item_call: 单个item处理完回调: `item_call(item_index, result, exception)`
         :return: result_doc
         """
@@ -307,20 +370,15 @@ class Processor(object):
 
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
-        # 并发下载文件,否则无法使用`file.byte_array`
-        self.wrap_file_data_for_items(items)
         item_docs = []
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            # 遮罩区域缓存
-            marks_images_cache = {}
             futures = []
             for item in items:
                 file_count += len(item.files)
                 # 如果是测试 传入string则增加不同item之间的批次号
                 item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, item, marks_images_cache)
+                future = pool.submit(self.generate_from_item_without_close, item, url_datas)
                 futures.append(future)
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行

@@ -1,6 +1,7 @@
 import random
 from typing import List
 
+import fitz
 from pydantic import BaseModel, Field
 
 
@@ -33,6 +34,7 @@ class Mark(BaseModel):
     )
 
 
+
 class SimpleFile(BaseModel):
     # 文件名
     name: str = Field(
@@ -54,11 +56,6 @@ class File(BaseModel):
     # pdf文件url地址
     url: str = Field(
         title="文件url", max_length=2000, examples=['https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf']
-    )
-
-    # 不需要传值,内容会自动通过url下载
-    data: bytes | None = Field(
-        None, title="文件内容字节数组,不需要传值", exclude=True
     )
 
     # 每个页面统一的缩放大小 0 ~ 1 (0.8 表示缩小1/4)

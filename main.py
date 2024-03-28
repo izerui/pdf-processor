@@ -44,9 +44,9 @@ def rotate_from_urls(files: List[SimpleFile]):
         results = []
         processor = Processor()
         down_files = list(map(lambda x: File(name=x.name, url=x.url), files))
-        processor.wrap_file_data_for_files(down_files)
+        url_datas = processor.download_urls_from_files(down_files)
         for index, file in enumerate(down_files):
-            reader: Reader = Reader(file.data, False)
+            reader: Reader = Reader(url_datas[file.url], False)
             rotations = reader.get_horizontal_transform_rotations()
             file_rotations = {'name': file.name, 'url': file.url, 'rotations': rotations}
             results.append(file_rotations)
@@ -61,7 +61,8 @@ def rotate_from_urls(files: List[SimpleFile]):
 def generate_from_urls(items: List[Item]):
     try:
         processor = Processor()
-        target_doc = processor.generate_from_items_without_close(items, None)
+        url_datas = processor.download_urls_from_items(items)
+        target_doc = processor.generate_from_items_without_close(items, url_datas, None)
         target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=result-{int(time.perf_counter() * 1000)}.pdf'}
@@ -129,8 +130,8 @@ def callback_from_urls(callback_items: CallbackItems):
 def generate_from_file(file: File):
     try:
         processor = Processor()
-        processor.wrap_file_data_for_file(file)
-        file_doc_bytes = processor.generate_source_bytes_from_file(file)
+        url_datas = processor.download_urls_from_files([file])
+        file_doc_bytes = processor.generate_source_bytes_from_file(file, url_datas)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=file-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=file_doc_bytes, headers=headers, media_type="application/pdf")
@@ -154,8 +155,8 @@ def callback_from_urls(callback_file: CallbackFile):
             """
             try:
                 processor = Processor()
-                processor.wrap_file_data_for_file(callback_file.file)
-                file_doc_bytes = processor.generate_source_bytes_from_file(callback_file.file)
+                url_datas = processor.download_urls_from_files([callback_file.file])
+                file_doc_bytes = processor.generate_source_bytes_from_file(callback_file.file, url_datas)
                 files = {'file': (f'file-{int(time.perf_counter() * 1000)}.pdf', file_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。

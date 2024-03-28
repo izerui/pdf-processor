@@ -1,13 +1,12 @@
 import concurrent
 import io
-from io import BytesIO
 
 from PIL import Image
 from fitz import fitz, Shape
 
 from model import Mark
 from pdf import Reader
-from support import logged, get_url_content_retry, read_bytes_from_file, logger
+from support import logged, get_url_content_retry, logger
 
 
 # hui_img_buffer = read_bytes_from_file(
@@ -62,19 +61,17 @@ class Editor(Reader):
                 pass
 
     @logged(desc='给源文件所有页添加遮罩区域')
-    def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark], marks_images_cache: dict = {}) -> None:
+    def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark], url_datas: dict) -> None:
         """
         给当前source文档添加遮罩区域
         :param rotations: 每页的旋转角度
         :param zoom: 每页统一的缩放比例
         :param marks: 每页的遮罩区域数组
-        :param marks_images_cache: 每页的遮罩区域数组包含的网络图片的缓存, 如果外部传进来表示多个文件之间要使用共同的缓存
+        :param url_datas: url_data对照表
         :return:
         """
         if not marks or len(marks) == 0:
             return
-        # 添加遮罩区域之前先批量下载所有的图片
-        self.cache_marks_images(marks, marks_images_cache)
         if not zoom:
             zoom = 1
         for index, page in enumerate(self.doc):
@@ -91,7 +88,12 @@ class Editor(Reader):
                 # 通过设置的旋转角度通过反向计算区域块实际位置
                 rect = rect.transform(page.derotation_matrix)
                 if mark.image_url:
-                    img_pixmap = marks_images_cache[mark.image_url]
+                    # PIL加载网络图片，并转换成统一jpeg格式的二进制
+                    img = Image.open(io.BytesIO(url_datas[mark.image_url])).convert("RGB")
+                    img_stream = io.BytesIO()
+                    img.save(img_stream, format='JPEG')
+                    # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
+                    img_pixmap = fitz.Pixmap(img_stream)
                     # 跟随页面旋转角度进行旋转，否则图片方向不对  TODO xref 存放引用，这里待优化,可减少pdf体积
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
