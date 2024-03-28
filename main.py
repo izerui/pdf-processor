@@ -100,7 +100,8 @@ def callback_from_urls(callback_items: CallbackItems):
             """
             try:
                 processor = Processor()
-                target_doc = processor.generate_from_items_without_close(callback_items.items, item_call)
+                url_datas = processor.download_urls_from_items(callback_items.items)
+                target_doc = processor.generate_from_items_without_close(callback_items.items, url_datas, item_call)
                 target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
