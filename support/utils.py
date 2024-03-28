@@ -35,7 +35,7 @@ def logged(desc=None):
             pinfo = psutil.Process(pid)
             t = threading.current_thread()
             mem = psutil.virtual_memory()
-            print(
+            logger.info(
                 f'--->【pid:[{pid}] thread:[{t.name}] user_cpu_time:[{pinfo.cpu_times().user}] free_mem:[{mem.available / (1024 * 1024)}Mb]】【{repr(func)} {desc}】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms')
             return result
 

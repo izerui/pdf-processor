@@ -109,7 +109,7 @@ def callback_from_urls(callback_items: CallbackItems):
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
                                       timeout=Timeout(timeout=60.0, connect=10.0))
                 if response.is_success:
-                    print(f'---> 【上传pdf返回结果】: {response.content}')
+                    logger.info(f'---> 【上传pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
@@ -164,7 +164,7 @@ def callback_from_urls(callback_file: CallbackFile):
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
                                       timeout=Timeout(timeout=60.0, connect=10.0))
                 if response.is_success:
-                    print(f'---> 【上传单个处理的原pdf返回结果】: {response.content}')
+                    logger.info(f'---> 【上传单个处理的原pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
