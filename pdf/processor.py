@@ -246,6 +246,7 @@ class Processor(object):
                         urls.append(mark.image_url)
         return self.download_urls(urls)
 
+    @logged(desc='批量下载网络文件及图片')
     def download_urls(self, urls: list[str]):
 
         def append_url_data(url: str, url_datas: dict):
@@ -264,41 +265,6 @@ class Processor(object):
                     logger.exception(exception)
                 pass
         return url_datas
-
-    @logged(desc='并发下载请求的多个File的多个文件及遮罩图')
-    def wrap_file(self, file: File) -> None:
-        """
-        批量从请求的files中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
-        :param file:
-        :return:
-        """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            futures = []
-            futures.append(pool.submit(self._wrap_file_by_cache, file))
-            if file.marks:
-                for mark in file.marks:
-                    futures.append(pool.submit(self._wrap_mark_by_cache, mark))
-            for future in concurrent.futures.as_completed(futures):  # 并发执行
-                exception = future.exception()
-                if exception:
-                    logger.exception(exception)
-                pass
-        pass
-
-    def _wrap_file_by_cache(self, file: File):
-        """
-        通过缓存补充文件内容
-        :param file:
-        :param file_cache: 缓存
-        :return:
-        """
-        if file.url in self.url_file_data_cache:
-            print('已经存在')
-            file.data = self.url_file_data_cache[file.url]
-        else:
-            data = get_url_content_retry(file.url, 5)
-            self.url_file_data_cache[file.url] = data
-            file.data = data
 
     def _wrap_mark_by_cache(self, mark: Mark):
         """
