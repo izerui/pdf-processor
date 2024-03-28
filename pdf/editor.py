@@ -90,6 +90,7 @@ class Editor(Reader):
                 if mark.image_url:
                     # PIL加载网络图片，并转换成统一jpeg格式的二进制
                     img = Image.open(io.BytesIO(url_datas[mark.image_url])).convert("RGB")
+                    img = img.resize((int(rect.width), int(rect.height)))
                     img_stream = io.BytesIO()
                     img.save(img_stream, format='JPEG')
                     # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
