@@ -120,9 +120,9 @@ class Reader(object):
         if not self.doc.is_pdf:
             return [0]
         rotations = []
-        if input_rotations:
-            rotations = input_rotations
-        else:
-            for index, page in enumerate(self.doc):
+        for index, page in enumerate(self.doc):
+            if input_rotations and len(input_rotations) > index:
+                rotations.append(input_rotations[index])
+            else:
                 rotations.append(self.get_page_roration_for_cropbox(index))
         return rotations
