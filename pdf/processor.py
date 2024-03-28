@@ -136,6 +136,9 @@ class Processor(object):
             source_file_doc = editor.get_doc_without_close()
             #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
 
+            # source_file_doc.page_xref(0)
+            # source_file_doc.get_page_images()
+
             # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
             self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
         header_doc.close()
@@ -201,7 +204,7 @@ class Processor(object):
 
         # https://pymupdf.readthedocs.io/en/latest/document.html#Document.save
         def write_file_path(filepath: str):
-            doc.save(filepath, garbage=3, deflate=True)
+            doc.save(filepath, garbage=4, deflate=True)
             if auto_close:
                 doc.close()
 

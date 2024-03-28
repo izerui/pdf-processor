@@ -75,14 +75,14 @@ class Editor(Reader):
         if not zoom:
             zoom = 1
         for index, page in enumerate(self.doc):
+            # 记录原来的旋转角度
+            _rotation = page.rotation
             for mark in marks:
                 # print('rotation: ', rotations[index], 'mark: ', mark)
 
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                 rect = fitz.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
                                  float(mark.y1) / zoom)
-                # 记录原来的旋转角度
-                _rotation = page.rotation
                 # 设置为传入的旋转角度，防止显示效果不一致
                 page.set_rotation(rotations[index])
                 # 通过设置的旋转角度通过反向计算区域块实际位置
@@ -90,7 +90,7 @@ class Editor(Reader):
                 if mark.image_url:
                     # PIL加载网络图片，并转换成统一jpeg格式的二进制
                     img = Image.open(io.BytesIO(url_datas[mark.image_url])).convert("RGB")
-                    img = img.resize((int(rect.width), int(rect.height)))
+                    # img = img.resize((int(rect.width), int(rect.height)))
                     img_stream = io.BytesIO()
                     img.save(img_stream, format='JPEG')
                     # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
@@ -112,8 +112,8 @@ class Editor(Reader):
                         color=(217 / 255, 217 / 255, 217 / 255)  # line color
                     )
                     shape.commit()
-                # 还原原来的旋转角度
-                page.set_rotation(_rotation)
+            # 还原原来的旋转角度
+            page.set_rotation(_rotation)
 
     @logged(desc='清理页面')
     def clean_pages(self):
