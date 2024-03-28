@@ -14,6 +14,7 @@ RUN pip install fonttools
 RUN pip install tqdm
 RUN pip install qiniu
 RUN pip install psutil
+RUN pip install Pillow
 
 COPY *.py ./
 COPY ./model/ ./model/

@@ -110,10 +110,11 @@ class Processor(object):
         return header_doc
 
     @logged(desc='处理单个item_doc')
-    def generate_from_item_without_close(self, item: Item) -> Document:
+    def generate_from_item_without_close(self, item: Item, marks_images_cache: dict = {}) -> Document:
         """
         生成独立包含header和原页面的文档
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
+        :param marks_images_cache: 遮罩区域缓存
         :return:
         """
         target_item_doc = fitz.open()
@@ -127,7 +128,7 @@ class Processor(object):
             editor.clean_pages()
             if file.marks and len(file.marks) > 0:
                 # 添加遮罩区域
-                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks)
+                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, marks_images_cache)
             source_file_doc = editor.get_doc_without_close()
             #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
 
@@ -136,8 +137,8 @@ class Processor(object):
         header_doc.close()
         return target_item_doc
 
-    @logged(desc='处理单个文档加遮罩')
-    def generate_bytes_from_file(self, file: File) -> bytes:
+    @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
+    def generate_source_bytes_from_file(self, file: File) -> bytes:
         """
         单文档处理(该方法不复用),如果不涉及到字体添加，则不压缩
         :param file: 单个pdf文档
@@ -218,6 +219,9 @@ class Processor(object):
             # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 # process_bar.update(1)
+                exception = future.exception()
+                if exception:
+                    logger.exception(exception)
                 pass
         pass
 
@@ -236,6 +240,9 @@ class Processor(object):
             # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}个文件')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 # process_bar.update(1)
+                exception = future.exception()
+                if exception:
+                    logger.exception(exception)
                 pass
         pass
 
@@ -303,14 +310,17 @@ class Processor(object):
         # 并发下载文件,否则无法使用`file.byte_array`
         self.wrap_file_data_for_items(items)
         item_docs = []
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            # 遮罩区域缓存
+            marks_images_cache = {}
             futures = []
             for item in items:
                 file_count += len(item.files)
                 # 如果是测试 传入string则增加不同item之间的批次号
                 item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, item)
+                future = pool.submit(self.generate_from_item_without_close, item, marks_images_cache)
                 futures.append(future)
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
@@ -319,6 +329,7 @@ class Processor(object):
             for index, future in enumerate(futures):
                 exception = future.exception()
                 if exception:
+                    logger.exception(exception)
                     item_call(index, None, exception)
                     raise exception
                 else:

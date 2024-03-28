@@ -124,13 +124,13 @@ def callback_from_urls(callback_items: CallbackItems):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@logged(desc='处理单个pdf文件，返回加遮罩后的文档')
+@logged(desc='处理单个pdf文件，返回加遮罩后的源文档')
 @app.post('/generate/from-file', summary='处理单个pdf文件，返回加遮罩后的文档')
 def generate_from_file(file: File):
     try:
         processor = Processor()
         processor.wrap_file_data_for_file(file)
-        file_doc_bytes = processor.generate_bytes_from_file(file)
+        file_doc_bytes = processor.generate_source_bytes_from_file(file)
         headers = {"content-type": "application/pdf",
                    "content-disposition": f'attachment;filename=file-{int(time.perf_counter() * 1000)}.pdf'}
         return Response(content=file_doc_bytes, headers=headers, media_type="application/pdf")
@@ -155,7 +155,7 @@ def callback_from_urls(callback_file: CallbackFile):
             try:
                 processor = Processor()
                 processor.wrap_file_data_for_file(callback_file.file)
-                file_doc_bytes = processor.generate_bytes_from_file(callback_file.file)
+                file_doc_bytes = processor.generate_source_bytes_from_file(callback_file.file)
                 files = {'file': (f'file-{int(time.perf_counter() * 1000)}.pdf', file_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。

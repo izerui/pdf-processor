@@ -1,11 +1,13 @@
 import concurrent
-import os
+import io
+from io import BytesIO
 
+from PIL import Image
 from fitz import fitz, Shape
 
 from model import Mark
 from pdf import Reader
-from support import logged, get_url_content_retry, read_bytes_from_file
+from support import logged, get_url_content_retry, read_bytes_from_file, logger
 
 
 # hui_img_buffer = read_bytes_from_file(
@@ -26,45 +28,53 @@ class Editor(Reader):
         """
         super().__init__(data, is_convert)
 
-    @logged(desc='批量下载遮罩区域图片')
-    def get_image_url_pixmap_dict(self, marks: list[Mark]) -> dict:
+    @logged(desc='批量获取marks区域的网络图片，并返回填充后的缓存')
+    def cache_marks_images(self, marks: list[Mark], marks_images_cache: dict) -> None:
         """
         从遮罩区域数组中提取图片url，并发下载，放到 url-pixmap 作为kv的字典中
         :param marks: 遮罩区域数组
+        :param marks_images_cache: 遮罩区域包含的网络图片的缓存dict
         :return: dict
         """
 
-        def append_dict(url: str, image_pixmap_dict: object):
-            if url not in image_pixmap_dict:
-                img_pixmap = fitz.Pixmap(get_url_content_retry(url))
-                image_pixmap_dict[url] = img_pixmap
+        def check_and_fill_marks_images_cache(url: str, marks_images_cache: object = {}):
+            if url not in marks_images_cache:
+                # PIL加载网络图片，并转换成统一jpeg格式的二进制
+                img = Image.open(io.BytesIO(get_url_content_retry(url))).convert("RGB")
+                img_stream = io.BytesIO()
+                img.save(img_stream, format='JPEG')
+                # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
+                img_pixmap = fitz.Pixmap(img_stream)
+                marks_images_cache[url] = img_pixmap
 
-        image_pixmap_dict = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
             for mark in marks:
                 if mark.image_url:
-                    future = pool.submit(append_dict, mark.image_url, image_pixmap_dict)
+                    future = pool.submit(check_and_fill_marks_images_cache, mark.image_url, marks_images_cache)
                     futures.append(future)
             # process_bar = tqdm(total=len(futures), desc=f'并行下载{len(futures)}遮罩图片')
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 # process_bar.update(1)
+                exception = future.exception()
+                if exception:
+                    logger.exception(exception)
                 pass
-        return image_pixmap_dict
 
     @logged(desc='给源文件所有页添加遮罩区域')
-    def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark]) -> None:
+    def wrap_doc_with_marks(self, rotations: list[float], zoom: float, marks: list[Mark], marks_images_cache: dict = {}) -> None:
         """
         给当前source文档添加遮罩区域
         :param rotations: 每页的旋转角度
         :param zoom: 每页统一的缩放比例
         :param marks: 每页的遮罩区域数组
+        :param marks_images_cache: 每页的遮罩区域数组包含的网络图片的缓存, 如果外部传进来表示多个文件之间要使用共同的缓存
         :return:
         """
         if not marks or len(marks) == 0:
             return
         # 添加遮罩区域之前先批量下载所有的图片
-        image_url_dict = self.get_image_url_pixmap_dict(marks)
+        self.cache_marks_images(marks, marks_images_cache)
         if not zoom:
             zoom = 1
         for index, page in enumerate(self.doc):
@@ -81,8 +91,8 @@ class Editor(Reader):
                 # 通过设置的旋转角度通过反向计算区域块实际位置
                 rect = rect.transform(page.derotation_matrix)
                 if mark.image_url:
-                    img_pixmap = image_url_dict[mark.image_url]
-                    # 跟随页面旋转角度进行旋转，否则图片方向不对
+                    img_pixmap = marks_images_cache[mark.image_url]
+                    # 跟随页面旋转角度进行旋转，否则图片方向不对  TODO xref 存放引用，这里待优化,可减少pdf体积
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
                 else:

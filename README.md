@@ -27,6 +27,7 @@ sequenceDiagram
 * pip install fastapi[all]
 * pip install uvicorn[standard]
 * pip install tqdm
+* pip install Pillow
 * ~~pip install matplotlib~~
 * pip install qiniu
 
