@@ -305,14 +305,11 @@ class Processor(object):
         :return:
         """
         # TODO 考虑使用本地文件做进程间全局锁
-        for _ in range(5):
-            try:
-                doc.subset_fonts()
-                return
-            except Exception:
-                logger.warn(f'压缩文档处理进程冲突: 第{_}次')
-                continue
-        logger.warn(f'5次重试未成功压缩!')
+        try:
+            doc.subset_fonts()
+            return
+        except Exception:
+            logger.warn(f'压缩文档处理进程冲突!')
 
     @logged(desc='压缩合并多个item文档到一个结果文档')
     def merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> Document:
