@@ -93,10 +93,10 @@ class Editor(Reader):
                     # img = img.resize((int(rect.width), int(rect.height)))
                     img_stream = io.BytesIO()
                     img.save(img_stream, format='JPEG')
-                    # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
-                    img_pixmap = fitz.Pixmap(img_stream)
+                    # 这里转成pixmap反而会增大最终pdf体积
+                    # img_pixmap = fitz.Pixmap(img_stream)
                     # 跟随页面旋转角度进行旋转，否则图片方向不对  TODO xref 存放引用，这里待优化,可减少pdf体积
-                    page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0,
+                    page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
                 else:
                     # 跟随页面旋转角度进行旋转，否则图片方向不对
