@@ -77,10 +77,9 @@ def generate_from_urls(items: List[Item]):
 def callback_from_urls(callback_items: CallbackItems):
     try:
 
-        def item_call(item_index, item_doc, exception):
+        def item_callback(index, item, doc, exception):
             if callback_items.process_url:
-                item = callback_items.items[item_index]
-                process_data = {'total': len(callback_items.items), 'index': item_index,
+                process_data = {'total': len(callback_items.items), 'index': index,
                                 'request_id': callback_items.request_id,
                                 'item_id': item.item_id, 'success': True, 'err_msg': None}
                 if exception:
@@ -101,7 +100,7 @@ def callback_from_urls(callback_items: CallbackItems):
             try:
                 processor = Processor()
                 url_datas = processor.download_urls_from_items(callback_items.items)
-                target_doc = processor.generate_from_items_without_close(callback_items.items, url_datas, item_call)
+                target_doc = processor.generate_from_items_without_close(callback_items.items, url_datas, item_callback)
                 target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
@@ -109,7 +108,7 @@ def callback_from_urls(callback_items: CallbackItems):
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
                                       timeout=Timeout(timeout=60.0, connect=10.0))
                 if response.is_success:
-                    logger.info(f'---> 【上传pdf返回结果】: {response.content}')
+                    logger.info(f'【上传pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
@@ -164,7 +163,7 @@ def callback_from_urls(callback_file: CallbackFile):
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
                                       timeout=Timeout(timeout=60.0, connect=10.0))
                 if response.is_success:
-                    logger.info(f'---> 【上传单个处理的原pdf返回结果】: {response.content}')
+                    logger.info(f'【上传单个处理的原pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
@@ -182,7 +181,7 @@ def callback_from_urls(callback_file: CallbackFile):
 
 @app.post('/callback/process', summary='回调示例-接收进度信息')
 def callback_process(callback_process: CallbackProcess):
-    print(
+    logger.info(
         f'<--- 【接收到处理进度】: 共{callback_process.total}个item, 当前第{callback_process.index}个, request_id:{callback_process.request_id}, item_id:{callback_process.item_id} success: {callback_process.success} err_msg:{callback_process.err_msg}')
     return Response(content='success', media_type="text/html")
 
@@ -193,7 +192,7 @@ async def callback_file(file: UploadFile | None = None,
                         total: int | None = Form(None),
                         err_msg: str | None = Form(None)):
     if file:
-        print(f'<--- 【接收到回调文件】: request_id:{request_id} filename:{file.filename} filesize:{file.size}')
+        logger.info(f'<--- 【接收到回调文件】: request_id:{request_id} filename:{file.filename} filesize:{file.size}')
         with open(f'/Users/liuyuhua/Downloads/pdf/{file.filename}', 'wb') as f:
             data = await file.read()
             f.write(data)

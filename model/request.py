@@ -30,9 +30,9 @@ class Mark(BaseModel):
     image_url: str | None = Field(
         None,
         title="矩形区域如果是图片，则为图片网络url地址,否则留空",
-        examples=['https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg']
+        examples=['https://tfile.yj2025.com/pdf-processor/source/2024-03-28/2.jpg',
+                  'https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg']
     )
-
 
 
 class SimpleFile(BaseModel):
@@ -152,6 +152,7 @@ class CallbackFile(BaseModel):
     callback_url: str | None = Field(
         None, examples=['http://localhost:8000/callback/file']
     )
+
 
 class CallbackItems(BaseModel):
     items: List[Item]

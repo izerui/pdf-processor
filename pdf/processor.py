@@ -114,35 +114,46 @@ class Processor(object):
         return header_doc
 
     @logged(desc='处理单个item_doc')
-    def generate_from_item_without_close(self, item: Item, url_datas: dict) -> Document:
+    def generate_from_item_without_close(self, index: int, item: Item, url_datas: dict,
+                                         item_callback: Function = None) -> Document:
         """
         生成独立包含header和原页面的文档
+        :param index: item的索引
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
         :param url_datas: url_data 对照表
+        :param item_callback: 成功与失败回调
         :return:
         """
-        target_item_doc = fitz.open()
-        # 每个item的头部区域pdf
-        header_doc: Document = self.generate_header_doc_without_close(item)
-        for file in item.files:
+        try:
+            target_item_doc = fitz.open()
+            # 每个item的头部区域pdf
+            header_doc: Document = self.generate_header_doc_without_close(item)
+            for file in item.files:
 
-            #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
-            editor: Editor = Editor(url_datas[file.url], False)
-            rotations = editor.get_horizontal_transform_rotations(file.rotations)
-            editor.clean_pages()
-            if file.marks and len(file.marks) > 0:
-                # 添加遮罩区域
-                editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
-            source_file_doc = editor.get_doc_without_close()
-            #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
+                #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
+                editor: Editor = Editor(url_datas[file.url], False)
+                rotations = editor.get_horizontal_transform_rotations(file.rotations)
+                editor.clean_pages()
+                if file.marks and len(file.marks) > 0:
+                    # 添加遮罩区域
+                    editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
+                source_file_doc = editor.get_doc_without_close()
+                #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
 
-            # source_file_doc.page_xref(0)
-            # source_file_doc.get_page_images()
+                # source_file_doc.page_xref(0)
+                # source_file_doc.get_page_images()
 
-            # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
-            self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
-        header_doc.close()
-        return target_item_doc
+                # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
+                self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
+            header_doc.close()
+            if item_callback:
+                item_callback(index, item, target_item_doc, None)
+            return target_item_doc
+        except BaseException as err:
+            logger.exception(err)
+            if item_callback:
+                item_callback(index, item, None, err)
+            raise err
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
     def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:
@@ -323,33 +334,27 @@ class Processor(object):
 
     @logged(desc='通过多个items处理成一个结果文档')
     def generate_from_items_without_close(self, items: list[Item], url_datas: dict,
-                                          item_call: Function = None) -> Document:
+                                          item_callback: Function = None) -> Document:
         """
         通过多个items处理成一个结果文档
         :param items: item任务列表
         :param url_datas: url_data的对照表
-        :param item_call: 单个item处理完回调: `item_call(item_index, result, exception)`
+        :param item_callback: 单个item处理完回调: `item_callback(item_index, item, result, exception)`
         :return: result_doc
         """
-        if not item_call:
-            def _item_call(item_index, item_doc, exception):
-                pass
-
-            item_call = _item_call
-
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
         item_docs = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
-            for item in items:
+            for index, item in enumerate(items):
                 file_count += len(item.files)
                 # 如果是测试 传入string则增加不同item之间的批次号
                 item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, item, url_datas)
+                future = pool.submit(self.generate_from_item_without_close, index, item, url_datas, item_callback)
                 futures.append(future)
-            # 处理进度 TODO 这里应该触发回调，否则就是一下子批量通知了
+            # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
                 pass
             # 按原始顺序添加页
@@ -357,12 +362,9 @@ class Processor(object):
                 exception = future.exception()
                 if exception:
                     logger.exception(exception)
-                    item_call(index, None, exception)
                     raise exception
                 else:
-                    result = future.result()
-                    item_docs.append(result)
-                    item_call(index, result, None)
+                    item_docs.append(future.result())
         logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
         target_doc = self.merge_and_compress_docs(item_docs)
