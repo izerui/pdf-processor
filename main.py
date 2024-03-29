@@ -125,7 +125,7 @@ def callback_from_urls(callback_items: CallbackItems):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@logged(desc='处理单个pdf文件，返回加遮罩后的源文档')
+@logged(desc='处理单个源pdf文件，返回加遮罩后的源文档')
 @app.post('/generate/from-file', summary='处理单个pdf文件，返回加遮罩后的文档')
 def generate_from_file(file: File):
     try:
@@ -140,7 +140,7 @@ def generate_from_file(file: File):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
-@logged(desc='处理单个pdf文件, 加遮罩后, 异步回调')
+@logged(desc='处理单个源pdf文件, 加遮罩后, 异步回调')
 @app.post('/generate/async-callback-from-file', summary='处理单个pdf文件, 加遮罩后, 异步回调')
 def callback_from_urls(callback_file: CallbackFile):
     try:
