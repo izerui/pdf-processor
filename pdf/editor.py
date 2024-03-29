@@ -99,10 +99,6 @@ class Editor(Reader):
                     page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
                 else:
-                    # 跟随页面旋转角度进行旋转，否则图片方向不对
-                    # page.insert_image(rect, pixmap=hui_pixmap, keep_proportion=False, alpha=0, xref=0,
-                    #                   rotate=rotations[index])
-
                     shape: Shape = page.new_shape()
                     shape.draw_rect(rect=rect)
                     # 颜色对照表 (217 / 255, 217 / 255, 217 / 255) 对应  #D9D9D9
