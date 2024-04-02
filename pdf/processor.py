@@ -182,7 +182,12 @@ class Processor(object):
         :param target_doc: 目标文件
         :return:
         """
+
         for p_index, source_page in enumerate(source_file_doc):
+
+            # fitz.Matrix()
+            # bottom_rect = source_page.cropbox.transform(page.derotation_matrix)
+
             # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
             new_page = target_doc.new_page(width=a4_width, height=a4_height)
             # 顶部区域
@@ -197,8 +202,19 @@ class Processor(object):
             source_page.set_rotation(0)
             new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=rotations[p_index], keep_proportion=True,
                                    clip=source_page.cropbox)
+
+            for annot in source_page.annots():
+                print(annot.type, annot.info['content'], annot.colors["stroke"])
+                # 复制注释到目标文档中
+                match annot.type[1]:
+                    case 'FreeText':
+                        _annot = new_page.add_freetext_annot(rect=annot.rect, text=annot.get_text())
+                        # _annot.update()
+            # target_doc.reload_page(new_page)
+
             # 还原旋转角度
             source_page.set_rotation(_source_page_rotation)
+
             # usage_pdf.save('333.pdf')
 
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
@@ -219,7 +235,8 @@ class Processor(object):
             if auto_close:
                 doc.close()
 
-        pdf_bytes = read_temp_file_instant(write_file_path)
+        # pdf_bytes = read_temp_file_instant(write_file_path)
+        pdf_bytes = doc.tobytes(garbage=4, deflate=True)
         return pdf_bytes
 
     def download_urls_from_items(self, items: list[Item]):

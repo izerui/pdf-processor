@@ -11,7 +11,7 @@ from datetime import datetime
 
 import httpx
 
-from fitz import fitz
+from fitz import fitz, Document
 
 from support import get_url_content_retry
 
@@ -90,7 +90,7 @@ class TestTable(unittest.TestCase):
         img = Image.open(io.BytesIO(get_url_content_retry(url))).convert("RGB")
         img_stream = io.BytesIO()
         img.save(img_stream, format='JPEG')
-        #TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
+        # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
         img_pixmap = fitz.Pixmap(img_stream)
 
         # img_pixmap = fitz.Pixmap()
@@ -103,4 +103,37 @@ class TestTable(unittest.TestCase):
             # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_image
             page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, overlay=True)
         doc.save('11111111.pdf', garbage=3, deflate=True)
+        doc.close()
+
+    def test_open_pdf(self):
+        bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf')
+        doc = fitz.open('pdf', bytes)
+        for index, page in enumerate(doc):
+            print(
+                f'''第{index + 1}页
+                rect cropbox mediabox 是否一致: {page.rect == page.cropbox == page.mediabox}
+                原始矩形宽:{page.cropbox.width}  高:{page.cropbox.height}  旋转角度:{page.rotation}
+                旋转矩阵:{page.rotation_matrix}
+                变换矩阵:{page.transformation_matrix}''')
+            print(doc.xref_object(page.xref))
+        doc.close()
+
+    # https://pymupdf.readthedocs.io/en/latest/recipes-annotations.html
+    def test_copy_annot(self):
+        bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-01/mt_04_24024_0_812.pdf')
+        target_doc: Document = fitz.open()
+        doc = fitz.open('pdf', bytes)
+        for index, page in enumerate(doc):
+            new_page = target_doc.new_page(width=page.rect.width, height=page.rect.height)
+            for index, annot in enumerate(page.annots()):
+                print(annot.type, annot.info['content'], annot.colors["stroke"], annot.rotation)
+                if index == 5:
+                    pass
+                # 复制注释到目标文档中
+                match annot.type[1]:
+                    case 'FreeText':
+                        _annot = new_page.add_freetext_annot(rect=annot.rect, text=annot.get_text())
+                        _annot.update(rotate=annot.rotation, text_color= (1.0, 0.0, 0.0))
+            pass
+        target_doc.save('111.pdf', garbage=4, deflate=True)
         doc.close()
