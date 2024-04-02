@@ -124,6 +124,7 @@ class TestTable(unittest.TestCase):
         target_doc: Document = fitz.open()
         doc = fitz.open('pdf', bytes)
         for index, page in enumerate(doc):
+            print(doc.xref_object(page.xref))
             new_page = target_doc.new_page(width=page.rect.width, height=page.rect.height)
             for index, annot in enumerate(page.annots()):
                 print(annot.type, annot.info['content'], annot.colors["stroke"], annot.rotation)
