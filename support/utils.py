@@ -8,6 +8,8 @@ from functools import wraps
 
 import httpx
 import psutil
+from PIL import ImageColor
+from fitz import TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
@@ -91,6 +93,7 @@ def read_temp_file_instant(callback):
             byte_data = bytes(f.read())
             return byte_data
 
+
 def read_bytes_from_file(file_path: str):
     """
     从文件路径读取二进制
@@ -100,3 +103,31 @@ def read_bytes_from_file(file_path: str):
     with open(file_path, 'rb') as f:
         byte_data = bytes(f.read())
         return byte_data
+
+
+def get_properties_from_style(style: str):
+    """
+    解析style字符串，并返回符合pymupdf渲染的属性值对象
+    """
+    font_size = None
+    font_name = None
+    color = [0, 0, 0]
+    text_align = TEXT_ALIGN_LEFT
+    for style in style.split(';'):
+        s = style.split(':')
+        if s[0] == 'color':
+            _color = ImageColor.getcolor(s[1], "RGB")
+            color = [_color[0] / 255, _color[1] / 255, _color[2] / 255]
+        if s[0] == 'font-size':
+            font_size = int(s[1].replace('pt', ''))
+        if s[0] == 'font-family':
+            font_name = s[1]
+        if s[0] == 'text-align':
+            match s[1]:
+                case 'left':
+                    text_align = TEXT_ALIGN_LEFT
+                case 'right':
+                    text_align = TEXT_ALIGN_RIGHT
+                case 'center':
+                    text_align = TEXT_ALIGN_CENTER
+    return {'font_size': font_size, 'font_name': font_name, 'color': color, 'text_align': text_align}

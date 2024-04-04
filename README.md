@@ -30,6 +30,7 @@ sequenceDiagram
 * pip install Pillow
 * ~~pip install matplotlib~~
 * pip install qiniu
+* pip install prettytable
 
 压力测试工具:
 * pip install locust
