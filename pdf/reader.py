@@ -18,7 +18,7 @@ class Reader(object):
         self.doc = fitz.open("pdf", data)
         # 如果doc不是pdf或者强制进行二次转换
         if is_convert or not self.doc.is_pdf:
-            self.convert_doc()
+            self.doc = self.convert_doc(self.doc)
 
     def get_doc_without_close(self) -> Document:
         """
@@ -27,7 +27,7 @@ class Reader(object):
         return self.doc
 
     # @logged(desc='重新包装当前的doc')
-    def convert_doc(self) -> None:
+    def convert_doc(self, document: Document) -> Document:
         """
         重新包装转换当前的doc,避免一些识别处理问题, 注意这里转换后文档页面的rotation会重置为0
         :return:
@@ -35,19 +35,16 @@ class Reader(object):
         try:
             # 转换前先记录下原始pdf的rotations, 因为发生`convert_to_pdf`后，旋转角度会丢失
             rotations = []
-            for index, page in enumerate(self.doc):
+            for index, page in enumerate(document):
                 rotations.append(page.rotation)
 
             # 将原pdf重新转换下，保证注释可见
             # 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-            convert_pdf = fitz.open('pdf', self.doc.convert_to_pdf())
-            # 把原来的doc关闭
-            self.doc.close()
-            # 将转换后的文档设置到self.doc
-            self.doc = convert_pdf
+            convert_pdf = fitz.open('pdf', document.convert_to_pdf())
             # 还原转换前的旋转角度
-            for index, page in enumerate(self.doc):
+            for index, page in enumerate(document):
                 page.set_rotation(rotations[index])
+            return convert_pdf
         except BaseException as e:
             logger.warn(f'重新包装转换失败: {repr(e)}')
 

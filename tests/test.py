@@ -285,6 +285,69 @@ class TestTable(unittest.TestCase):
         target_doc.save('mt_04_24024_0_812--1---annot.pdf', garbage=4, deflate=True)
         doc.close()
 
+    def test_copy_annot2(self):
+        # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+        fitz.TOOLS.set_small_glyph_heights(True)
+        # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-01/mt_04_24024_0_812.pdf')
+        # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-2.pdf')
+        # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
+        # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-03/x.pdf')
+        bytes = get_url_content_retry('https://file.yj2025.com/工程图纸0940-竖向.pdf')
+        target_doc: Document = fitz.open()
+        doc = fitz.open('pdf', bytes)
+        for index, page in enumerate(doc):
+            page.clean_contents()
+            _page_rotation = page.rotation
+            page.set_rotation(0)
+            # 初始化一张A4纸张大小的新页面
+            new_page = target_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+
+            new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
+                                   clip=page.cropbox)
+
+            for annot_index, annot in enumerate(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT])):
+                if annot.type[1] == 'FreeText':
+                    blocks = annot.get_textpage().extractDICT()['blocks']
+                    for block in blocks:
+                        for line in block['lines']:
+                            line_wmode = line['wmode']
+                            line_rotation = get_text_rotation_from_dir(line['dir'])
+                            line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                            for span in line['spans']:
+                                span_size = span['size']
+                                span_flags = span['flags']
+                                span_font = span['font']
+                                # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
+                                rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                                span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
+                                span_ascender = span['ascender']
+                                span_descender = span['descender']
+                                span_text = span['text']
+
+                                # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+                                a = span["ascender"]
+                                d = span["descender"]
+                                o = fitz.Point(span["origin"])
+                                r = fitz.Rect(span['bbox'])
+
+                                # 通过设置的旋转角度通过反向计算区域块实际位置
+                                # r = r.transform(page.derotation_matrix)
+
+                                _annot = new_page.add_freetext_annot(rect=r,
+                                                                     text=span_text,
+                                                                     fontname=span_font,
+                                                                     fontsize=span_size,
+                                                                     text_color=span_color)
+                                _annot.set_flags(span_flags)
+                                _annot.set_opacity(1)
+                                _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
+            page.set_rotation(_page_rotation)
+            new_page.set_rotation(_page_rotation)
+        target_doc.save('xxx.pdf', garbage=4, deflate=True)
+        doc.close()
+        target_doc.close()
+
+
     def test_bug_91(self):
         bytes = get_url_content_retry(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
