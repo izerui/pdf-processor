@@ -8,7 +8,7 @@ from symtable import Function
 
 import qrcode
 from PIL import Image
-from fitz import fitz, Font, Document
+from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT
 from qrcode.image.pil import PilImage
 
 from model import Item, File, Mark
@@ -302,8 +302,8 @@ class Processor(object):
                                 r = fitz.Rect(span['bbox'])
 
                                 # 如果区域高度不足以包含字体的大小，则把字体大小设置为rect的高度
-                                # if r.height < span_size:
-                                #     span_size = r.height
+                                if r.height < span_size:
+                                    span_size = r.height
 
                                 # rect 区域向外部区域延伸的数值
                                 x0_outer_extend = 0
@@ -323,7 +323,8 @@ class Processor(object):
                                                                      text=span_text,
                                                                      fontname=span_font,
                                                                      fontsize=(span_size) * scale_factor,
-                                                                     text_color=span_color)
+                                                                     text_color=span_color,
+                                                                     align=TEXT_ALIGN_LEFT)
                                 _annot.set_flags(span_flags)
                                 _annot.set_opacity(1)
                                 _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
