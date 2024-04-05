@@ -1,4 +1,5 @@
 import logging
+import math
 import os
 import tempfile
 import threading
@@ -131,3 +132,20 @@ def get_properties_from_style(style: str):
                 case 'center':
                     text_align = TEXT_ALIGN_CENTER
     return {'font_size': font_size, 'font_name': font_name, 'color': color, 'text_align': text_align}
+
+
+def get_text_rotation_from_dir(dir_tuple: tuple):
+    """
+    根据pymupdf中 `get_textpage().extractDICT()['blocks'][0]['lines']` 的 dir获取字体旋转角度
+    转换为度数(去掉小数点),并且默认只支持 0、90、180、270
+    """
+    # 计算反正切值
+    # 注意：这里是-dir_tuple[1]， https://pymupdf.readthedocs.io/en/latest/textpage.html#f2
+    # MuPDF 和 PDF 的坐标系不同，MuPDF 使用页面的左上角点作为 (0, 0)。而在 PDF 中，这是左下点。
+    # 因此，MuPDF 的 y 轴的正方向是从上至下。这就导致了此处正弦值的符号变化：负值表示文本的逆时针旋转。
+    angle_radians = math.atan2(-dir_tuple[1], dir_tuple[0])
+    # 转换为度数(去掉小数点),并且默认只支持 0、90、180、270
+    rotation = int(angle_radians * 180 / math.pi)
+    if rotation < 0:
+        rotation = rotation + 360
+    return rotation

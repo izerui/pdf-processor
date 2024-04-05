@@ -9,13 +9,14 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from xml.etree.ElementTree import Element
+import xml.etree.ElementTree as ET
 
 import httpx
-from fitz import fitz, Document
+from fitz import fitz, Document, TEXT_ALIGN_LEFT
 from prettytable import PrettyTable
 
-from support import get_url_content_retry
-from support.utils import get_properties_from_style
+from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height, \
+    get_properties_from_style
 
 
 def random_wait_return(index, item):
@@ -122,7 +123,8 @@ class TestTable(unittest.TestCase):
 
     # https://pymupdf.readthedocs.io/en/latest/recipes-annotations.html
     def test_copy_annot(self):
-        import xml.etree.ElementTree as ET
+        # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+        fitz.TOOLS.set_small_glyph_heights(True)
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-01/mt_04_24024_0_812.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-2.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
@@ -133,80 +135,154 @@ class TestTable(unittest.TestCase):
         for index, page in enumerate(doc):
             page.clean_contents()
             # print(doc.xref_object(page.xref))
-            new_page = target_doc.new_page(width=page.rect.width, height=page.rect.height)
+
+            # 初始化一张A4纸张大小的新页面
+            new_page = target_doc.new_page(width=a4_width, height=a4_height)
+
+            # 计算缩放因子
+            scale_factor = min(a4_width / page.cropbox.width, a4_height / page.cropbox.height)
+
             new_page.set_rotation(page.rotation)
-            # new_page.show_pdf_page(page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
-            #                        clip=page.cropbox)
+            # 新的底部区域的自身rect大小(即剪切掉header区域后，剩余的底部区域的整个rect)
+            bottom_self_rect = fitz.Rect(0, 0, a4_width, a4_height - header_height)
+            new_height = a4_width * page.cropbox.height / page.cropbox.width
+            bottom_scale_matrix = fitz.Matrix(1, 0, 0, new_height / page.cropbox.height, 0, 0)
+
+            # 底部区域在整个A4纸张的新页面的rect区域
+            # bottom_rect = fitz.Rect(0, header_height, a4_width, a4_height)
+            new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
+                                   clip=page.cropbox)
             for annot_index, annot in enumerate(page.annots()):
+                # if annot.xref != 25:
+                #     continue
                 print('\r\t')
                 # print(doc.xref_object(annot.xref))
                 # print(annot.xref, annot.type, annot.info['content'], annot.colors["stroke"], annot.rotation)
                 # print('Rotation:', doc.xref_get_key(annot.xref, 'Rotation'))
                 # print('Contents:', doc.xref_get_key(annot.xref, 'Contents'))
                 # print('Default Appearance:', doc.xref_get_key(annot.xref, 'DA'))
+
                 print('Remote Control:', doc.xref_get_key(annot.xref, 'RC'))
                 print('Default Style:', doc.xref_get_key(annot.xref, 'DS'))
                 keys = doc.xref_get_keys(annot.xref)
                 if annot.type[1] == 'FreeText':
-                    # 以第一个块的第一行为例，取文字的方向、颜色、字体信息等
+                    content = doc.xref_get_key(annot.xref, 'Contents')[1]
+                    fontname = None
+                    fontsize = 12
+                    #     # 以第一个块的第一行为例，取文字的方向、颜色、字体信息等
                     lines = annot.get_textpage().extractDICT()['blocks'][0]['lines']
-                    dir_tuple = lines[0]['dir']
-                    # 计算反正切值
-                    # 注意：这里是-dir_tuple[1]， https://pymupdf.readthedocs.io/en/latest/textpage.html#f2
-                    # MuPDF 和 PDF 的坐标系不同，MuPDF 使用页面的左上角点作为 (0, 0)。而在 PDF 中，这是左下点。
-                    # 因此，MuPDF 的 y 轴的正方向是从上至下。这就导致了此处正弦值的符号变化：负值表示文本的逆时针旋转。
-                    angle_radians = math.atan2(-dir_tuple[1], dir_tuple[0])
-                    # 转换为度数(去掉小数点),并且默认只支持 0、90、180、270
-                    rotation = int(angle_radians * 180 / math.pi)
-                    if rotation < 0:
-                        rotation = rotation + 360
+                    color = [0, 0, 0]
+                    ##### 拆分后按每个span进行添加
+                    for line in lines:
+                        line_wmode = line['wmode']
+                        line_rotation = get_text_rotation_from_dir(line['dir'])
+                        line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                        for span in line['spans']:
+                            span_size = span['size']
+                            fontsize = span_size
+                            span_flags = span['flags']
+                            span_font = span['font']
+                            fontname = span_font
+                            # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
+                            rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                            span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
+                            color = span_color
+                            span_ascender = span['ascender']
+                            span_descender = span['descender']
+                            span_text = span['text']
 
-                    # rect = doc.xref_get_key(annot.xref, 'Rect')[1]
-                    styles = None
-                    if 'RC' in keys:
-                        style_json = doc.xref_get_key(annot.xref, 'RC')[1]
-                        print('USE RC: ', style_json)
-                        rc_xml: Element = ET.fromstring(style_json)
-                        style_nodes = []
-                        if 'style' in rc_xml.attrib:
-                            style_nodes.append(rc_xml)
-                        style_nodes.extend(rc_xml.findall(".//*[@style]"))
-                        if style_nodes:
-                            for node in style_nodes:
-                                styles = get_properties_from_style(node.attrib['style'])
-                    else:
-                        default_style = doc.xref_get_key(annot.xref, 'DS')[1]
-                        print('USE DS: ', default_style)
-                        styles = get_properties_from_style(default_style)
-                    # 复制注释到目标文档中
-                    match annot.type[1]:
-                        case 'FreeText':
-                            annot_tbl = PrettyTable(
-                                ['xref', '类型', '内容', '方向', '字体名称', '字体大小', '字体颜色', '对齐方式',
-                                 '位置'])
+                            # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+                            a = span["ascender"]
+                            d = span["descender"]
+                            o = fitz.Point(span["origin"])
+                            r = fitz.Rect(span['bbox'])
 
-                            annot_tbl.add_row([
-                                annot.xref,
-                                annot.type[1],
-                                annot.get_text(),
-                                rotation,
-                                styles["font_name"],
-                                styles["font_size"],
-                                styles["color"],
-                                styles["text_align"],
-                                annot.rect
-                            ])
-                            print(annot_tbl)
-                            _annot = new_page.add_freetext_annot(rect=annot.rect,
-                                                                 text=annot.get_text(),
-                                                                 fontname=styles["font_name"],
-                                                                 fontsize=styles["font_size"],
-                                                                 text_color=styles["color"],
-                                                                 align=styles["text_align"],
-                                                                 rotate=rotation)
-                            # _annot.update(rotate=rotation, text_color= color)
+                            # a = span["ascender"]
+                            # d = span["descender"]
+                            # o = fitz.Point(span["origin"])  # its y-value is the baseline
+                            # r.y1 = o.y - span["size"] * scale_factor * d / (a - d)
+                            # r.y0 = r.y1 - span["size"]
+
+                            r = fitz.Rect(r[0] * scale_factor,
+                                          r[1] * scale_factor,
+                                          r[2] * scale_factor,
+                                          r[3] * scale_factor)
+                            _annot = new_page.add_freetext_annot(rect=r,
+                                                                 text=span_text,
+                                                                 fontname=span_font,
+                                                                 fontsize=(span_size) * scale_factor,
+                                                                 text_color=span_color,
+                                                                 # fill_color=[1, 1, 1],
+                                                                 # align=TEXT_ALIGN_LEFT,
+                                                                 rotate=line_rotation)
+                            _annot.set_flags(span_flags)
+                            _annot.set_opacity(1)
+                            _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
+                            pass
+
+                        pass
+
+                    #### 未拆分span，直接整个字符串添加
+                    # dir_tuple = lines[0]['dir']
+                    # # 计算反正切值
+                    # # 注意：这里是-dir_tuple[1]， https://pymupdf.readthedocs.io/en/latest/textpage.html#f2
+                    # # MuPDF 和 PDF 的坐标系不同，MuPDF 使用页面的左上角点作为 (0, 0)。而在 PDF 中，这是左下点。
+                    # # 因此，MuPDF 的 y 轴的正方向是从上至下。这就导致了此处正弦值的符号变化：负值表示文本的逆时针旋转。
+                    # angle_radians = math.atan2(-dir_tuple[1], dir_tuple[0])
+                    # #
+                    # rotation = int(angle_radians * 180 / math.pi)
+                    # if rotation < 0:
+                    #     rotation = rotation + 360
+                    #
+                    # # rect = doc.xref_get_key(annot.xref, 'Rect')[1]
+                    # styles = None
+                    # if 'RC' in keys:
+                    #     style_json = doc.xref_get_key(annot.xref, 'RC')[1]
+                    #     print('USE RC: ', style_json)
+                    #     rc_xml: Element = ET.fromstring(style_json)
+                    #     style_nodes = []
+                    #     if 'style' in rc_xml.attrib:
+                    #         style_nodes.append(rc_xml)
+                    #     style_nodes.extend(rc_xml.findall(".//*[@style]"))
+                    #     if style_nodes:
+                    #         for node in style_nodes:
+                    #             styles = get_properties_from_style(node.attrib['style'])
+                    # else:
+                    #     default_style = doc.xref_get_key(annot.xref, 'DS')[1]
+                    #     print('USE DS: ', default_style)
+                    #     styles = get_properties_from_style(default_style)
+                    # rect = fitz.Rect(annot.rect)
+                    # rect = fitz.Rect(rect[0] * scale_factor, rect[1] * scale_factor, rect[2] * scale_factor, rect[3] * scale_factor)
+                    # # 复制注释到目标文档中
+                    # match annot.type[1]:
+                    #     case 'FreeText':
+                    #         annot_tbl = PrettyTable(
+                    #             ['类型', 'xref', '内容', '方向', '字体名称', '字体大小', '字体颜色', '对齐方式',
+                    #              '位置'])
+                    #
+                    #         annot_tbl.add_row([
+                    #             annot.type[1],
+                    #             annot.xref,
+                    #             content,
+                    #             rotation,
+                    #             fontname,
+                    #             fontsize,
+                    #             color,
+                    #             styles["text_align"],
+                    #             rect
+                    #         ])
+                    #         print(annot_tbl)
+                    # _annot = new_page.add_freetext_annot(rect=rect,
+                    #                                      text=content,
+                    #                                      fontname=fontname,
+                    #                                      fontsize=fontsize,
+                    #                                      text_color=color,
+                    #                                      fill_color=[1,1,1],
+                    #                                      align=styles["text_align"],
+                    #                                      rotate=rotation)
+                    # # _annot.update(rotate=rotation, text_color= color)
             pass
-        target_doc.save('111.pdf', garbage=4, deflate=True)
+        target_doc.save('mt_04_24024_0_812--1---annot.pdf', garbage=4, deflate=True)
         doc.close()
 
     def test_bug_91(self):
@@ -276,10 +352,16 @@ class TestTable(unittest.TestCase):
             #     rotation = int(doc.xref_get_key(annot.xref, 'Rotation')[1])
             #     print('Rotation: ', rotation)
 
-    # def test_rotation(self):
-    #     bytes = httpx.get('https://tfile.yj2025.com/pdf-processor/source/2024-04-04/竖图方向不正确-1.pdf').content
-    #     doc = fitz.open('pdf', bytes)
-    #     page = doc[0]
-    #     text_page = page.get_textpage()
-    #     dict = text_page.extractDICT()
-    #     pass
+    def test_scale(self):
+        s_w = 400
+        s_h = 210
+        t_w = 200
+        t_h = 100
+        w_scale_factor = t_w / s_w
+        h_scale_factor = t_h / s_h
+        print(w_scale_factor, h_scale_factor)
+        if s_h * w_scale_factor < t_h:
+            print('按宽度缩放：', w_scale_factor)
+        else:
+            print('按高度缩放：', h_scale_factor)
+        pass

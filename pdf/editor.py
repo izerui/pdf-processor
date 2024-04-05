@@ -111,6 +111,7 @@ class Editor(Reader):
             # 还原原来的旋转角度
             page.set_rotation(_rotation)
 
+
     @logged(desc='清理页面')
     def clean_pages(self):
         """
