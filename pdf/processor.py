@@ -252,8 +252,8 @@ class Processor(object):
             # 以宽度为准进行等比例缩放
             is_h_scale_factor = h_scale_factor == scale_factor
 
-            print(rotations[index], is_h_scale_factor, scale_factor * page.cropbox.width,
-                  scale_factor * page.cropbox.height)
+            # print(rotations[index], is_h_scale_factor, scale_factor * page.cropbox.width,
+            #       scale_factor * page.cropbox.height)
 
             # 页面复制是居中，故需要计算源页面到新的区域的适配方式
             # 如果以宽度来适配，则需要计算y轴的偏移量
@@ -318,7 +318,7 @@ class Processor(object):
                                               r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
 
                                 # r = r.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
-                                print('line rotation: ', line_rotation)
+                                # print('line rotation: ', line_rotation)
                                 _annot = new_page.add_freetext_annot(rect=r,
                                                                      text=span_text,
                                                                      fontname=span_font,
