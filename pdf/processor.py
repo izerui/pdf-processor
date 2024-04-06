@@ -271,9 +271,9 @@ class Processor(object):
                                    clip=page.cropbox)
             for annot_index, annot in enumerate(annots):
                 print('\r\t')
-                # print(doc.xref_object(annot.xref))
-                # print('Remote Control:', doc.xref_get_key(annot.xref, 'RC'))
-                # print('Default Style:', doc.xref_get_key(annot.xref, 'DS'))
+                # print(source_file_doc.xref_object(annot.xref))
+                # print('Remote Control:', source_file_doc.xref_get_key(annot.xref, 'RC'))
+                # print('Default Style:', source_file_doc.xref_get_key(annot.xref, 'DS'))
                 if annot.type[1] == 'FreeText':
                     blocks = annot.get_textpage().extractDICT()['blocks']
                     for block in blocks:
