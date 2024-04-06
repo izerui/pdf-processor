@@ -230,107 +230,108 @@ class Processor(object):
         """
         将源文件页面的注释原样copy到target_item_doc中
         """
-        # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-        fitz.TOOLS.set_small_glyph_heights(True)
-        # 下部区域
-        r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+        try:
+            # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+            fitz.TOOLS.set_small_glyph_heights(True)
+            # 下部区域
+            r2 = fitz.Rect(0, header_height, a4_width, a4_height)
 
-        for index, page in enumerate(source_file_doc):
-            _rotation = page.rotation
-            page.set_rotation(0)
-            annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT]))
-            # print(doc.xref_object(page.xref))
-            if len(annots) < 0:
-                continue
-            # target_item_doc的新页面
-            new_page = target_item_doc[index]
+            for index, page in enumerate(source_file_doc):
+                _rotation = page.rotation
+                page.set_rotation(0)
+                annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT]))
+                # print(doc.xref_object(page.xref))
+                if len(annots) < 0:
+                    continue
+                # target_item_doc的新页面
+                new_page = target_item_doc[index]
 
-            # 计算缩放因子(针对target_item_doc的底部区域)
-            h_scale_factor = r2.width / page.cropbox.width
-            v_scale_factor = r2.height / page.cropbox.height
-            scale_factor = min(h_scale_factor, v_scale_factor)
-            # 以宽度为准进行等比例缩放
-            is_h_scale_factor = h_scale_factor == scale_factor
+                # 计算缩放因子(针对target_item_doc的底部区域)
+                h_scale_factor = r2.width / page.cropbox.width
+                v_scale_factor = r2.height / page.cropbox.height
+                scale_factor = min(h_scale_factor, v_scale_factor)
+                # 以宽度为准进行等比例缩放
+                is_h_scale_factor = h_scale_factor == scale_factor
 
-            # print(rotations[index], is_h_scale_factor, scale_factor * page.cropbox.width,
-            #       scale_factor * page.cropbox.height)
+                # print(rotations[index], is_h_scale_factor, scale_factor * page.cropbox.width,
+                #       scale_factor * page.cropbox.height)
 
-            # 页面复制是居中，故需要计算源页面到新的区域的适配方式
-            # 如果以宽度来适配，则需要计算y轴的偏移量
-            # 如果以高度来适配，则需要计算x轴的偏移量
-            x_offset = 0
-            y_offset = 0
-            if not is_h_scale_factor:
-                x_offset = (r2.width - scale_factor * page.cropbox.width) / 2
-            else:
-                y_offset = (r2.height - scale_factor * page.cropbox.height) / 2
+                # 页面复制是居中，故需要计算源页面到新的区域的适配方式
+                # 如果以宽度来适配，则需要计算y轴的偏移量
+                # 如果以高度来适配，则需要计算x轴的偏移量
+                x_offset = 0
+                y_offset = 0
+                if not is_h_scale_factor:
+                    x_offset = (r2.width - scale_factor * page.cropbox.width) / 2
+                else:
+                    y_offset = (r2.height - scale_factor * page.cropbox.height) / 2
 
-            # new_page.set_rotation(page.rotation)
+                # new_page.set_rotation(page.rotation)
 
-            new_page.show_pdf_page(r2, source_file_doc, index, rotate=rotations[index], keep_proportion=True,
-                                   clip=page.cropbox)
-            for annot_index, annot in enumerate(annots):
-                print('\r\t')
-                # print(source_file_doc.xref_object(annot.xref))
-                # print('Remote Control:', source_file_doc.xref_get_key(annot.xref, 'RC'))
-                # print('Default Style:', source_file_doc.xref_get_key(annot.xref, 'DS'))
-                if annot.type[1] == 'FreeText':
-                    blocks = annot.get_textpage().extractDICT()['blocks']
-                    for block in blocks:
-                        lines = block['lines']
-                        # 拆分后按每个span进行添加
-                        for line in lines:
-                            line_wmode = line['wmode']
-                            line_rotation = get_text_rotation_from_dir(line['dir'])
-                            line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
-                            # line_rect = line_rect.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
-                            for span in line['spans']:
-                                span_size = span['size']
-                                span_flags = span['flags']
-                                span_font = span['font']
-                                # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
-                                rgb_tuple = fitz.sRGB_to_pdf(span['color'])
-                                span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
-                                span_ascender = span['ascender']
-                                span_descender = span['descender']
-                                span_text = span['text']
+                new_page.show_pdf_page(r2, source_file_doc, index, rotate=rotations[index], keep_proportion=True,
+                                       clip=page.cropbox)
+                for annot_index, annot in enumerate(annots):
+                    print('\r\t')
+                    # print(source_file_doc.xref_object(annot.xref))
+                    # print('Remote Control:', source_file_doc.xref_get_key(annot.xref, 'RC'))
+                    # print('Default Style:', source_file_doc.xref_get_key(annot.xref, 'DS'))
+                    if annot.type[1] == 'FreeText':
+                        blocks = annot.get_textpage().extractDICT()['blocks']
+                        for block in blocks:
+                            lines = block['lines']
+                            # 拆分后按每个span进行添加
+                            for line in lines:
+                                line_wmode = line['wmode']
+                                line_rotation = get_text_rotation_from_dir(line['dir'])
+                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                                # line_rect = line_rect.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
+                                for span in line['spans']:
+                                    span_size = span['size']
+                                    span_flags = span['flags']
+                                    span_font = span['font']
+                                    # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
+                                    rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                                    span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
+                                    span_ascender = span['ascender']
+                                    span_descender = span['descender']
+                                    span_text = span['text']
 
-                                # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-                                a = span["ascender"]
-                                d = span["descender"]
-                                o = fitz.Point(span["origin"])
-                                r = fitz.Rect(span['bbox'])
+                                    # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
+                                    a = span["ascender"]
+                                    d = span["descender"]
+                                    o = fitz.Point(span["origin"])
+                                    r = fitz.Rect(span['bbox'])
 
-                                # 如果区域高度不足以包含字体的大小，则把字体大小设置为rect的高度
-                                if r.height < span_size:
-                                    span_size = r.height
+                                    # 如果区域高度不足以包含字体的大小，则把字体大小设置为rect的高度
+                                    if r.height < span_size:
+                                        span_size = r.height
 
-                                # rect 区域向外部区域延伸的数值
-                                x0_outer_extend = 0
-                                y0_outer_extend = 0
-                                x1_outer_extend = 0
-                                y1_outer_extend = 0
+                                    # rect 区域向外部区域延伸的数值
+                                    x0_outer_extend = 0
+                                    y0_outer_extend = 0
+                                    x1_outer_extend = 0
+                                    y1_outer_extend = 0
 
-                                # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
-                                r = fitz.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
-                                              r[1] * scale_factor + y_offset - y0_outer_extend + header_height,
-                                              r[2] * scale_factor + x_offset + x1_outer_extend,
-                                              r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
+                                    # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
+                                    r = fitz.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
+                                                  r[1] * scale_factor + y_offset - y0_outer_extend + header_height,
+                                                  r[2] * scale_factor + x_offset + x1_outer_extend,
+                                                  r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
 
-                                # r = r.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
-                                # print('line rotation: ', line_rotation)
-                                _annot = new_page.add_freetext_annot(rect=r,
-                                                                     text=span_text,
-                                                                     fontname=span_font,
-                                                                     fontsize=(span_size) * scale_factor,
-                                                                     text_color=span_color,
-                                                                     align=TEXT_ALIGN_LEFT)
-                                _annot.set_flags(span_flags)
-                                _annot.set_opacity(1)
-                                _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
-            page.set_rotation(_rotation)
-        pass
-
+                                    # r = r.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
+                                    # print('line rotation: ', line_rotation)
+                                    _annot = new_page.add_freetext_annot(rect=r,
+                                                                         text=span_text,
+                                                                         fontname=span_font,
+                                                                         fontsize=(span_size) * scale_factor,
+                                                                         text_color=span_color,
+                                                                         align=TEXT_ALIGN_LEFT)
+                                    _annot.set_flags(span_flags)
+                                    _annot.set_opacity(1)
+                                    _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
+                page.set_rotation(_rotation)
+        except BaseException as err:
+            logger.exception(err)
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document, auto_close: bool = True) -> bytes:
         """
