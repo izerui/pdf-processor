@@ -47,8 +47,6 @@ class Processor(object):
         :param header_height:
         """
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
-        self.url_file_data_cache = {}
-        self.url_image_pixmap_cache = {}
 
     @logged(desc='处理单个item_doc')
     def generate_from_item_without_close(self, index: int, item: Item, url_datas: dict,
@@ -408,26 +406,6 @@ class Processor(object):
                     logger.exception(exception)
                 pass
         return url_datas
-
-    def _wrap_mark_by_cache(self, mark: Mark):
-        """
-        通过缓存补充遮罩图data
-        :param mark:
-        :param mark_img_cache: 缓存
-        :return:
-        """
-        if mark.image_url:
-            if mark.image_url in self.url_image_pixmap_cache:
-                mark.image_data = self.url_image_pixmap_cache[mark.image_url]
-            else:
-                # PIL加载网络图片，并转换成统一jpeg格式的二进制
-                img = Image.open(io.BytesIO(get_url_content_retry(mark.image_url))).convert("RGB")
-                img_stream = io.BytesIO()
-                img.save(img_stream, format='JPEG')
-                # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
-                img_pixmap = fitz.Pixmap(img_stream)
-                self.url_image_pixmap_cache[mark.image_url] = img_pixmap
-                mark.image_data = img_pixmap
 
     def compress_doc(self, doc: Document) -> None:
         """
