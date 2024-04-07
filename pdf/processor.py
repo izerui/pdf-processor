@@ -305,10 +305,10 @@ class Processor(object):
                                         span_size = r.height
 
                                     # rect 区域向外部区域延伸的数值
-                                    x0_outer_extend = 0
-                                    y0_outer_extend = 0
-                                    x1_outer_extend = 0
-                                    y1_outer_extend = 0
+                                    x0_outer_extend = 2
+                                    y0_outer_extend = 2
+                                    x1_outer_extend = 2
+                                    y1_outer_extend = 2
 
                                     # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
                                     r = fitz.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
