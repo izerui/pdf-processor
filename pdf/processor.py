@@ -69,12 +69,12 @@ class Processor(object):
                 editor: Editor = Editor(url_datas[file.url], False)
                 rotations = editor.get_horizontal_transform_rotations(file.rotations)
                 editor.clean_pages()
+                editor.bake_document()
                 if file.marks and len(file.marks) > 0:
                     # 添加遮罩区域
                     editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
                 source_file_doc = editor.get_doc_without_close()
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
-
                 # source_file_doc.page_xref(0)
                 # source_file_doc.get_page_images()
 
@@ -82,7 +82,7 @@ class Processor(object):
                 self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
-                self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
+                # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
             header_doc.close()
             if item_callback:
                 item_callback(index, item, target_item_doc, None)
@@ -167,6 +167,7 @@ class Processor(object):
         editor: Editor = Editor(file.data, False)
         rotations = editor.get_horizontal_transform_rotations(file.rotations)
         editor.clean_pages()
+        editor.bake_document()
         if file.marks and len(file.marks) > 0:
             # 添加遮罩区域
             editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)

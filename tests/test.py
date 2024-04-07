@@ -438,3 +438,17 @@ class TestTable(unittest.TestCase):
         doc = fitz.open('pdf', doc.tobytes(garbage=4, clean=True, deflate=True))
         # doc = fitz.open('pdf', doc.convert_to_pdf())
         doc.save('xxx.pdf')
+
+    def test_bakes(self):
+        """
+        解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
+        将注释等转换成页面内容，这样可以使用show_pdf_page 复制这些内容到别的地方
+        """
+        bytes = httpx.get(
+            'https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf').content
+        doc = fitz.open('pdf', bytes)
+        for page in doc:
+            page.clean_contents()
+        pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
+        fitz.mupdf.pdf_bake_document(pdf, 1, 1)
+        doc.save('xxx.pdf')

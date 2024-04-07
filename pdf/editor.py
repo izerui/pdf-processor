@@ -190,3 +190,12 @@ class Editor(Reader):
 
         for page in self.doc:
             page.clean_contents()
+
+    def bake_document(self):
+        """
+        可立即在 PyMuPDF 中使用。有一个功能可以将注释和字段（！！！）“烘焙”到 PDF 中 - 这意味着它将这些项目转换为正常的页面内容。
+        解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
+        """
+        source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(self.doc)
+        fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        pass
