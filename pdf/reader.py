@@ -56,6 +56,7 @@ class Reader(object):
             return convert_pdf
         except BaseException as e:
             logger.warn(f'重新包装转换失败: {repr(e)}')
+            return convert_pdf
 
     def __del__(self):
         try:
