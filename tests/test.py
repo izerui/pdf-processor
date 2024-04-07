@@ -431,10 +431,10 @@ class TestTable(unittest.TestCase):
 
     def test_ghost(self):
         bytes = httpx.get(
-            'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf').content
+            'https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf').content
         doc = fitz.open('pdf', bytes)
         for page in doc:
             page.clean_contents()
-        # doc = fitz.open('pdf', doc.convert_to_pdf())
         doc = fitz.open('pdf', doc.tobytes(garbage=4, clean=True, deflate=True))
+        # doc = fitz.open('pdf', doc.convert_to_pdf())
         doc.save('xxx.pdf')

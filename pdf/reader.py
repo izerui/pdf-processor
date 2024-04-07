@@ -44,12 +44,12 @@ class Reader(object):
                 # 循环每页清理：
                 # 清理并连接与此页面关联的所有contents对象
                 # 参考：https: // pymupdf.readthedocs.io / en / latest / functions.html  # Page.clean_contents
-                page.clean_contents()
+                # page.clean_contents()
                 rotations.append(page.rotation)
 
             # 将原pdf重新转换下，保证注释可见
             # 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-            convert_pdf = fitz.open('pdf', document.tobytes(garbage=4, clean=True, deflate=True))
+            convert_pdf = fitz.open('pdf', document.convert_to_pdf())
             # 还原转换前的旋转角度
             for index, page in enumerate(document):
                 page.set_rotation(rotations[index])
