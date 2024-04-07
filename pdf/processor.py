@@ -235,6 +235,7 @@ class Processor(object):
             r2 = fitz.Rect(0, header_height, a4_width, a4_height)
 
             for index, page in enumerate(source_file_doc):
+                # 这里一定要先将原始页面角度设置为0，否则注释的字体方向不是以0为参考基准，因为之前合并到bottom区域的时候都是先设置原始页面为0再复制过去的
                 _rotation = page.rotation
                 page.set_rotation(0)
                 annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT]))
@@ -264,10 +265,9 @@ class Processor(object):
                 else:
                     y_offset = (r2.height - scale_factor * page.cropbox.height) / 2
 
-                # new_page.set_rotation(page.rotation)
-
-                new_page.show_pdf_page(r2, source_file_doc, index, rotate=rotations[index], keep_proportion=True,
-                                       clip=page.cropbox)
+                # 测试用，将原图贴过来
+                # new_page.show_pdf_page(r2, source_file_doc, index, rotate=rotations[index], keep_proportion=True,
+                #                        clip=page.cropbox)
                 for annot_index, annot in enumerate(annots):
                     print('\r\t')
                     # print(source_file_doc.xref_object(annot.xref))

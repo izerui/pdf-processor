@@ -50,7 +50,7 @@ class SimpleFile(BaseModel):
 class File(BaseModel):
     # 文件名
     name: str = Field(
-        title="文件名称", max_length=200, examples=['单页.pdf']
+        title="文件名称", max_length=200, examples=['示例.pdf']
     )
 
     # pdf文件url地址
