@@ -1,5 +1,4 @@
 import concurrent
-import io
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -7,11 +6,10 @@ from io import BytesIO
 from symtable import Function
 
 import qrcode
-from PIL import Image
 from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT
 from qrcode.image.pil import PilImage
 
-from model import Item, File, Mark
+from model import Item, File
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
     get_text_rotation_from_dir
@@ -66,9 +64,8 @@ class Processor(object):
             for file in item.files:
 
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
-                editor: Editor = Editor(url_datas[file.url], False)
+                editor: Editor = Editor(url_datas[file.url], True)
                 rotations = editor.get_horizontal_transform_rotations(file.rotations)
-                editor.clean_pages()
                 if file.marks and len(file.marks) > 0:
                     # 添加遮罩区域
                     editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
@@ -82,7 +79,7 @@ class Processor(object):
                 self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
-                self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
+                # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
             header_doc.close()
             if item_callback:
                 item_callback(index, item, target_item_doc, None)
@@ -164,9 +161,8 @@ class Processor(object):
         :param url_datas: url_data对照表
         :return:
         """
-        editor: Editor = Editor(file.data, False)
+        editor: Editor = Editor(file.data, True)
         rotations = editor.get_horizontal_transform_rotations(file.rotations)
-        editor.clean_pages()
         if file.marks and len(file.marks) > 0:
             # 添加遮罩区域
             editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
@@ -238,7 +234,7 @@ class Processor(object):
                 # 这里一定要先将原始页面角度设置为0，否则注释的字体方向不是以0为参考基准，因为之前合并到bottom区域的时候都是先设置原始页面为0再复制过去的
                 _rotation = page.rotation
                 page.set_rotation(0)
-                annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT]))
+                annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT, fitz.mupdf.PDF_ANNOT_LINE]))
                 # print(doc.xref_object(page.xref))
                 if len(annots) < 0:
                     continue
@@ -281,7 +277,8 @@ class Processor(object):
                             for line in lines:
                                 line_wmode = line['wmode']
                                 line_rotation = get_text_rotation_from_dir(line['dir'])
-                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2],
+                                                      line['bbox'][3])
                                 # line_rect = line_rect.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
                                 for span in line['spans']:
                                     span_size = span['size']
@@ -327,9 +324,22 @@ class Processor(object):
                                     _annot.set_flags(span_flags)
                                     _annot.set_opacity(1)
                                     _annot.update(rotate=line_rotation, text_color=span_color, fill_color=[1, 1, 1])
+                    elif annot.type[1] == 'Line':
+                        annot_pixmap = annot.get_pixmap(alpha=True)
+                        r = annot.rect
+                        # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
+                        r = fitz.Rect(r[0] * scale_factor + x_offset,
+                                      r[1] * scale_factor + y_offset + header_height,
+                                      r[2] * scale_factor + x_offset,
+                                      r[3] * scale_factor + y_offset + header_height)
+                        # 跟随页面旋转角度进行旋转，否则图片方向不对
+                        new_page.insert_image(r, pixmap=annot_pixmap, keep_proportion=True, alpha=0, xref=0,
+                                              rotate=rotations[index])
+                        pass
                 page.set_rotation(_rotation)
         except BaseException as err:
             logger.exception(err)
+
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document, auto_close: bool = True) -> bytes:
         """

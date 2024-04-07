@@ -49,4 +49,5 @@ test file:
 * mark区域坐标不对: https://file.yj2025.com/CS01-P3-003.pdf
 * 丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
 * 带管子图: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf
-* 带箭头: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/7003361(1).pdf
+* 箭头注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/7003361(1).pdf
+* 文字注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf

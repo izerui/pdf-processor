@@ -174,19 +174,15 @@ class Editor(Reader):
             new_page.set_rotation(_page_rotation)
         return self.convert_doc(annot_doc)
 
-    @logged(desc='清理页面')
+    @logged(desc='清理页面，并转换')
     def clean_pages(self):
         """
-        循环每页清理：
-            清理并连接与此页面关联的所有contents对象
-        参考：https://pymupdf.readthedocs.io/en/latest/functions.html#Page.clean_contents
+
         :return:
         """
 
-        # 考虑下面两个方法的区别：貌似第二个快，但是会清理不完整，导致坐标还是存在偏差
-        # 1. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.clean_contents
-        # 2. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.wrap_contents
-        # page.wrap_contents()
+
 
         for page in self.doc:
             page.clean_contents()
+        self.doc = self.convert_doc(self.doc)
