@@ -35,6 +35,9 @@ sequenceDiagram
 压力测试工具:
 * pip install locust
 
+pymupdf介绍:
+https://artifex.com/blog/text-extraction-with-pymupdf
+
 dom树:
 https://pymupdf.readthedocs.io/en/latest/_images/img-textpage.png
 
