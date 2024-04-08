@@ -129,6 +129,8 @@ class Reader(object):
         for block in blocks:
             lines = block['lines']
             for line in lines:
+                # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
+                line_wmode = line['wmode']
                 line_rotation = get_text_rotation_from_dir(line['dir'])
                 # 90度的字体排除，因为这些可能是一些图示标记字体，只判断是否上下颠倒的字体
                 if line_rotation == 0:

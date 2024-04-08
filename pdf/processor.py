@@ -284,6 +284,7 @@ class Processor(object):
                             lines = block['lines']
                             # 拆分后按每个span进行添加
                             for line in lines:
+                                # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                                 line_wmode = line['wmode']
                                 line_rotation = get_text_rotation_from_dir(line['dir'])
                                 line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
