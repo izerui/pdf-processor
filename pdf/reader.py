@@ -1,7 +1,7 @@
 from fitz import Document
 from fitz import Page, fitz
 
-from support import logger, logged
+from support import logger, logged, get_text_rotation_from_dir
 
 
 class Reader(object):
@@ -114,6 +114,36 @@ class Reader(object):
                 # 如果发生了基于x轴的上线翻转，则额外加180度
         if page.rotation_matrix.d < 0:
             rotate_for_cropbox += 180
+
+        #################  优化页面的上下颠倒的方向问题 begin #############
+        # 将页面设置成计算的旋转角度，然后通过字体的方向，自动矫正
+        # 暂时记录原始旋转角度
+        _rotation = page.rotation
+        page.set_rotation(rotate_for_cropbox)
+        # 正确的字体方向个数
+        right_rotation_count = 0
+        # 上下颠倒的字体方向个数
+        wrong_rotation_count = 0
+        # 通过获取字体的方向，判断是否上下颠倒了
+        blocks = page.get_textpage().extractDICT()['blocks']
+        for block in blocks:
+            lines = block['lines']
+            for line in lines:
+                line_rotation = get_text_rotation_from_dir(line['dir'])
+                # 90度的字体排除，因为这些可能是一些图示标记字体，只判断是否上下颠倒的字体
+                if line_rotation == 0:
+                    right_rotation_count += 1
+                elif line_rotation == 180:
+                    wrong_rotation_count += 1
+        # 如果错误的字体方向个数大于正确的字体方向个数，则表示页面按上面计算后的旋转后为上下颠倒的页面
+        if wrong_rotation_count > right_rotation_count:
+            if rotate_for_cropbox < 180:
+                rotate_for_cropbox += 180
+            else:
+                rotate_for_cropbox -= 180
+        # 还原原始旋转角度
+        page.set_rotation(_rotation)
+        #################  优化页面的上下颠倒的方向问题 end #############
 
         return rotate_for_cropbox
 

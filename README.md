@@ -38,11 +38,16 @@ sequenceDiagram
 可选支持参考:
 https://pymupdf.readthedocs.io/en/latest/installation.html#notes
 
+如何标记非水平文本
+https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-mark-non-horizontal-text
+
+分析字体特征
+https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-analyze-font-characteristics
+
 test file:
 * https://file.yj2025.com/CH3600-1-M04003A%20%E6%90%AC%E8%BF%90%E7%88%AA%E5%AE%89%E8%A3%85%E6%9D%BF-%E9%95%BF.pdf
 * https://file.yj2025.com/003.pdf
 * https://file.yj2025.com/WX20230909-172402%402x.png
-* https://file.yj2025.com/工程图纸0940-竖向.pdf
 * https://file.yj2025.com/PD5060-GL-016T%20%E9%95%9C%E6%9E%B6%E6%8A%A4%E7%BD%A9.pdf
 * https://file.yj2025.com/CS01-P3-001.pdf
 * https://file.yj2025.com/CS01-P3-002.pdf
@@ -51,3 +56,13 @@ test file:
 * 带管子图: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf
 * 箭头注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/7003361(1).pdf
 * 文字注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖向图纸.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖向图纸2.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/CS01-P3-001-竖向-右侧.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/工程图纸0940-竖向.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/横向图纸.pdf
+* 遮罩位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖图-翻转方向正确的.pdf
+* 无法矫正, 无法获取文字信息 https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖图方向不正确-1.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/用wps设置方向后，与视图方向翻转180.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/打开方向正确-打印翻转了180°-20231205-明信达.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/打开方向正确-打印翻转了180°-20231023-雄利.pdf
