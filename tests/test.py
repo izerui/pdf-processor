@@ -8,15 +8,11 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from xml.etree.ElementTree import Element
-import xml.etree.ElementTree as ET
 
 import httpx
-from fitz import fitz, Document, TEXT_ALIGN_LEFT
-from prettytable import PrettyTable
+from fitz import fitz, Document
 
-from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height, \
-    get_properties_from_style
+from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height
 
 
 def random_wait_return(index, item):
@@ -347,7 +343,6 @@ class TestTable(unittest.TestCase):
         doc.close()
         target_doc.close()
 
-
     def test_bug_91(self):
         bytes = get_url_content_retry(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
@@ -452,3 +447,103 @@ class TestTable(unittest.TestCase):
         pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
         fitz.mupdf.pdf_bake_document(pdf, 1, 1)
         doc.save('xxx.pdf')
+
+    def test_clean_pages(self):
+        """
+        clean_contents 后导致内容丢失，但是通过mac的 preview.app 可以查看
+        """
+        files = [
+            'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf',
+            'https://tfile.yj2025.com/pdf-processor/source/2024-04-08/丢失大量内容401-020605-00.pdf'
+        ]
+        docs = []
+        for file in files:
+            bytes = httpx.get(file).content
+            doc = fitz.open('pdf', bytes)
+            docs.append(doc)
+
+        from PIL import Image
+        img = Image.open(io.BytesIO(
+            httpx.get('https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg').content)).convert("RGB")
+        img_stream = io.BytesIO()
+        img.save(img_stream, format='JPEG')
+
+        rect = [0, 0, 200, 300]
+
+        target_doc = fitz.open()
+        for doc in docs:
+            for index, page in enumerate(doc):
+                print(
+                    f'''第{index + 1}页
+                                rect cropbox mediabox 是否一致: {page.rect == page.cropbox == page.mediabox}
+                                原始矩形宽:{page.cropbox.width}  高:{page.cropbox.height}  旋转角度:{page.rotation}
+                                旋转矩阵:{page.rotation_matrix}
+                                变换矩阵:{page.transformation_matrix}''')
+
+
+                # TODO If you use clean_contents, the content of the second page will be lost and the image will not be displayed.
+                # page.clean_contents()
+
+                # TODO If wrap_contents is used, it will cause the image on the first page to be displayed in the wrong position
+                page.wrap_contents()
+
+                # TODO If both clean_contents and wrap_contents are not used, the first page content will be lost and the image will not be displayed.
+
+                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
+                                  rotate=0)
+                new_page = target_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+                new_page.show_pdf_page(rect=page.cropbox, src=doc, pno=index, keep_proportion=True, rotate=0,
+                                       clip=new_page.cropbox)
+            doc.close()
+        target_doc.save('x.pdf')
+        target_doc.close()
+
+    def test_insert_pdf(self):
+        """
+        内容丢失问题解决
+        """
+        files = [
+            'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf',
+            'https://tfile.yj2025.com/pdf-processor/source/2024-04-08/丢失大量内容401-020605-00.pdf'
+        ]
+        from PIL import Image
+        img = Image.open(io.BytesIO(
+            httpx.get('https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg').content)).convert("RGB")
+        img_stream = io.BytesIO()
+        img.save(img_stream, format='JPEG')
+
+        rect = [0, 0, 200, 300]
+
+        target_doc = fitz.open()
+        for file in files:
+            bytes = httpx.get(file).content
+            doc = fitz.open('pdf', bytes)
+
+            target_doc.insert_pdf(docsrc=doc)
+
+            for index, page in enumerate(target_doc):
+                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
+                                  rotate=0)
+            doc.close()
+        target_doc.save('x.pdf')
+        target_doc.close()
+
+    # https://github.com/pymupdf/PyMuPDF/discussions/2384  show_pdf_page 需要按照逆时针旋转
+    def test_rotation(self):
+        # doc = fitz.open('扫码报工PDF/图档不正确/图档倒转/打开方向正确-打印翻转了180°-20231205-明信达.pdf')
+        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图方向不正确-1.pdf')
+        doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图-0度-左侧为底.pdf')
+        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/横图-90度.pdf')
+        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图右侧-0度.pdf')
+        page = doc[0]
+        print(page.rotation)
+        page.set_rotation(90)
+        doc.save('90.pdf')
+
+        result_doc = fitz.open()
+        new_page = result_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+        _rotation = page.rotation
+        page.set_rotation(0)
+        new_page.show_pdf_page(rect=new_page.cropbox, src=doc, pno=0, keep_proportion=True, rotate=-90, clip=page.cropbox)
+
+        result_doc.save('show_pdf_rotaion_result.pdf')

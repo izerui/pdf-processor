@@ -70,7 +70,7 @@ class File(BaseModel):
 
     # 每个页面的旋转角度
     rotations: List[int] | None = Field(
-        None, title="旋转角度", examples=[[0]]
+        None, title="旋转角度", examples=[[]]
     )
 
 

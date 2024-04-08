@@ -69,6 +69,7 @@ class Processor(object):
                 editor: Editor = Editor(url_datas[file.url], False)
                 rotations = editor.get_horizontal_transform_rotations(file.rotations)
                 editor.clean_pages()
+                # editor.clone_doc_for_self()
                 editor.bake_document()
                 if file.marks and len(file.marks) > 0:
                     # 添加遮罩区域
@@ -167,6 +168,7 @@ class Processor(object):
         editor: Editor = Editor(file.data, False)
         rotations = editor.get_horizontal_transform_rotations(file.rotations)
         editor.clean_pages()
+        # editor.clone_doc_for_self()
         editor.bake_document()
         if file.marks and len(file.marks) > 0:
             # 添加遮罩区域
@@ -202,7 +204,9 @@ class Processor(object):
             _source_page_rotation = source_page.rotation
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
             source_page.set_rotation(0)
-            new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=rotations[p_index], keep_proportion=True,
+            # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
+            # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
+            new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
                                    clip=source_page.cropbox)
             # 还原旋转角度
             source_page.set_rotation(_source_page_rotation)

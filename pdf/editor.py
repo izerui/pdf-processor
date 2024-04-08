@@ -190,6 +190,17 @@ class Editor(Reader):
 
         for page in self.doc:
             page.clean_contents()
+            # page.wrap_contents()
+
+    @logged(desc='重新定义当前文档')
+    def clone_doc_for_self(self):
+        """
+        复制一个新的pdf
+        """
+        clone_doc = fitz.open()
+        clone_doc.insert_pdf(docsrc=self.doc)
+        self.doc.close()
+        self.doc = clone_doc
 
     def bake_document(self):
         """

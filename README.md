@@ -52,7 +52,8 @@ test file:
 * https://file.yj2025.com/CS01-P3-001.pdf
 * https://file.yj2025.com/CS01-P3-002.pdf
 * mark区域坐标不对: https://file.yj2025.com/CS01-P3-003.pdf
-* 丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
+* 未clean则丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
+* clean后丢失内容: https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf
 * 带管子图: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf
 * 箭头注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/7003361(1).pdf
 * 文字注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf
@@ -61,8 +62,9 @@ test file:
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/CS01-P3-001-竖向-右侧.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/工程图纸0940-竖向.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/横向图纸.pdf
-* 遮罩位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖图-翻转方向正确的.pdf
+* 遮罩位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-09/竖图-0度-左侧为底.pdf
 * 无法矫正, 无法获取文字信息 https://tfile.yj2025.com/pdf-processor/source/2024-04-08/竖图方向不正确-1.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/用wps设置方向后，与视图方向翻转180.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/打开方向正确-打印翻转了180°-20231205-明信达.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/打开方向正确-打印翻转了180°-20231023-雄利.pdf
+* https://tfile.yj2025.com/pdf-processor/source/2024-04-08/文件倒转了-401-990022-00.pdf
