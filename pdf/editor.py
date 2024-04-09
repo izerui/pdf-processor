@@ -190,8 +190,8 @@ class Editor(Reader):
         # page.wrap_contents()
 
         for page in self.doc:
-            page.clean_contents()
-            # page.wrap_contents()
+            # page.clean_contents()
+            page.wrap_contents()
 
     @logged(desc='重新定义当前文档')
     def clone_doc_for_self(self):

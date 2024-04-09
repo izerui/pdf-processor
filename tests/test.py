@@ -482,6 +482,8 @@ class TestTable(unittest.TestCase):
                                 旋转矩阵:{page.rotation_matrix}
                                 变换矩阵:{page.transformation_matrix}''')
 
+                print(doc.xref_object(page.xref))
+
 
                 # TODO If you use clean_contents, the content of the second page will be lost and the image will not be displayed.
                 # page.clean_contents()
@@ -489,9 +491,11 @@ class TestTable(unittest.TestCase):
                 # TODO If wrap_contents is used, it will cause the image on the first page to be displayed in the wrong position
                 page.wrap_contents()
 
+                print(doc.xref_object(page.xref))
+
                 # TODO If both clean_contents and wrap_contents are not used, the first page content will be lost and the image will not be displayed.
 
-                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
+                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0,
                                   rotate=0)
                 new_page = target_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
                 new_page.show_pdf_page(rect=page.cropbox, src=doc, pno=index, keep_proportion=True, rotate=0,
