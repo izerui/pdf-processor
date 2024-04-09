@@ -38,6 +38,11 @@ sequenceDiagram
 pymupdf介绍:
 https://artifex.com/blog/text-extraction-with-pymupdf
 
+有用的方法:
+```
+page.get_text("dict", sort=True)
+```
+
 dom树:
 https://pymupdf.readthedocs.io/en/latest/_images/img-textpage.png
 
