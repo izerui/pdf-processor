@@ -162,6 +162,8 @@ class Processor(object):
         new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
         new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
         # new_header_doc.save('new_header.pdf')
+
+        header_doc.close()
         return new_header_doc
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
