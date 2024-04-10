@@ -154,7 +154,7 @@ class Processor(object):
         page.insert_text(point=fitz.Point(1080, 100), text=f'规格型号: {item.inventory_spec}',
                          fontsize=fontsize,
                          fontname=chn_fontname, color=(0, 0, 0))
-        page.clean_contents()
+        # page.clean_contents()
         self.compress_doc(header_doc)
         # header_doc.save('header.pdf')
 
