@@ -191,6 +191,7 @@ class Editor(Reader):
 
         for page in self.doc:
             # page.clean_contents()
+            # page.clean_contents(sanitize=0)
             page.wrap_contents()
 
     @logged(desc='重新定义当前文档')

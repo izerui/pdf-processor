@@ -154,8 +154,15 @@ class Processor(object):
         page.insert_text(point=fitz.Point(1080, 100), text=f'规格型号: {item.inventory_spec}',
                          fontsize=fontsize,
                          fontname=chn_fontname, color=(0, 0, 0))
+        page.clean_contents()
+        self.compress_doc(header_doc)
+        # header_doc.save('header.pdf')
 
-        return header_doc
+        new_header_doc = fitz.open()
+        new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+        new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
+        # new_header_doc.save('new_header.pdf')
+        return new_header_doc
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
     def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:
@@ -434,6 +441,7 @@ class Processor(object):
         """
         # TODO 考虑使用本地文件做进程间全局锁
         try:
+            # doc.subset_fonts(verbose=True)
             doc.subset_fonts()
             return
         except Exception:
@@ -449,8 +457,6 @@ class Processor(object):
         """
         target_doc = fitz.open()
         for item_doc in item_docs:
-            # 先压缩item文档
-            self.compress_doc(item_doc)
             # 每个item生成独立的document，然后插入到target中
             target_doc.insert_pdf(docsrc=item_doc)
             if is_item_doc_close:

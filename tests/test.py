@@ -482,57 +482,63 @@ class TestTable(unittest.TestCase):
                                 旋转矩阵:{page.rotation_matrix}
                                 变换矩阵:{page.transformation_matrix}''')
 
-                print(doc.xref_object(page.xref))
+                # print(doc.xref_object(page.xref))
 
 
                 # TODO If you use clean_contents, the content of the second page will be lost and the image will not be displayed.
                 # page.clean_contents()
+                # page.clean_contents(sanitize=0)
+
 
                 # TODO If wrap_contents is used, it will cause the image on the first page to be displayed in the wrong position
                 page.wrap_contents()
 
-                print(doc.xref_object(page.xref))
-
                 # TODO If both clean_contents and wrap_contents are not used, the first page content will be lost and the image will not be displayed.
 
-                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0,
-                                  rotate=0)
-                new_page = target_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
-                new_page.show_pdf_page(rect=page.cropbox, src=doc, pno=index, keep_proportion=True, rotate=0,
-                                       clip=new_page.cropbox)
+                page.insert_image(rect, stream=img_stream)
+                page.draw_rect(rect, color=(1, 0, 0))
+
+                new_page = target_doc.new_page(width=842, height=595)
+                new_page.show_pdf_page(rect=page.cropbox, src=doc, pno=index)
+
+
             doc.close()
         target_doc.save('x.pdf')
         target_doc.close()
 
-    def test_insert_pdf(self):
+    def test_clean_pages_with_lose_contents(self):
         """
-        内容丢失问题解决
+        clean_contents 后导致内容丢失，但是通过mac的 preview.app 可以查看
         """
-        files = [
-            'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf',
-            'https://tfile.yj2025.com/pdf-processor/source/2024-04-08/丢失大量内容401-020605-00.pdf'
-        ]
-        from PIL import Image
-        img = Image.open(io.BytesIO(
-            httpx.get('https://cdn.pixabay.com/photo/2023/11/09/19/36/zoo-8378189_1280.jpg').content)).convert("RGB")
-        img_stream = io.BytesIO()
-        img.save(img_stream, format='JPEG')
+        bytes = httpx.get(
+            'https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf').content
+        doc = fitz.open('pdf', bytes)
+        for page in doc:
+            page.clean_contents()
+        doc.save('xxx.pdf')
+
+    def test_3359(self):
+        """
+        clean_contents 后导致内容丢失，但是通过mac的 preview.app 可以查看
+        https://github.com/pymupdf/PyMuPDF/discussions/3359
+        """
+        files = ["test_3359/mt_03_22318er_0_806.pdf", "test_3359/丢失大量内容401-020605-00.pdf"]
 
         rect = [0, 0, 200, 300]
 
         target_doc = fitz.open()
         for file in files:
-            bytes = httpx.get(file).content
-            doc = fitz.open('pdf', bytes)
-
-            target_doc.insert_pdf(docsrc=doc)
-
-            for index, page in enumerate(target_doc):
-                page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
-                                  rotate=0)
+            doc = fitz.open(file)
+            for page in doc:
+                page.clean_contents(sanitize=False)
+                page.insert_image(rect, filename="test_3359/logo.png")
+                page.draw_rect(rect, color=(1, 0, 0))
+                new_page = target_doc.new_page(width=842, height=595)
+                new_page.show_pdf_page(new_page.rect, doc, page.number)
             doc.close()
-        target_doc.save('x.pdf')
+        target_doc.save("x.pdf")
         target_doc.close()
+
 
     # https://github.com/pymupdf/PyMuPDF/discussions/2384  show_pdf_page 需要按照逆时针旋转
     def test_rotation(self):
