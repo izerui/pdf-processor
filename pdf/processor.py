@@ -157,13 +157,11 @@ class Processor(object):
                                      top_padding + line_no * (line_height + line_space))
             page.insert_htmlbox(
                 rect=get_rect(label_point, label_width, line_height),
-                text=f'<b>{label}</b>',
-                css='* {font-size:18px;}'
+                text=f'<span style="font-size:18px;font-weight:bold;">{label}</span>'
             )
             page.insert_htmlbox(
                 rect=get_rect(value_point, value_width, line_height),
-                text=f'<b>{value}</b>',
-                css='* {font-size:18px;}'
+                text=f'<span style="font-size:18px;font-weight:bold;">{value}</span>'
             )
 
         ########### 第一列
