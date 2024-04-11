@@ -1,5 +1,4 @@
 import concurrent
-import io
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -7,11 +6,10 @@ from io import BytesIO
 from symtable import Function
 
 import qrcode
-from PIL import Image
 from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT
 from qrcode.image.pil import PilImage
 
-from model import Item, File, Mark
+from model import Item, File
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
     get_text_rotation_from_dir
@@ -49,20 +47,22 @@ class Processor(object):
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
 
     @logged(desc='处理单个item_doc')
-    def generate_from_item_without_close(self, index: int, item: Item, url_datas: dict,
+    def generate_from_item_without_close(self, index: int,
+                                         item: Item,
+                                         header_doc: Document,
+                                         url_datas: dict,
                                          item_callback: Function = None) -> Document:
         """
         生成独立包含header和原页面的文档
         :param index: item的索引
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
+        :param header_doc: 当前item对应的header头文档（在主线程中先生成，因为fonttools在多线程中获取临时目录可能有问题）
         :param url_datas: url_data 对照表
         :param item_callback: 成功与失败回调
         :return:
         """
         try:
             target_item_doc = fitz.open()
-            # 每个item的头部区域pdf
-            header_doc: Document = self.generate_header_doc_without_close(item)
             for file in item.files:
 
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
@@ -296,7 +296,8 @@ class Processor(object):
                                 # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                                 line_wmode = line['wmode']
                                 line_rotation = get_text_rotation_from_dir(line['dir'])
-                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2],
+                                                      line['bbox'][3])
                                 # line_rect = line_rect.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
                                 for span in line['spans']:
                                     span_size = span['size']
@@ -352,11 +353,12 @@ class Processor(object):
                                       r[3] * scale_factor + y_offset + header_height)
                         # 跟随页面旋转角度进行旋转，否则图片方向不对
                         new_page.insert_image(r, pixmap=annot_pixmap, keep_proportion=True, alpha=0, xref=0,
-                                          rotate=rotations[index])
+                                              rotate=rotations[index])
                         pass
                 page.set_rotation(_rotation)
         except BaseException as err:
             logger.exception(err)
+
     # @logged(desc='生成pdf文件的字节数组,并关闭文档已打开的句柄')
     def get_doc_bytes_and_close(self, doc: Document, auto_close: bool = True) -> bytes:
         """
@@ -477,7 +479,14 @@ class Processor(object):
         """
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
+        # 每个item对应的header头文档集合
+        item_header_docs = []
+        for index, item in enumerate(items):
+            header_doc = self.generate_header_doc_without_close(item)
+            item_header_docs.append(header_doc)
+        # 合并后的item最终文档集合
         item_docs = []
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
             for index, item in enumerate(items):
@@ -485,7 +494,8 @@ class Processor(object):
                 # 如果是测试 传入string则增加不同item之间的批次号
                 item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, index, item, url_datas, item_callback)
+                future = pool.submit(self.generate_from_item_without_close, index, item, item_header_docs[index],
+                                     url_datas, item_callback)
                 futures.append(future)
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
