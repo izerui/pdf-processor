@@ -126,14 +126,14 @@ class Processor(object):
 
         # 序号
         if item.item_no:
-            # page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
-            #                  fontsize=fontsize,
-            #                  fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
-            page.insert_htmlbox(
-                rect=get_rect(fitz.Point(1754 - 50, 50), 50, 20),
-                text=f'<b>{item.item_no}</b>',
-                css='* {font-family: sans-serif;font-size:16px;color:blue;}'
-            )
+            page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
+                             fontsize=18,
+                             color=(30 / 255, 144 / 255, 255 / 255))
+            # page.insert_htmlbox(
+            #     rect=get_rect(fitz.Point(1754 - 50, 50), 50, 20),
+            #     text=f'<b>{item.item_no}</b>',
+            #     css='* {font-family: sans-serif;font-size:16px;color:blue;}'
+            # )
 
         # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
         # page.insert_font(fontname=chn_fontname,
