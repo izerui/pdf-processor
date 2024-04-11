@@ -7,6 +7,7 @@ from symtable import Function
 
 import qrcode
 from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT
+from fitz.utils import getColor
 from qrcode.image.pil import PilImage
 
 from model import Item, File
@@ -101,6 +102,12 @@ class Processor(object):
         :param item: 生成需要的当前header头信息
         :return:
         """
+
+        def get_rect(x0: float, y0: float, width: int = 200, height: int = 35):
+            x1 = x0 + width
+            y1 = y0 + height
+            return fitz.Rect(x0, y0, x1, y1)
+
         header_doc = fitz.open()
         page = header_doc.new_page(width=a4_width, height=header_height)
         img: PilImage = qrcode.make(data=item.qr_code)
@@ -127,14 +134,40 @@ class Processor(object):
 
         # 序号
         if item.item_no:
-            page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
-                             fontsize=fontsize,
-                             fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
+            # page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
+            #                  fontsize=fontsize,
+            #                  fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
+            # page.add_freetext_annot(rect=get_rect(1754 - 50, 50),
+            #                         text=f'{item.item_no}',
+            #                         fontname=chn_fontname,
+            #                         fontsize=fontsize,
+            #                         text_color=[30 / 255, 144 / 255, 255 / 255],
+            #                         fill_color=[1, 1, 1],
+            #                         align=TEXT_ALIGN_LEFT)
+            # page.insert_textbox(rect=get_rect(1754 - 50, 50),
+            #                     buffer=f'{item.item_no}',
+            #                     fontname=chn_fontname,
+            #                     fontsize=fontsize,
+            #                     color=[30 / 255, 144 / 255, 255 / 255],
+            #                     align=TEXT_ALIGN_LEFT
+            #                     )
+            pass
 
         # 第一列
-        page.insert_text(point=fitz.Point(280, 50), text=f'工单号: {item.doc_no}',
-                         fontsize=fontsize,
-                         fontname=chn_fontname, color=(0, 0, 0))
+        page.add_freetext_annot(rect=get_rect(280, 50, 300, 40),
+                                text=f'工单号: {item.doc_no}',
+                                fontname=chn_fontname,
+                                fontsize=fontsize,
+                                text_color = getColor('BLACK'),
+                                align=TEXT_ALIGN_LEFT)
+        # page.insert_textbox(rect=get_rect(280, 50, 400, 40),
+        #                     buffer=f'工单号: {item.doc_no}',
+        #                     fontname=chn_fontname,
+        #                     fontsize=fontsize,
+        #                     color=[0, 0, 0],
+        #                     align=TEXT_ALIGN_LEFT
+        #                     )
+
         page.insert_text(point=fitz.Point(280, 100), text=f'交期: {item.doc_date}',
                          fontsize=fontsize,
                          fontname=chn_fontname, color=(0, 0, 0))
@@ -156,14 +189,16 @@ class Processor(object):
                          fontname=chn_fontname, color=(0, 0, 0))
         # page.clean_contents()
         self.compress_doc(header_doc)
+        self.bake_document(header_doc)
         # header_doc.save('header.pdf')
 
         new_header_doc = fitz.open()
         new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
         new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
         # new_header_doc.save('new_header.pdf')
-
+        new_page.wrap_contents()
         header_doc.close()
+
         return new_header_doc
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
@@ -443,10 +478,11 @@ class Processor(object):
         :param doc:
         :return:
         """
-        # TODO 考虑使用本地文件做进程间全局锁
         try:
             # doc.subset_fonts(verbose=True)
             doc.subset_fonts()
+            # pdf = fitz._as_pdf_document(doc)  # access underlying PDF document of the general Document
+            # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))  # create font subsets
             return
         except Exception:
             logger.warn(f'压缩文档处理进程冲突!')
@@ -512,3 +548,12 @@ class Processor(object):
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
         target_doc = self.merge_and_compress_docs(item_docs)
         return target_doc
+
+    def bake_document(self, doc: Document) -> None:
+        """
+        可立即在 PyMuPDF 中使用。有一个功能可以将注释和字段（！！！）“烘焙”到 PDF 中 - 这意味着它将这些项目转换为正常的页面内容。
+        解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
+        """
+        source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
+        fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        pass
