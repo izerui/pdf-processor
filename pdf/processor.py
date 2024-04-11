@@ -6,7 +6,7 @@ from io import BytesIO
 from symtable import Function
 
 import qrcode
-from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT
+from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT, Point
 from fitz.utils import getColor
 from qrcode.image.pil import PilImage
 
@@ -15,24 +15,27 @@ from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
     get_text_rotation_from_dir
 
+
 # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
 # 其他字体下载: http://www.ae-sys.com/China/Fonts/
 # page.insert_font(fontname=chn_fontname,
 #                  fontfile=os.path.join(self.current_file_path, 'fonts', 'ms-song.ttf'))
 
-chn_fontname = 'chn'
-# https://pymupdf.readthedocs.io/en/latest/font.html#Font
-# 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
-# 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
-# 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
-#   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+# chn_fontname = 'chn'
+# # https://pymupdf.readthedocs.io/en/latest/font.html#Font
+# # 1. 使用默认嵌入字体，pdf大小最优,缺点: 中文支持不太好
+# # 2. 使用第三方字体库, `pip install pymupdf-fonts` 大小一般, 缺点: 中文支持不够
+# # 3. 手动安装字体,但是需要创建字体子集来减少字体大小。创建子集需要安装第三方库`pip install fonttools` (这里选用该方法, 中文支持较好)
+# #   3.1. 参考: https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
+#
+# font_buffer = read_bytes_from_file(
+#     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
+#
+# font = Font(fontname=chn_fontname,
+#             fontbuffer=font_buffer,
+#             language='zh-Hans')
 
-font_buffer = read_bytes_from_file(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts', 'FangZhengHeiTiJianTi-1.ttf'))
-
-font = Font(fontname=chn_fontname,
-            fontbuffer=font_buffer,
-            language='zh-Hans')
+# arch_fonts = fitz.Archive(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts'))
 
 
 class Processor(object):
@@ -103,103 +106,99 @@ class Processor(object):
         :return:
         """
 
-        def get_rect(x0: float, y0: float, width: int = 200, height: int = 35):
-            x1 = x0 + width
-            y1 = y0 + height
-            return fitz.Rect(x0, y0, x1, y1)
+        def get_rect(p: Point, width: int = 200, height: int = 35):
+            x1 = p.x + width
+            y1 = p.y + height
+            return fitz.Rect(p.x, p.y, x1, y1)
 
         header_doc = fitz.open()
         page = header_doc.new_page(width=a4_width, height=header_height)
+
+        # 二维码: 左上角坐标 80、10、宽高统一180
         img: PilImage = qrcode.make(data=item.qr_code)
         imagefile = BytesIO()
         img.save(imagefile)
-
-        # page.insert_image(
-        #     rect=fitz.Rect(10, 10, 200, 200),
-        #     filename=os.path.join(self.current_file_path, 'logo', 'logo20220210-01.png'), overlay=False)
-
-        # 二维码: 左上角坐标 80、10、宽高统一180
         page.insert_image(
             rect=fitz.Rect(80, 10, 280,
                            10 + header_height),
             stream=imagefile,
             overlay=False)
 
-        # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
-        page.insert_font(fontname=chn_fontname,
-                         fontbuffer=font.buffer)
-
-        # 字体大小
-        fontsize = 16
-
         # 序号
         if item.item_no:
             # page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{item.item_no}',
             #                  fontsize=fontsize,
             #                  fontname=chn_fontname, color=(30 / 255, 144 / 255, 255 / 255))
-            # page.add_freetext_annot(rect=get_rect(1754 - 50, 50),
-            #                         text=f'{item.item_no}',
-            #                         fontname=chn_fontname,
-            #                         fontsize=fontsize,
-            #                         text_color=[30 / 255, 144 / 255, 255 / 255],
-            #                         fill_color=[1, 1, 1],
-            #                         align=TEXT_ALIGN_LEFT)
-            # page.insert_textbox(rect=get_rect(1754 - 50, 50),
-            #                     buffer=f'{item.item_no}',
-            #                     fontname=chn_fontname,
-            #                     fontsize=fontsize,
-            #                     color=[30 / 255, 144 / 255, 255 / 255],
-            #                     align=TEXT_ALIGN_LEFT
-            #                     )
-            pass
+            page.insert_htmlbox(
+                rect=get_rect(fitz.Point(1754 - 50, 50), 50, 20),
+                text=f'<b>{item.item_no}</b>',
+                css='* {font-family: sans-serif;font-size:16px;color:blue;}'
+            )
 
-        # 第一列
-        page.add_freetext_annot(rect=get_rect(280, 50, 300, 40),
-                                text=f'工单号: {item.doc_no}',
-                                fontname=chn_fontname,
-                                fontsize=fontsize,
-                                text_color = getColor('BLACK'),
-                                align=TEXT_ALIGN_LEFT)
-        # page.insert_textbox(rect=get_rect(280, 50, 400, 40),
-        #                     buffer=f'工单号: {item.doc_no}',
-        #                     fontname=chn_fontname,
-        #                     fontsize=fontsize,
-        #                     color=[0, 0, 0],
-        #                     align=TEXT_ALIGN_LEFT
-        #                     )
+        # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
+        # page.insert_font(fontname=chn_fontname,
+        #                  fontbuffer=font.buffer)
 
-        page.insert_text(point=fitz.Point(280, 100), text=f'交期: {item.doc_date}',
-                         fontsize=fontsize,
-                         fontname=chn_fontname, color=(0, 0, 0))
-        page.insert_text(point=fitz.Point(280, 150), text=f'工艺路线: {item.process_flow}',
-                         fontsize=fontsize,
-                         fontname=chn_fontname, color=(0, 0, 0))
+        # 行高
+        line_height = 40
+        # 距离顶部距离
+        top_padding = 30
+        # 行间距
+        line_space = 5
+        # 标签与值间距
+        column_space = 5
 
-        # 第二列
-        page.insert_text(point=fitz.Point(680, 50), text=f'货品编码: {item.inventory_code}',
-                         fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-        page.insert_text(point=fitz.Point(680, 100), text=f'数量: {item.quantity}',
-                         fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
+        def insert_form_item(label: str, value: str, x: float, label_width: float, value_width: float, line_no: int = 0):
+            """
+            插入表单项
+            """
+            label_point = fitz.Point(x, top_padding + line_no * (line_height + line_space))
+            value_point = fitz.Point(x + column_space + label_width,
+                                     top_padding + line_no * (line_height + line_space))
+            page.insert_htmlbox(
+                rect=get_rect(label_point, label_width, line_height),
+                text=f'<b>{label}</b>',
+                css='* {font-size:18px;}'
+            )
+            page.insert_htmlbox(
+                rect=get_rect(value_point, value_width, line_height),
+                text=f'<b>{value}</b>',
+                css='* {font-size:18px;}'
+            )
 
-        # 第三列
-        page.insert_text(point=fitz.Point(1080, 50), text=f'货品名称: {item.inventory_name}',
-                         fontsize=fontsize, fontname=chn_fontname, color=(0, 0, 0))
-        page.insert_text(point=fitz.Point(1080, 100), text=f'规格型号: {item.inventory_spec}',
-                         fontsize=fontsize,
-                         fontname=chn_fontname, color=(0, 0, 0))
+        ########### 第一列
+        # 工单号
+        insert_form_item('工单号: ', item.doc_no, 280, 60, 330, 0)
+        # 交期
+        insert_form_item('交 期: ', item.doc_date, 280, 60, 330, 1)
+        # 工艺路线
+        insert_form_item('工艺路线: ', item.process_flow, 280, 80, 800, 2)
+
+        ########### 第二列
+        # 货品编码
+        insert_form_item('货品编码: ', item.inventory_code, 680, 80, 320, 0)
+        # 数量
+        insert_form_item('数 量: ', item.quantity, 680, 80, 320, 1)
+
+        ########### 第三列
+        # 货品名称
+        insert_form_item('货品名称: ', item.inventory_name, 1100, 80, 400, 0)
+        # 规格型号
+        insert_form_item('规格型号: ', item.inventory_spec, 1100, 80, 400, 1)
+
         # page.clean_contents()
         self.compress_doc(header_doc)
-        self.bake_document(header_doc)
+        # 注释需要烘焙到页面中
+        # self.bake_document(header_doc)
         # header_doc.save('header.pdf')
 
-        new_header_doc = fitz.open()
-        new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
-        new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
-        # new_header_doc.save('new_header.pdf')
-        new_page.wrap_contents()
-        header_doc.close()
+        # new_header_doc = fitz.open()
+        # new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+        # new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
+        # # new_header_doc.save('new_header.pdf')
+        # header_doc.close()
 
-        return new_header_doc
+        return header_doc
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
     def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:

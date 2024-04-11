@@ -55,6 +55,9 @@ https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-mark-non-horiz
 分析字体特征
 https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-analyze-font-characteristics
 
+字体处理:
+https://pymupdf.readthedocs.io/en/latest/recipes-text.html#how-to-fill-a-text-box
+
 test file:
 * https://file.yj2025.com/CH3600-1-M04003A%20%E6%90%AC%E8%BF%90%E7%88%AA%E5%AE%89%E8%A3%85%E6%9D%BF-%E9%95%BF.pdf
 * https://file.yj2025.com/003.pdf
