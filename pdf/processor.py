@@ -148,6 +148,7 @@ class Processor(object):
         # 标签与值间距
         column_space = 5
 
+        @logged(desc='插入表单项')
         def insert_form_item(label: str, value: str, x: float, label_width: float, value_width: float, line_no: int = 0):
             """
             插入表单项
@@ -157,12 +158,15 @@ class Processor(object):
                                      top_padding + line_no * (line_height + line_space))
             page.insert_htmlbox(
                 rect=get_rect(label_point, label_width, line_height),
-                text=f'<span style="font-size:18px;font-weight:bold;">{label}</span>'
+                text=f'<span style="font-size:18px;font-weight:bold;display:block;word-break:break-all;">{label}</span>'
             )
+            # page.draw_rect(get_rect(label_point, label_width, line_height), color=(1, 0, 0))
+
             page.insert_htmlbox(
                 rect=get_rect(value_point, value_width, line_height),
-                text=f'<span style="font-size:18px;font-weight:bold;">{value}</span>'
+                text=f'<span style="font-size:18px;font-weight:bold;word-break:break-all;">{value}</span>'
             )
+            # page.draw_rect(get_rect(value_point, value_width, line_height), color=(1, 0, 0))
 
         ########### 第一列
         # 工单号
@@ -184,16 +188,15 @@ class Processor(object):
         # 规格型号
         insert_form_item('规格型号: ', item.inventory_spec, 1100, 80, 400, 1)
 
-        # page.clean_contents()
-        self.compress_doc(header_doc)
         # 注释需要烘焙到页面中
         # self.bake_document(header_doc)
+        self.compress_doc(header_doc)
         # header_doc.save('header.pdf')
 
         # new_header_doc = fitz.open()
         # new_page = new_header_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
         # new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
-        # # new_header_doc.save('new_header.pdf')
+        # new_header_doc.save('new_header.pdf')
         # header_doc.close()
 
         return header_doc
@@ -468,6 +471,7 @@ class Processor(object):
                 pass
         return url_datas
 
+    @logged(desc='压缩文档')
     def compress_doc(self, doc: Document) -> None:
         """
         创建字体的子集，减少文档大小，前提必须在主线程中调用,否则会导致文件找不到异常
