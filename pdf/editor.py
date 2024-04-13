@@ -175,7 +175,7 @@ class Editor(Reader):
             new_page.set_rotation(_page_rotation)
         return self.convert_doc(annot_doc)
 
-    @logged(desc='清理页面')
+    @logged(desc='整理页面')
     def clean_pages(self):
         """
         循环每页清理：

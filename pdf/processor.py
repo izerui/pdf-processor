@@ -98,6 +98,31 @@ class Processor(object):
                 item_callback(index, item, None, err)
             raise err
 
+    @logged(desc='并发生成header_docs')
+    def generate_header_docs_by_items_without_close(self, items: list[Item]) -> list[Document]:
+        """
+        并发生成header_doc数组
+        """
+        header_docs = []
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+            futures = []
+            for index, item in enumerate(items):
+                # 开始多线程处理
+                future = pool.submit(self.generate_header_doc_without_close, item)
+                futures.append(future)
+            # 处理进度
+            for future in concurrent.futures.as_completed(futures):  # 并发执行
+                pass
+            # 按原始顺序返回生成的header_docs
+            for index, future in enumerate(futures):
+                exception = future.exception()
+                if exception:
+                    logger.exception(exception)
+                    raise exception
+                else:
+                    header_docs.append(future.result())
+        return header_docs
+
     @logged(desc='生成header头信息pdf对象')
     def generate_header_doc_without_close(self, item: Item) -> Document:
         """
@@ -110,6 +135,9 @@ class Processor(object):
             x1 = p.x + width
             y1 = p.y + height
             return fitz.Rect(p.x, p.y, x1, y1)
+
+        # 如果是测试 传入string则增加不同item之间的批次号
+        item.wrap_batch_number_when_qr_string()
 
         header_doc = fitz.open()
         page = header_doc.new_page(width=a4_width, height=header_height)
@@ -148,7 +176,7 @@ class Processor(object):
         # 标签与值间距
         column_space = 5
 
-        @logged(desc='插入表单项')
+        # @logged(desc='插入表单项')
         def insert_form_item(label: str, value: str, x: float, label_width: float, value_width: float, line_no: int = 0):
             """
             插入表单项
@@ -190,7 +218,7 @@ class Processor(object):
 
         # 注释需要烘焙到页面中
         # self.bake_document(header_doc)
-        self.compress_doc(header_doc)
+        # self.compress_doc(header_doc)
         # header_doc.save('header.pdf')
 
         # new_header_doc = fitz.open()
@@ -481,6 +509,7 @@ class Processor(object):
         """
         try:
             # doc.subset_fonts(verbose=True)
+            # https://pymupdf.readthedocs.io/en/latest/tools.html#Tools.set_subset_fontnames
             doc.subset_fonts()
             # pdf = fitz._as_pdf_document(doc)  # access underlying PDF document of the general Document
             # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))  # create font subsets
@@ -516,11 +545,20 @@ class Processor(object):
         """
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
+
         # 每个item对应的header头文档集合
         item_header_docs = []
         for index, item in enumerate(items):
             header_doc = self.generate_header_doc_without_close(item)
+            self.compress_doc(header_doc)
             item_header_docs.append(header_doc)
+
+        # # 并发生成header头文档集合
+        # item_header_docs = self.generate_header_docs_by_items_without_close(items)
+        # # 主线程中压缩字体
+        # for header in item_header_docs:
+        #     self.compress_doc(header)
+
         # 合并后的item最终文档集合
         item_docs = []
 
@@ -528,8 +566,6 @@ class Processor(object):
             futures = []
             for index, item in enumerate(items):
                 file_count += len(item.files)
-                # 如果是测试 传入string则增加不同item之间的批次号
-                item.wrap_batch_number_when_qr_string()
                 # 开始多线程处理
                 future = pool.submit(self.generate_from_item_without_close, index, item, item_header_docs[index],
                                      url_datas, item_callback)
