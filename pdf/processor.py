@@ -1,12 +1,14 @@
 import concurrent
 import os
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from symtable import Function
 
 import qrcode
-from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT, Point
+import fitz
+from fitz import Font, Document, TEXT_ALIGN_LEFT, Point
 from fitz.utils import getColor
 from qrcode.image.pil import PilImage
 from tqdm import tqdm
@@ -55,19 +57,18 @@ class Processor(object):
     def generate_from_item_without_close(self,
                                          index: int,
                                          item: Item,
-                                         header_doc: Document,
                                          url_datas: dict,
                                          item_callback: Function = None) -> Document:
         """
         生成独立包含header和原页面的文档
         :param index: item的索引
         :param item: 生成需要的当前header头信息，并且包含的多个源文档files
-        :param header_doc: 当前item对应的header头文档（在主线程中先生成，因为fonttools在多线程中获取临时目录可能有问题）
         :param url_datas: url_data 对照表
         :param item_callback: 成功与失败回调
         :return:
         """
         try:
+            header_doc = self.generate_header_doc_without_close(item)
             target_item_doc = fitz.open()
             for file in item.files:
 
@@ -86,10 +87,11 @@ class Processor(object):
                 # source_file_doc.get_page_images()
 
                 # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
-                self.wrap_target_doc_with_header(index, rotations, source_file_doc, header_doc, target_item_doc)
+                self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
                 # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
+            header_doc.close()
             if item_callback:
                 item_callback(index, item, target_item_doc, None)
             return target_item_doc
@@ -99,8 +101,21 @@ class Processor(object):
                 item_callback(index, item, None, err)
             raise err
 
-    @logged(desc='生成header头信息pdf对象')
-    def generate_header_doc_without_close(self, items: list[Item]) -> Document:
+    @logged(desc='生成单个header头信息pdf对象(包括生成和压缩)')
+    def generate_header_doc_without_close(self, item: Item) -> Document:
+        """
+        生成header头信息pdf对象
+        :param item: 生成需要的当前header头信息
+        :return:
+        """
+        # 每个item对应的header头文档集合
+        header_doc = fitz.open()
+        self._generate_header_page(item, header_doc)
+        header_doc = self.subset_doc_and_return_new_doc(header_doc)
+        return header_doc
+
+    @logged(desc='生成多个header头信息pdf对象,暂时不用')
+    def generate_headers_doc_without_close(self, items: list[Item]) -> Document:
         """
         生成headers头信息pdf对象
         :param items: 生成需要的当前header头信息集合
@@ -112,7 +127,7 @@ class Processor(object):
         for index, item in enumerate(items):
             self._generate_header_page(item, header_doc)
             process_bar.update(1)
-        self.compress_doc(header_doc)
+        header_doc = self.subset_doc_and_return_new_doc(header_doc)
         return header_doc
 
     def _generate_header_page(self, item: Item, header_doc: Document) -> None:
@@ -238,11 +253,10 @@ class Processor(object):
         return self.get_doc_bytes_and_close(source_file_doc, auto_close=False)
 
     @logged(desc='合并头内容和源内容到新页面')
-    def wrap_target_doc_with_header(self, index: int, rotations: list[float], source_file_doc: Document, header_doc: Document,
+    def wrap_target_doc_with_header(self, rotations: list[float], source_file_doc: Document, header_doc: Document,
                                     target_doc: Document) -> None:
         """
         将头内容和源内容合并到target_doc文件中
-        :param index: item在 items中的索引
         :param rotations: 源文件的旋转角度集合
         :param source_file_doc: 源文件
         :param header_doc: 头文件
@@ -261,7 +275,7 @@ class Processor(object):
             # 下部区域
             r2 = fitz.Rect(0, header_height, a4_width, a4_height)
             # 将header-pdf首页贴到顶部区域
-            new_page.show_pdf_page(r1, header_doc, index)
+            new_page.show_pdf_page(r1, header_doc, 0)
             # 记录原来的旋转角度
             _source_page_rotation = source_page.rotation
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
@@ -431,7 +445,9 @@ class Processor(object):
                 doc.close()
 
         # pdf_bytes = read_temp_file_instant(write_file_path)
-        pdf_bytes = doc.tobytes(garbage=4, deflate=True)
+
+        # 对象流提供额外的压缩效果 https://github.com/pymupdf/PyMuPDF/discussions/3383
+        pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
         return pdf_bytes
 
     def download_urls_from_items(self, items: list[Item]):
@@ -478,7 +494,7 @@ class Processor(object):
                 url_datas[url] = data
 
         url_datas = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
             for url in urls:
                 futures.append(pool.submit(append_url_data, url, url_datas))
@@ -489,23 +505,35 @@ class Processor(object):
                 pass
         return url_datas
 
-    @logged(desc='压缩文档')
-    def compress_doc(self, doc: Document) -> None:
+    @logged(desc='压缩并返回新的文档')
+    def subset_doc_and_return_new_doc(self, doc: Document) -> Document:
         """
         创建字体的子集，减少文档大小，前提必须在主线程中调用,否则会导致文件找不到异常
         参考：https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
         :param doc:
         :return:
         """
+        tmp_file_path = None
         try:
             # doc.subset_fonts(verbose=True)
             # https://pymupdf.readthedocs.io/en/latest/tools.html#Tools.set_subset_fontnames
-            doc.subset_fonts()
-            # pdf = fitz._as_pdf_document(doc)  # access underlying PDF document of the general Document
-            # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))  # create font subsets
-            return
+            # doc.subset_fonts()
+
+            # 参考: https://github.com/pymupdf/PyMuPDF/discussions/3383
+            pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
+            fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
+
+            tmp_dir = tempfile.gettempdir()
+            tmp_file_path = os.path.join(tmp_dir, f"{tmp_dir}/{int(time.perf_counter() * 1000)}.pdf")
+            doc.ez_save(tmp_file_path)
+            doc.close()
+            return fitz.open(tmp_file_path)
         except Exception:
             logger.warn(f'压缩文档处理进程冲突!')
+        finally:
+            if tmp_file_path:
+                os.remove(tmp_file_path)
+
 
     @logged(desc='压缩合并多个item文档到一个结果文档')
     def merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> Document:
@@ -536,17 +564,14 @@ class Processor(object):
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
 
-        # items对应的header头文档
-        header_doc = self.generate_header_doc_without_close(items)
         # 合并后的item最终文档集合
         item_docs = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
             for index, item in enumerate(items):
                 file_count += len(item.files)
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, index, item, header_doc,
-                                     url_datas, item_callback)
+                future = pool.submit(self.generate_from_item_without_close, index, item, url_datas, item_callback)
                 futures.append(future)
             # 处理进度
             for future in concurrent.futures.as_completed(futures):  # 并发执行
@@ -561,7 +586,7 @@ class Processor(object):
                     item_docs.append(future.result())
         logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
-        header_doc.close()
+        # header_doc.close()
         target_doc = self.merge_and_compress_docs(item_docs)
         return target_doc
 

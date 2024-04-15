@@ -46,7 +46,7 @@ class Editor(Reader):
                 img_pixmap = fitz.Pixmap(img_stream)
                 marks_images_cache[url] = img_pixmap
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
             for mark in marks:
                 if mark.image_url:

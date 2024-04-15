@@ -13,7 +13,7 @@ def wait_random_return_index(index: int) -> int:
 
 
 if __name__ == '__main__':
-    with ThreadPoolExecutor(max_workers=20) as pool:
+    with ThreadPoolExecutor(max_workers=10) as pool:
         futures = []
         for index in range(10):
             # 开始多线程处理
