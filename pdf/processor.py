@@ -9,6 +9,7 @@ import qrcode
 from fitz import fitz, Font, Document, TEXT_ALIGN_LEFT, Point
 from fitz.utils import getColor
 from qrcode.image.pil import PilImage
+from tqdm import tqdm
 
 from model import Item, File
 from pdf import Editor
@@ -51,7 +52,8 @@ class Processor(object):
         self.current_file_path = os.path.abspath(os.path.dirname(__file__))
 
     @logged(desc='处理单个item_doc')
-    def generate_from_item_without_close(self, index: int,
+    def generate_from_item_without_close(self,
+                                         index: int,
                                          item: Item,
                                          header_doc: Document,
                                          url_datas: dict,
@@ -84,11 +86,10 @@ class Processor(object):
                 # source_file_doc.get_page_images()
 
                 # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
-                self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
+                self.wrap_target_doc_with_header(index, rotations, source_file_doc, header_doc, target_item_doc)
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
                 # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
-            header_doc.close()
             if item_callback:
                 item_callback(index, item, target_item_doc, None)
             return target_item_doc
@@ -98,33 +99,23 @@ class Processor(object):
                 item_callback(index, item, None, err)
             raise err
 
-    @logged(desc='并发生成header_docs')
-    def generate_header_docs_by_items_without_close(self, items: list[Item]) -> list[Document]:
-        """
-        并发生成header_doc数组
-        """
-        header_docs = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
-            futures = []
-            for index, item in enumerate(items):
-                # 开始多线程处理
-                future = pool.submit(self.generate_header_doc_without_close, item)
-                futures.append(future)
-            # 处理进度
-            for future in concurrent.futures.as_completed(futures):  # 并发执行
-                pass
-            # 按原始顺序返回生成的header_docs
-            for index, future in enumerate(futures):
-                exception = future.exception()
-                if exception:
-                    logger.exception(exception)
-                    raise exception
-                else:
-                    header_docs.append(future.result())
-        return header_docs
-
     @logged(desc='生成header头信息pdf对象')
-    def generate_header_doc_without_close(self, item: Item) -> Document:
+    def generate_header_doc_without_close(self, items: list[Item]) -> Document:
+        """
+        生成headers头信息pdf对象
+        :param items: 生成需要的当前header头信息集合
+        :return:
+        """
+        # 每个item对应的header头文档集合
+        header_doc = fitz.open()
+        process_bar = tqdm(total=len(items), desc=f'生成header文档,共{len(items)}个页面.')
+        for index, item in enumerate(items):
+            self._generate_header_page(item, header_doc)
+            process_bar.update(1)
+        self.compress_doc(header_doc)
+        return header_doc
+
+    def _generate_header_page(self, item: Item, header_doc: Document) -> None:
         """
         生成header头信息pdf对象
         :param item: 生成需要的当前header头信息
@@ -139,7 +130,6 @@ class Processor(object):
         # 如果是测试 传入string则增加不同item之间的批次号
         item.wrap_batch_number_when_qr_string()
 
-        header_doc = fitz.open()
         page = header_doc.new_page(width=a4_width, height=header_height)
 
         # 二维码: 左上角坐标 80、10、宽高统一180
@@ -226,8 +216,7 @@ class Processor(object):
         # new_page.show_pdf_page(rect=new_page.cropbox, src=header_doc, pno=0)
         # new_header_doc.save('new_header.pdf')
         # header_doc.close()
-
-        return header_doc
+        pass
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
     def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:
@@ -249,10 +238,11 @@ class Processor(object):
         return self.get_doc_bytes_and_close(source_file_doc, auto_close=False)
 
     @logged(desc='合并头内容和源内容到新页面')
-    def wrap_target_doc_with_header(self, rotations: list[float], source_file_doc: Document, header_doc: Document,
+    def wrap_target_doc_with_header(self, index: int, rotations: list[float], source_file_doc: Document, header_doc: Document,
                                     target_doc: Document) -> None:
         """
         将头内容和源内容合并到target_doc文件中
+        :param index: item在 items中的索引
         :param rotations: 源文件的旋转角度集合
         :param source_file_doc: 源文件
         :param header_doc: 头文件
@@ -271,7 +261,7 @@ class Processor(object):
             # 下部区域
             r2 = fitz.Rect(0, header_height, a4_width, a4_height)
             # 将header-pdf首页贴到顶部区域
-            new_page.show_pdf_page(r1, header_doc, 0)
+            new_page.show_pdf_page(r1, header_doc, index)
             # 记录原来的旋转角度
             _source_page_rotation = source_page.rotation
             # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
@@ -546,28 +536,16 @@ class Processor(object):
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
 
-        # 每个item对应的header头文档集合
-        item_header_docs = []
-        for index, item in enumerate(items):
-            header_doc = self.generate_header_doc_without_close(item)
-            self.compress_doc(header_doc)
-            item_header_docs.append(header_doc)
-
-        # # 并发生成header头文档集合
-        # item_header_docs = self.generate_header_docs_by_items_without_close(items)
-        # # 主线程中压缩字体
-        # for header in item_header_docs:
-        #     self.compress_doc(header)
-
+        # items对应的header头文档
+        header_doc = self.generate_header_doc_without_close(items)
         # 合并后的item最终文档集合
         item_docs = []
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as pool:
             futures = []
             for index, item in enumerate(items):
                 file_count += len(item.files)
                 # 开始多线程处理
-                future = pool.submit(self.generate_from_item_without_close, index, item, item_header_docs[index],
+                future = pool.submit(self.generate_from_item_without_close, index, item, header_doc,
                                      url_datas, item_callback)
                 futures.append(future)
             # 处理进度
@@ -583,6 +561,7 @@ class Processor(object):
                     item_docs.append(future.result())
         logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
+        header_doc.close()
         target_doc = self.merge_and_compress_docs(item_docs)
         return target_doc
 
