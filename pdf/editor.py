@@ -189,6 +189,7 @@ class Editor(Reader):
         # 2. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.wrap_contents
         # page.wrap_contents()
 
+        # TODO clean 能纠正错误的位置问题，但是会丢失内容
         for page in self.doc:
             # page.clean_contents()
             # page.clean_contents(sanitize=0)
