@@ -26,8 +26,8 @@ def test():
     docs = [
         # fitz.open('28205N61101AAA (1).pdf'),
         # fitz.open('mt_03_22318er.pdf'),
-        fitz.open('401-020605-00.pdf'),
-        # fitz.open('mt_04_23024cc.pdf'),
+        # fitz.open('401-020605-00.pdf'),
+        fitz.open('mt_04_23024cc.pdf'),
         fitz.open('401-016306-01(内容丢失).pdf'),
         fitz.open('NOR4.139.136（V00）.pdf')
     ]
