@@ -191,8 +191,10 @@ class Editor(Reader):
 
         # TODO clean 能纠正错误的位置问题，但是会丢失内容
         for page in self.doc:
-            page.clean_contents()
-            # page.wrap_contents()
+            if len(page.annots()) > 0:
+                page.clean_contents()
+            else:
+                page.wrap_contents()
 
     @logged(desc='重新定义当前文档')
     def clone_doc_for_self(self):

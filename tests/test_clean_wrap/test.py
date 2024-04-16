@@ -12,6 +12,7 @@ def bake_document(doc):
 def handle_page(page, type):
     if type == 0:
         page.insert_text(point=fitz.Point(300, 300), text='no_operation', fontsize=48, color=[1, 0, 0])
+        pass
     elif type == 1:
         page.clean_contents()
         page.insert_text(point=fitz.Point(300, 300), text='clean_contents', fontsize=48, color=[1, 0, 0])
@@ -23,10 +24,12 @@ def handle_page(page, type):
 
 def test():
     docs = [
-        fitz.open('28205N61101AAA (1).pdf'),
-        fitz.open('mt_03_22318er.pdf'),
+        # fitz.open('28205N61101AAA (1).pdf'),
+        # fitz.open('mt_03_22318er.pdf'),
         fitz.open('401-020605-00.pdf'),
-        fitz.open('mt_04_23024cc.pdf')
+        # fitz.open('mt_04_23024cc.pdf'),
+        fitz.open('401-016306-01(内容丢失).pdf'),
+        fitz.open('NOR4.139.136（V00）.pdf')
     ]
 
     new_doc = fitz.open()
@@ -41,7 +44,7 @@ def test():
 
         # TODO Switch from 0 to 2 to reproduce the problem
         # handle_page(page, 0) # no operation  error: 1,2,4
-        handle_page(page, 1) # clean_contents error: 3
+        handle_page(page, 1) # clean_contents error: 3,5,6
         # handle_page(page, 2) # wrap_contents error: 1,2,4
 
         print(doc.xref_object(page.xref))
