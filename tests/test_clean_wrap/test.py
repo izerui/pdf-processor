@@ -47,6 +47,10 @@ def test():
         handle_page(page, 1) # clean_contents error: 3,5,6
         # handle_page(page, 2) # wrap_contents error: 1,2,4
 
+        # cont_lines = page.read_contents().splitlines()
+        # for line in cont_lines:
+        #     print(line)
+
         print(doc.xref_object(page.xref))
         print('')
 

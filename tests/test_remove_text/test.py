@@ -20,3 +20,23 @@ def test():
     #     doc.update_stream(xref, stream)
     doc.ez_save('x.pdf')
     pass
+
+# 暂时不可用，未验证完
+def test2():
+    doc = fitz.open('a227bf74-c639-4d12-9f55-7d92b8a72ba9.pdf')
+    page = doc[0]
+
+    cont_lines = page.read_contents().splitlines()
+    for line in cont_lines:
+        print(line)
+
+    for xref in page.get_contents():
+        stream = doc.xref_stream(xref).replace(b'Copyright', b'')
+        doc.update_stream(xref, stream)
+
+
+    # for xref in page.get_contents():
+    #     stream = doc.xref_stream(xref).replace(b'Copyright 2016-2024 Aspose Pty Ltd.', b'')
+    #     doc.update_stream(xref, stream)
+    doc.ez_save('x.pdf')
+    pass
