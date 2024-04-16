@@ -66,8 +66,6 @@ test file:
 * https://file.yj2025.com/CS01-P3-001.pdf
 * https://file.yj2025.com/CS01-P3-002.pdf
 * mark区域坐标不对: https://file.yj2025.com/CS01-P3-003.pdf
-* 未clean则丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
-* clean后丢失内容: https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf
 * 带管子图: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf
 * 箭头注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/7003361(1).pdf
 * 文字注释: https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf
@@ -84,3 +82,7 @@ test file:
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-08/文件倒转了-401-990022-00.pdf
 * 48序号显示不全 https://tfile.yj2025.com/pdf-processor/source/2024-04-11/240406-01-230-106.pdf
 * https://tfile.yj2025.com/pdf-processor/source/2024-04-15/竖图-翻转方向正确的.pdf
+* 未clean则丢失内容,并且重影: https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf
+* clean后丢失内容: https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf
+* 未clean 丢失注释, wrap后批注位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-16/mt_04_23024cc_0_806.pdf
+* wrap后批注位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-16/mt_04_229856vx_0_806.pdf
