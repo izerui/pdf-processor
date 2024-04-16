@@ -21,6 +21,20 @@ def test():
     doc.ez_save('x.pdf')
     pass
 
+def test1():
+    doc = fitz.open('a227bf74-c639-4d12-9f55-7d92b8a72ba9.pdf')
+    page = doc[0]
+    # https://pymupdf.readthedocs.io/en/latest/functions.html#Page.get_text_blocks
+    blocks = page.get_text_blocks()
+    for block in blocks:
+        if (block[4] == 'Copyright 2016-2024 Aspose Pty Ltd.\n' or
+            block[4] == 'Created with Aspose.CAD.\n' or
+            block[4] == 'Evaluation only.\n'):
+            page.add_redact_annot((block[0], block[1], block[2], block[3]))
+    page.apply_redactions(images=fitz.PDF_REDACT_IMAGE_NONE, graphics=fitz.PDF_REDACT_LINE_ART_NONE)  # remove text, but no image
+    doc.ez_save('x.pdf')
+    pass
+
 # 暂时不可用，未验证完
 def test2():
     doc = fitz.open('a227bf74-c639-4d12-9f55-7d92b8a72ba9.pdf')
