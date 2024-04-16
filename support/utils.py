@@ -138,6 +138,7 @@ def get_text_rotation_from_dir(dir_tuple: tuple):
     """
     根据pymupdf中 `get_textpage().extractDICT()['blocks'][0]['lines']` 的 dir获取字体旋转角度
     转换为度数(去掉小数点),并且默认只支持 0、90、180、270
+    提高性能参考: https://pymupdf.readthedocs.io/en/latest/coop_low.html#textpage
     """
     # 计算反正切值
     # 注意：这里是-dir_tuple[1]， https://pymupdf.readthedocs.io/en/latest/textpage.html#f2

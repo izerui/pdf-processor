@@ -9,6 +9,7 @@ def bake_document(doc):
     pass
 
 
+# 解释参考: https://pymupdf.readthedocs.io/en/latest/recipes-low-level-interfaces.html#how-to-handle-page-contents
 def handle_page(page, type):
     if type == 0:
         page.insert_text(point=fitz.Point(300, 300), text='no_operation', fontsize=48, color=[1, 0, 0])
