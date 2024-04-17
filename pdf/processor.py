@@ -598,3 +598,15 @@ class Processor(object):
         source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
         fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
         pass
+
+    def merge_url_pdfs(self, urls):
+        """
+        合并多个pdf到一个pdf中
+        :param urls: 文件url列表
+        """
+        url_datas = self.download_urls(urls)
+        docs = []
+        for url in urls:
+            doc = fitz.open("pdf", url_datas[url])
+            docs.append(doc)
+        return self.merge_and_compress_docs(docs)

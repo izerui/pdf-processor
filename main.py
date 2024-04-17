@@ -55,6 +55,19 @@ def rotate_from_urls(files: List[SimpleFile]):
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
+@logged(desc='接收多个文档url，合并成一个文档')
+@app.post('/merge/from-urls', summary='接收多个文档url，合并成一个文档')
+def generate_from_urls(file_urls: List[str]):
+    try:
+        processor = Processor()
+        target_doc = processor.merge_url_pdfs(file_urls)
+        target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=merge-{int(time.perf_counter() * 1000)}.pdf'}
+        return Response(content=target_doc_bytes, headers=headers, media_type="application/pdf")
+    except Exception as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
 
 @logged(desc='处理多个pdf文件,并返回结果文档')
 @app.post('/generate/from-urls', summary='处理多个pdf文件,并返回结果文档')
@@ -70,6 +83,7 @@ def generate_from_urls(items: List[Item]):
     except Exception as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
+
 
 
 @logged(desc='处理多个pdf文件,并回调通知')
