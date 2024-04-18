@@ -25,8 +25,11 @@ def test_subfont1():
 
     # doc.subset_fonts()
 
-    pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
-    fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
+    # pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
+    # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
+
+    # 1.24.2 增加新功能，替换原有的font-tools压缩
+    doc.subset_fonts()
 
     doc.ez_save('com1.pdf')
 

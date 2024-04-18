@@ -189,12 +189,14 @@ class Editor(Reader):
         # 2. https://pymupdf.readthedocs.io/en/latest/functions.html#Page.wrap_contents
         # page.wrap_contents()
 
-        # TODO clean 能纠正错误的位置问题，但是会丢失内容
-        for page in self.doc:
-            if len(page.annot_names()) > 0:
-                page.clean_contents()
-            else:
-                page.wrap_contents()
+        # clean 能纠正错误的位置问题，但是会丢失内容
+        # for page in self.doc:
+        #     if len(page.annot_names()) > 0:
+        #         page.clean_contents()
+        #     else:
+        #         page.wrap_contents() # wrap 的目的是保证页面插入图片和矩形保证坐标位置正确
+        # 1.24.2 后不再需要清理页面 应该会自动修复坐标位置错误问题
+        pass
 
     @logged(desc='重新定义当前文档')
     def clone_doc_for_self(self):
@@ -206,11 +208,14 @@ class Editor(Reader):
         self.doc.close()
         self.doc = clone_doc
 
+    @logged(desc='将注释和字段“烘焙”到PDF页面中')
     def bake_document(self):
         """
         可立即在 PyMuPDF 中使用。有一个功能可以将注释和字段（！！！）“烘焙”到 PDF 中 - 这意味着它将这些项目转换为正常的页面内容。
         解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
         """
-        source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(self.doc)
-        fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        # source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(self.doc)
+        # fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        # 1.24.2 增加新功能
+        self.doc.bake()
         pass

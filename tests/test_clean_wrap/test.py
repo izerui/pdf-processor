@@ -4,8 +4,10 @@ import fitz
 
 
 def bake_document(doc):
-    source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
-    fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+    # source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
+    # fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+    # 1.24.2 升级替换
+    doc.bake()
     pass
 
 
@@ -25,9 +27,9 @@ def handle_page(page, type):
 
 def test():
     docs = [
-        # fitz.open('28205N61101AAA (1).pdf'),
-        # fitz.open('mt_03_22318er.pdf'),
-        # fitz.open('401-020605-00.pdf'),
+        fitz.open('28205N61101AAA (1).pdf'),
+        fitz.open('mt_03_22318er.pdf'),
+        fitz.open('401-020605-00.pdf'),
         fitz.open('mt_04_23024cc.pdf'),
         fitz.open('401-016306-01(内容丢失).pdf'),
         fitz.open('NOR4.139.136（V00）.pdf')
@@ -45,8 +47,8 @@ def test():
 
         # TODO Switch from 0 to 2 to reproduce the problem
         # handle_page(page, 0) # no operation  error: 1,2,4
-        handle_page(page, 1) # clean_contents error: 3,5,6
-        # handle_page(page, 2) # wrap_contents error: 1,2,4
+        # handle_page(page, 1) # clean_contents error: 3,5,6
+        handle_page(page, 2) # wrap_contents error: 1,2,4
 
         # cont_lines = page.read_contents().splitlines()
         # for line in cont_lines:

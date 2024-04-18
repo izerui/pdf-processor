@@ -75,7 +75,7 @@ class Processor(object):
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
                 editor: Editor = Editor(url_datas[file.url], False)
                 rotations = editor.get_horizontal_transform_rotations(file.rotations)
-                editor.clean_pages()
+                # editor.clean_pages()
                 # editor.clone_doc_for_self()
                 editor.bake_document()
                 if file.marks and len(file.marks) > 0:
@@ -243,7 +243,7 @@ class Processor(object):
         """
         editor: Editor = Editor(file.data, False)
         rotations = editor.get_horizontal_transform_rotations(file.rotations)
-        editor.clean_pages()
+        # editor.clean_pages()
         # editor.clone_doc_for_self()
         editor.bake_document()
         if file.marks and len(file.marks) > 0:
