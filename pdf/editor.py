@@ -175,7 +175,7 @@ class Editor(Reader):
             new_page.set_rotation(_page_rotation)
         return self.convert_doc(annot_doc)
 
-    @logged(desc='整理页面')
+    # @logged(desc='整理页面')
     def clean_pages(self):
         """
         循环每页清理：
@@ -190,8 +190,8 @@ class Editor(Reader):
         # page.wrap_contents()
 
         # clean 能纠正错误的位置问题，但是会丢失内容
-        for page in self.doc:
-            page.wrap_contents() # wrap 的目的是保证页面插入图片和矩形保证坐标位置正确
+        # for page in self.doc:
+        #     page.wrap_contents() # wrap 的目的是保证页面插入图片和矩形保证坐标位置正确
         # 1.24.2 后不再需要清理页面 应该会自动修复坐标位置错误问题
         pass
 
