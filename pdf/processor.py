@@ -493,6 +493,7 @@ class Processor(object):
             if url not in url_datas:
                 url_datas[url] = data
 
+        urls = list(set(urls))
         url_datas = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
