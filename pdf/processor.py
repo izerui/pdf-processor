@@ -6,16 +6,15 @@ from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from symtable import Function
 
-import qrcode
 import fitz
-from fitz import Font, Document, TEXT_ALIGN_LEFT, Point
-from fitz.utils import getColor
+import qrcode
+from fitz import Document, TEXT_ALIGN_LEFT, Point
 from qrcode.image.pil import PilImage
 from tqdm import tqdm
 
 from model import Item, File
 from pdf import Editor
-from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, read_bytes_from_file, \
+from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, \
     get_text_rotation_from_dir
 
 
@@ -182,7 +181,8 @@ class Processor(object):
         column_space = 5
 
         # @logged(desc='插入表单项')
-        def insert_form_item(label: str, value: str, x: float, label_width: float, value_width: float, line_no: int = 0):
+        def insert_form_item(label: str, value: str, x: float, label_width: float, value_width: float,
+                             line_no: int = 0):
             """
             插入表单项
             """
@@ -535,9 +535,9 @@ class Processor(object):
             if tmp_file_path:
                 os.remove(tmp_file_path)
 
-
     @logged(desc='压缩合并多个item文档到一个结果文档')
-    def merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True) -> Document:
+    def merge_and_compress_docs(self, item_docs: list[Document], is_item_doc_close: bool = True,
+                                item_call: Function = None) -> Document:
         """
         合并多个文档并压缩
         :param item_docs: 多个子文档
@@ -545,9 +545,11 @@ class Processor(object):
         :return: 一个文档
         """
         target_doc = fitz.open()
-        for item_doc in item_docs:
+        for index, item_doc in enumerate(item_docs):
             # 每个item生成独立的document，然后插入到target中
             target_doc.insert_pdf(docsrc=item_doc)
+            if item_call:
+                item_call(index, item_doc)
             if is_item_doc_close:
                 item_doc.close()
         return target_doc
@@ -600,7 +602,7 @@ class Processor(object):
         fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
         pass
 
-    def merge_url_pdfs(self, urls):
+    def merge_url_pdfs(self, urls, item_call: Function = None):
         """
         合并多个pdf到一个pdf中
         :param urls: 文件url列表
@@ -610,4 +612,4 @@ class Processor(object):
         for url in urls:
             doc = fitz.open("pdf", url_datas[url])
             docs.append(doc)
-        return self.merge_and_compress_docs(docs)
+        return self.merge_and_compress_docs(docs, is_item_doc_close=True, item_call=item_call)

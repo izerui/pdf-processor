@@ -10,7 +10,7 @@ from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 
-from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile
+from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile, CallbackUrls
 from pdf import Reader, Processor
 from support import logger, logged, QiniuClient
 
@@ -85,6 +85,55 @@ def generate_from_urls(items: List[Item]):
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
 
+@logged(desc='接收多个文档url，合并成一个文档，并回调通知')
+@app.post('/merge/async-callback-from-urls', summary='接收多个文档url，合并成一个文档')
+def merge_from_urls(callback_urls: CallbackUrls):
+    try:
+
+        def item_callback(index, doc):
+            if callback_urls.process_url:
+                process_data = {'total': len(callback_urls.urls),
+                                'index': index,
+                                'request_id': callback_urls.request_id,
+                                'success': True,
+                                'err_msg': None}
+                thread = threading.Thread(target=async_post_process, args=(callback_urls.process_url, process_data))
+                thread.start()
+                pass
+
+        def async_post_process(url, data):
+            if url:
+                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+
+        def async_merge_and_callback(callback_urls: CallbackUrls):
+            """
+            异步开启合并线程
+            """
+            try:
+                processor = Processor()
+                target_doc = processor.merge_url_pdfs(callback_urls.urls, item_callback)
+                target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
+                files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
+                data = {'request_id': callback_urls.request_id, 'total': len(callback_urls.urls)}
+                # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
+                response = httpx.post(callback_urls.callback_url, files=files, data=data,
+                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                if response.is_success:
+                    logger.info(f'【上传pdf返回结果】: {response.content}')
+
+            except BaseException as err:
+                logger.exception(err)
+                data = {'request_id': callback_urls.request_id, 'total': len(callback_urls.items),
+                        'err_msg': repr(err)}
+                httpx.post(callback_urls.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                pass
+
+        thread = threading.Thread(target=async_merge_and_callback, args=(callback_urls,))
+        thread.start()
+        return Response(content=f'已经开始合并,待合并完成后回调地址: {callback_urls.callback_url}', media_type="text/html")
+    except Exception as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
 
 @logged(desc='处理多个pdf文件,并回调通知')
 @app.post('/generate/async-callback-from-urls', summary='处理多个pdf文件,并回调通知')

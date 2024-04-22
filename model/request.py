@@ -153,6 +153,15 @@ class CallbackFile(BaseModel):
         None, examples=['http://localhost:8000/callback/file']
     )
 
+class CallbackUrls(BaseModel):
+    urls: List[str]
+    request_id: str
+    process_url: str | None = Field(
+        None, examples=['http://localhost:8000/callback/process']
+    )
+    callback_url: str | None = Field(
+        None, examples=['http://localhost:8000/callback/file']
+    )
 
 class CallbackItems(BaseModel):
     items: List[Item]
