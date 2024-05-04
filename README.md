@@ -86,3 +86,4 @@ test file:
 * clean后丢失内容: https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf
 * 未clean 丢失注释, wrap后批注位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-16/mt_04_23024cc_0_806.pdf
 * wrap后批注位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-04-16/mt_04_229856vx_0_806.pdf
+* 虚线位置不对 https://tfile.yj2025.com/pdf-processor/source/2024-05-04/NOR4.002.004（V02）.pdf

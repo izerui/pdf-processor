@@ -518,11 +518,11 @@ class Processor(object):
         try:
             # doc.subset_fonts(verbose=True)
             # https://pymupdf.readthedocs.io/en/latest/tools.html#Tools.set_subset_fontnames
-            # doc.subset_fonts()
+            doc.subset_fonts()
 
             # 参考: https://github.com/pymupdf/PyMuPDF/discussions/3383
-            pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
-            fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
+            # pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
+            # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
 
             tmp_dir = tempfile.gettempdir()
             tmp_file_path = os.path.join(tmp_dir, f"{tmp_dir}/{int(time.perf_counter() * 1000)}.pdf")
