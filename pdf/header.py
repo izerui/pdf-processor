@@ -84,45 +84,64 @@ class Header331(IHeader):
         # page.insert_font(fontname=chn_fontname,
         #                  fontbuffer=font.buffer)
 
-        ########### 第一列
+        # 第一列
         self.insert_form_item(self.item.form_item1, 280, 0)
         self.insert_form_item(self.item.form_item4, 280, 1)
         self.insert_form_item(self.item.form_item7, 280, 2)
 
-        ########### 第二列
+        # 第二列  + 400
         self.insert_form_item(self.item.form_item2, 680, 0)
         self.insert_form_item(self.item.form_item5, 680, 1)
 
-        ########### 第三列
+        # 第三列  + 420
         self.insert_form_item(self.item.form_item3, 1100, 0)
         self.insert_form_item(self.item.form_item6, 1100, 1)
 
 
 class Header221(IHeader):
     def generate_header_page(self):
-        pass
+        super().generate_header_page()
+
+        # 第一列
+        self.insert_form_item(self.item.form_item1, 280, 0)
+        self.insert_form_item(self.item.form_item3, 280, 1)
+        self.insert_form_item(self.item.form_item5, 280, 2)
+
+        # 第二列  + 700
+        self.insert_form_item(self.item.form_item2, 980, 0)
+        self.insert_form_item(self.item.form_item4, 980, 1)
 
 
 class Header222(IHeader):
     def generate_header_page(self):
-        pass
+        super().generate_header_page()
+
+        # 第一列
+        self.insert_form_item(self.item.form_item1, 280, 0)
+        self.insert_form_item(self.item.form_item3, 280, 1)
+        self.insert_form_item(self.item.form_item5, 280, 2)
+
+        # 第二列  + 700
+        self.insert_form_item(self.item.form_item2, 980, 0)
+        self.insert_form_item(self.item.form_item4, 980, 1)
+        self.insert_form_item(self.item.form_item6, 980, 2)
 
 
 class Header333(IHeader):
     def generate_header_page(self):
         super().generate_header_page()
 
-        ########### 第一列
+        # 第一列
         self.insert_form_item(self.item.form_item1, 280, 0)
         self.insert_form_item(self.item.form_item4, 280, 1)
         self.insert_form_item(self.item.form_item7, 280, 2)
 
-        ########### 第二列
+        # 第二列 + 400
         self.insert_form_item(self.item.form_item2, 680, 0)
         self.insert_form_item(self.item.form_item5, 680, 1)
         self.insert_form_item(self.item.form_item8, 680, 2)
 
-        ########### 第三列
+        # 第三列 + 420
         self.insert_form_item(self.item.form_item3, 1100, 0)
         self.insert_form_item(self.item.form_item6, 1100, 1)
         self.insert_form_item(self.item.form_item9, 1100, 2)
@@ -130,4 +149,22 @@ class Header333(IHeader):
 
 class Header441(IHeader):
     def generate_header_page(self):
-        pass
+        super().generate_header_page()
+
+        # 第一列
+        self.insert_form_item(self.item.form_item1, 280, 0)
+        self.insert_form_item(self.item.form_item5, 280, 1)
+        self.insert_form_item(self.item.form_item9, 280, 2)
+
+        # 第二列 + 320
+        self.insert_form_item(self.item.form_item2, 600, 0)
+        self.insert_form_item(self.item.form_item6, 600, 1)
+
+        # 第三列 + 320
+        self.insert_form_item(self.item.form_item3, 920, 0)
+        self.insert_form_item(self.item.form_item7, 920, 1)
+
+        # 第四列 + 320
+        self.insert_form_item(self.item.form_item4, 1240, 0)
+        self.insert_form_item(self.item.form_item8, 1240, 1)
+

@@ -83,7 +83,7 @@ class ItemRender(BaseModel):
         default=None, title='标签宽度,三列建议: 两个字60、三个字80', examples=[60.0, 80.0]
     )
     value_width: float = Field(
-        default=None, title='内容宽度,三列建议: 1、2、3 列宽分别为: 330、320、400, 独立行宽可为800',
+        default=None, title='内容宽度,两列建议列宽分别为 600, 三列建议列宽分别为: 330、320、400, 独立行宽可为800',
         examples=[330.0, 320.0, 400.0, 800.0]
     )
 
