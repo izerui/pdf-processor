@@ -34,6 +34,8 @@ class IHeader(object):
         """
         插入表单项
         """
+        if not form_item or not form_item.label or not form_item.value or not form_item.label_width or not form_item.value_width:
+            return
         label_point = fitz.Point(x, self.top_padding + line_no * (self.line_height + self.line_space))
         value_point = fitz.Point(x + self.column_space + form_item.label_width,
                                  self.top_padding + line_no * (self.line_height + self.line_space))
@@ -108,7 +110,22 @@ class Header222(IHeader):
 
 class Header333(IHeader):
     def generate_header_page(self):
-        pass
+        super().generate_header_page()
+
+        ########### 第一列
+        self.insert_form_item(self.item.form_item1, 280, 0)
+        self.insert_form_item(self.item.form_item4, 280, 1)
+        self.insert_form_item(self.item.form_item7, 280, 2)
+
+        ########### 第二列
+        self.insert_form_item(self.item.form_item2, 680, 0)
+        self.insert_form_item(self.item.form_item5, 680, 1)
+        self.insert_form_item(self.item.form_item8, 680, 2)
+
+        ########### 第三列
+        self.insert_form_item(self.item.form_item3, 1100, 0)
+        self.insert_form_item(self.item.form_item6, 1100, 1)
+        self.insert_form_item(self.item.form_item9, 1100, 2)
 
 
 class Header441(IHeader):

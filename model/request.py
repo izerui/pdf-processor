@@ -92,46 +92,51 @@ class Item(BaseModel):
     # 传入的原始pdf文件对象列表
     files: List[File]
 
+    header_model: str = Field(
+        None, title='头部区域表单模版',
+        examples=['Header331', 'Header333', 'Header221', 'Header222', 'Header333', 'Header441']
+    )
+
     # 序号
-    item_no: str = Field(
+    item_no: str | None = Field(
         None, title='序号', examples=['29']
     )
 
     # 当前请求的item的标识ID
-    item_id: str = Field(
+    item_id: str | None = Field(
         None, title='当前请求的item的标识ID', examples=['当前请求的item的标识ID']
     )
 
     # 二维码内容
-    qr_code: str = Field(
+    qr_code: str | None = Field(
         None, title='二维码内容', examples=['二维码内容']
     )
 
-    form_item1: ItemRender = Field(
+    form_item1: ItemRender | None = Field(
         None, title='表单项1'
     )
-    form_item2: ItemRender = Field(
+    form_item2: ItemRender | None = Field(
         None, title='表单项2'
     )
-    form_item3: ItemRender = Field(
+    form_item3: ItemRender | None = Field(
         None, title='表单项3'
     )
-    form_item4: ItemRender = Field(
+    form_item4: ItemRender | None = Field(
         None, title='表单项4'
     )
-    form_item5: ItemRender = Field(
+    form_item5: ItemRender | None = Field(
         None, title='表单项5'
     )
-    form_item6: ItemRender = Field(
+    form_item6: ItemRender | None = Field(
         None, title='表单项6'
     )
-    form_item7: ItemRender = Field(
+    form_item7: ItemRender | None = Field(
         None, title='表单项7'
     )
-    form_item8: ItemRender = Field(
+    form_item8: ItemRender | None = Field(
         None, title='表单项8'
     )
-    form_item9: ItemRender = Field(
+    form_item9: ItemRender | None = Field(
         None, title='表单项9'
     )
 
