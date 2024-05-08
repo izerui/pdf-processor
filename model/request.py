@@ -1,7 +1,5 @@
-import random
 from typing import List
 
-import fitz
 from pydantic import BaseModel, Field
 
 
@@ -74,6 +72,22 @@ class File(BaseModel):
     )
 
 
+class ItemRender(BaseModel):
+    label: str = Field(
+        None, title='标签', examples=['标签:']
+    )
+    value: str = Field(
+        None, title='输出内容', examples=['输出内容']
+    )
+    label_width: float = Field(
+        default=None, title='标签宽度,三列建议: 两个字60、三个字80', examples=[60.0, 80.0]
+    )
+    value_width: float = Field(
+        default=None, title='内容宽度,三列建议: 1、2、3 列宽分别为: 330、320、400, 独立行宽可为800',
+        examples=[330.0, 320.0, 400.0, 800.0]
+    )
+
+
 class Item(BaseModel):
     # 传入的原始pdf文件对象列表
     files: List[File]
@@ -93,57 +107,33 @@ class Item(BaseModel):
         None, title='二维码内容', examples=['二维码内容']
     )
 
-    # 工单号
-    doc_no: str = Field(
-        None, title='工单号', examples=['卧室一个 DOC100']
+    form_item1: ItemRender = Field(
+        None, title='表单项1'
     )
-
-    # 货品编码
-    inventory_code: str = Field(
-        None, title='货品编码', examples=['你以为的是 Ivne002，。']
+    form_item2: ItemRender = Field(
+        None, title='表单项2'
     )
-
-    # 货品名称
-    inventory_name: str = Field(
-        None, title='货品名称', examples=['货品是 se名称！3']
+    form_item3: ItemRender = Field(
+        None, title='表单项3'
     )
-
-    # 货品规格型号
-    inventory_spec: str | None = Field(
-        None, title='货品规格型号', examples=['货品规 *6ds格型号']
+    form_item4: ItemRender = Field(
+        None, title='表单项4'
     )
-
-    # 数量
-    quantity: str = Field(
-        None, title='数量', examples=['数量 - 120']
+    form_item5: ItemRender = Field(
+        None, title='表单项5'
     )
-
-    # 交期
-    doc_date: str = Field(
-        None, title='交期', examples=['2024年03月24日']
+    form_item6: ItemRender = Field(
+        None, title='表单项6'
     )
-
-    # 工艺路线
-    process_flow: str | None = Field(
-        None, title='工艺路线', examples=['工艺路线1 》工艺路线 2']
+    form_item7: ItemRender = Field(
+        None, title='表单项7'
     )
-
-    def wrap_batch_number_when_qr_string(self):
-        """
-        如果是测试 传入string则增加不同item之间的批次号
-        :return:
-        """
-        if 'string' == self.qr_code:
-            rdm = f'{random.randrange(0, 101, 2)}'
-            self.qr_code += rdm
-            self.item_id += rdm
-            self.doc_no += rdm
-            self.inventory_code += rdm
-            self.inventory_name += rdm
-            self.inventory_spec += rdm
-            self.quantity += rdm
-            self.doc_date += rdm
-            self.process_flow += rdm
+    form_item8: ItemRender = Field(
+        None, title='表单项8'
+    )
+    form_item9: ItemRender = Field(
+        None, title='表单项9'
+    )
 
 
 class CallbackFile(BaseModel):
@@ -152,6 +142,7 @@ class CallbackFile(BaseModel):
     callback_url: str | None = Field(
         None, examples=['http://localhost:8000/callback/file']
     )
+
 
 class CallbackUrls(BaseModel):
     urls: List[str]
@@ -162,6 +153,7 @@ class CallbackUrls(BaseModel):
     callback_url: str | None = Field(
         None, examples=['http://localhost:8000/callback/file']
     )
+
 
 class CallbackItems(BaseModel):
     items: List[Item]

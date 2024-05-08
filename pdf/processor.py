@@ -134,9 +134,6 @@ class Processor(object):
         :param item: 生成需要的当前header头信息
         :return:
         """
-        # 如果是测试 传入string则增加不同item之间的批次号
-        item.wrap_batch_number_when_qr_string()
-
         # 通过名称动态加载类并执行
         header_class_meta = getattr(header_meta, 'Header331')
         header = header_class_meta(header_doc, item)
