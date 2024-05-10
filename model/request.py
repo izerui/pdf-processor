@@ -97,6 +97,11 @@ class Item(BaseModel):
         examples=['Header331', 'Header333', 'Header221', 'Header222', 'Header333', 'Header441']
     )
 
+    header_layout: str = Field(
+        None, title='头部区域布局',
+        examples=['top', 'bottom']
+    )
+
     # 序号
     item_no: str | None = Field(
         None, title='序号', examples=['29']

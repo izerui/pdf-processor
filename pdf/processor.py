@@ -84,8 +84,11 @@ class Processor(object):
                 # source_file_doc.page_xref(0)
                 # source_file_doc.get_page_images()
 
+                is_top = True
+                if item.header_layout and item.header_layout == 'bottom':
+                    is_top = False
                 # 合并到target_doc, 因为 rotations要复用，避免多次获取，所以上面file处理不复用`generate_from_file_without_close`
-                self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc)
+                self.wrap_target_doc_with_header(rotations, source_file_doc, header_doc, target_item_doc, is_top)
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
                 # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
@@ -161,7 +164,7 @@ class Processor(object):
 
     @logged(desc='合并头内容和源内容到新页面')
     def wrap_target_doc_with_header(self, rotations: list[float], source_file_doc: Document, header_doc: Document,
-                                    target_doc: Document) -> None:
+                                    target_doc: Document, is_top: bool = True) -> None:
         """
         将头内容和源内容合并到target_doc文件中
         :param rotations: 源文件的旋转角度集合
@@ -174,25 +177,45 @@ class Processor(object):
         for p_index, source_page in enumerate(source_file_doc):
             # fitz.Matrix()
             # bottom_rect = source_page.cropbox.transform(page.derotation_matrix)
+            if is_top:
+                # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
+                new_page = target_doc.new_page(width=a4_width, height=a4_height)
+                # 顶部header区域
+                r1 = fitz.Rect(0, 0, a4_width, header_height)
+                # 下部区域
+                r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+                # 将header-pdf首页贴到顶部区域
+                new_page.show_pdf_page(r1, header_doc, 0)
+                # 记录原来的旋转角度
+                _source_page_rotation = source_page.rotation
+                # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
+                source_page.set_rotation(0)
+                # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
+                # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
+                new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
+                                       clip=source_page.cropbox)
+                # 还原旋转角度
+                source_page.set_rotation(_source_page_rotation)
+            else:
+                # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
+                new_page = target_doc.new_page(width=a4_width, height=a4_height)
+                # 上部区域
+                r1 = fitz.Rect(0, 0, a4_width, a4_height - header_height)
+                # 下部header区域
+                r2 = fitz.Rect(0, a4_height - header_height, a4_width, a4_height)
+                # 记录原来的旋转角度
+                _source_page_rotation = source_page.rotation
+                # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
+                source_page.set_rotation(0)
+                # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
+                # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
+                new_page.show_pdf_page(r1, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
+                                       clip=source_page.cropbox)
+                # 还原旋转角度
+                source_page.set_rotation(_source_page_rotation)
 
-            # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
-            new_page = target_doc.new_page(width=a4_width, height=a4_height)
-            # 顶部区域
-            r1 = fitz.Rect(0, 0, a4_width, header_height)
-            # 下部区域
-            r2 = fitz.Rect(0, header_height, a4_width, a4_height)
-            # 将header-pdf首页贴到顶部区域
-            new_page.show_pdf_page(r1, header_doc, 0)
-            # 记录原来的旋转角度
-            _source_page_rotation = source_page.rotation
-            # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
-            source_page.set_rotation(0)
-            # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
-            # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
-            new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
-                                   clip=source_page.cropbox)
-            # 还原旋转角度
-            source_page.set_rotation(_source_page_rotation)
+                # 将header-pdf首页贴到顶部区域
+                new_page.show_pdf_page(r2, header_doc, 0)
 
             # usage_pdf.save('333.pdf')
 
