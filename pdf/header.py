@@ -6,7 +6,7 @@ from fitz import *
 from qrcode.image.pil import PilImage
 
 from model import Item, ItemRender
-from support import a4_width, header_height
+from support import a4_width, header_height, a4_height
 
 
 def get_rect(p: Point, width: int = 200, height: int = 35):
@@ -65,7 +65,9 @@ class IHeader(object):
 
         # 序号
         if self.item.item_no:
-            self.page.insert_text(point=fitz.Point(1804 - 50, 50), text=f'{self.item.item_no}',
+            is_top = True if self.item.header_layout and self.item.header_layout == 'top' else False
+            no_p = fitz.Point(a4_width - 50, 50) if is_top else fitz.Point(a4_width - 50, header_height - 50)
+            self.page.insert_text(point=no_p, text=f'{self.item.item_no}',
                                   fontsize=18,
                                   color=(30 / 255, 144 / 255, 255 / 255))
             # page.insert_htmlbox(
