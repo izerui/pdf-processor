@@ -65,11 +65,11 @@ class IHeader(object):
 
         # 序号
         if self.item.item_no:
-            self.page.insert_text(point=fitz.Point(1754 - 50, 50), text=f'{self.item.item_no}',
+            self.page.insert_text(point=fitz.Point(1804 - 50, 50), text=f'{self.item.item_no}',
                                   fontsize=18,
                                   color=(30 / 255, 144 / 255, 255 / 255))
             # page.insert_htmlbox(
-            #     rect=get_rect(fitz.Point(1754 - 50, 50), 50, 20),
+            #     rect=get_rect(fitz.Point(1804 - 50, 50), 50, 20),
             #     text=f'<b>{self.item.item_no}</b>',
             #     css='* {font-family: sans-serif;font-size:16px;color:blue;}'
             # )
@@ -86,17 +86,17 @@ class Header331(IHeader):
         #                  fontbuffer=font.buffer)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 280, 75, 320, 0)
-        self.insert_form_item(self.item.form_item4, 280, 75, 320, 1)
-        self.insert_form_item(self.item.form_item7, 280, 75, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270, 80, 320, 0)
+        self.insert_form_item(self.item.form_item4, 270, 80, 320, 1)
+        self.insert_form_item(self.item.form_item7, 270, 80, 800, 2)
 
-        # 第二列  + 400
-        self.insert_form_item(self.item.form_item2, 680, 75, 330, 0)
-        self.insert_form_item(self.item.form_item5, 680, 75, 330, 1)
+        # 第二列  + 410
+        self.insert_form_item(self.item.form_item2, 680, 80, 330, 0)
+        self.insert_form_item(self.item.form_item5, 680, 80, 330, 1)
 
         # 第三列  + 420
-        self.insert_form_item(self.item.form_item3, 1100, 75, 320, 0)
-        self.insert_form_item(self.item.form_item6, 1100, 75, 320, 1)
+        self.insert_form_item(self.item.form_item3, 1100, 80, 320, 0)
+        self.insert_form_item(self.item.form_item6, 1100, 80, 320, 1)
 
 
 class Header221(IHeader):
@@ -104,13 +104,13 @@ class Header221(IHeader):
         super().generate_header_page()
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 280, 75, 600, 0)
-        self.insert_form_item(self.item.form_item3, 280, 75, 600, 1)
-        self.insert_form_item(self.item.form_item5, 280, 75, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270, 80, 600, 0)
+        self.insert_form_item(self.item.form_item3, 270, 80, 600, 1)
+        self.insert_form_item(self.item.form_item5, 270, 80, 800, 2)
 
-        # 第二列  + 700
-        self.insert_form_item(self.item.form_item2, 980, 75, 600, 0)
-        self.insert_form_item(self.item.form_item4, 980, 75, 600, 1)
+        # 第二列  + 710
+        self.insert_form_item(self.item.form_item2, 980, 80, 600, 0)
+        self.insert_form_item(self.item.form_item4, 980, 80, 600, 1)
 
 
 class Header222(IHeader):
@@ -118,14 +118,14 @@ class Header222(IHeader):
         super().generate_header_page()
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 280, 75, 600, 0)
-        self.insert_form_item(self.item.form_item3, 280, 75, 600, 1)
-        self.insert_form_item(self.item.form_item5, 280, 75, 600, 2)
+        self.insert_form_item(self.item.form_item1, 270, 80, 600, 0)
+        self.insert_form_item(self.item.form_item3, 270, 80, 600, 1)
+        self.insert_form_item(self.item.form_item5, 270, 80, 600, 2)
 
-        # 第二列  + 700
-        self.insert_form_item(self.item.form_item2, 980, 75, 600, 0)
-        self.insert_form_item(self.item.form_item4, 980, 75, 600, 1)
-        self.insert_form_item(self.item.form_item6, 980, 75, 600, 2)
+        # 第二列  + 710
+        self.insert_form_item(self.item.form_item2, 980, 80, 600, 0)
+        self.insert_form_item(self.item.form_item4, 980, 80, 600, 1)
+        self.insert_form_item(self.item.form_item6, 980, 80, 600, 2)
 
 
 class Header333(IHeader):
@@ -133,19 +133,19 @@ class Header333(IHeader):
         super().generate_header_page()
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 280, 75, 320, 0)
-        self.insert_form_item(self.item.form_item4, 280, 75, 320, 1)
-        self.insert_form_item(self.item.form_item7, 280, 75, 320, 2)
+        self.insert_form_item(self.item.form_item1, 270, 80, 320, 0)
+        self.insert_form_item(self.item.form_item4, 270, 80, 320, 1)
+        self.insert_form_item(self.item.form_item7, 270, 80, 320, 2)
 
-        # 第二列 + 400
-        self.insert_form_item(self.item.form_item2, 680, 75, 330, 0)
-        self.insert_form_item(self.item.form_item5, 680, 75, 330, 1)
-        self.insert_form_item(self.item.form_item8, 680, 75, 330, 2)
+        # 第二列 + 410
+        self.insert_form_item(self.item.form_item2, 680, 80, 330, 0)
+        self.insert_form_item(self.item.form_item5, 680, 80, 330, 1)
+        self.insert_form_item(self.item.form_item8, 680, 80, 330, 2)
 
         # 第三列 + 420
-        self.insert_form_item(self.item.form_item3, 1100, 75, 330, 0)
-        self.insert_form_item(self.item.form_item6, 1100, 75, 330, 1)
-        self.insert_form_item(self.item.form_item9, 1100, 75, 330, 2)
+        self.insert_form_item(self.item.form_item3, 1100, 80, 330, 0)
+        self.insert_form_item(self.item.form_item6, 1100, 80, 330, 1)
+        self.insert_form_item(self.item.form_item9, 1100, 80, 330, 2)
 
 
 class Header441(IHeader):
@@ -153,18 +153,18 @@ class Header441(IHeader):
         super().generate_header_page()
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 280, 75, 245, 0)
-        self.insert_form_item(self.item.form_item5, 280, 75, 245, 1)
-        self.insert_form_item(self.item.form_item9, 280, 75, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270, 80, 240, 0)
+        self.insert_form_item(self.item.form_item5, 270, 80, 240, 1)
+        self.insert_form_item(self.item.form_item9, 270, 80, 800, 2)
 
-        # 第二列 + 320
-        self.insert_form_item(self.item.form_item2, 600, 75, 250, 0)
-        self.insert_form_item(self.item.form_item6, 600, 75, 250, 1)
+        # 第二列 + 330
+        self.insert_form_item(self.item.form_item2, 600, 80, 240, 0)
+        self.insert_form_item(self.item.form_item6, 600, 80, 240, 1)
 
         # 第三列 + 320
-        self.insert_form_item(self.item.form_item3, 920, 75, 250, 0)
-        self.insert_form_item(self.item.form_item7, 920, 75, 250, 1)
+        self.insert_form_item(self.item.form_item3, 920, 80, 240, 0)
+        self.insert_form_item(self.item.form_item7, 920, 80, 240, 1)
 
         # 第四列 + 320
-        self.insert_form_item(self.item.form_item4, 1240, 75, 250, 0)
-        self.insert_form_item(self.item.form_item8, 1240, 75, 250, 1)
+        self.insert_form_item(self.item.form_item4, 1240, 80, 240, 0)
+        self.insert_form_item(self.item.form_item8, 1240, 80, 240, 1)
