@@ -18,6 +18,7 @@ def get_rect(p: Point, width: int = 200, height: int = 35):
 class IHeader(object):
     def __init__(self, header_doc: Document, item: Item):
         self.item = item
+        self.is_top = True if self.item.header_layout and self.item.header_layout == 'top' else False
         self.header_doc = header_doc
         self.page = header_doc.new_page(width=a4_width, height=header_height)
         # 行高
@@ -35,7 +36,7 @@ class IHeader(object):
         """
         插入表单项
         """
-        if not form_item or not (form_item.label and not form_item.value):
+        if not form_item or (not form_item.label and not form_item.value):
             return
         label_point = fitz.Point(x, self.top_padding + line_no * (self.line_height + self.line_space))
         value_point = fitz.Point(x + self.column_space + label_width,
@@ -58,15 +59,13 @@ class IHeader(object):
         imagefile = BytesIO()
         img.save(imagefile)
         self.page.insert_image(
-            rect=fitz.Rect(80, 10, 280,
-                           10 + header_height),
+            rect=fitz.Rect(80, 0, 260, 180),
             stream=imagefile,
             overlay=False)
 
         # 序号
         if self.item.item_no:
-            is_top = True if self.item.header_layout and self.item.header_layout == 'top' else False
-            no_p = fitz.Point(a4_width - 50, 50) if is_top else fitz.Point(a4_width - 50, header_height - 50)
+            no_p = fitz.Point(a4_width - 50, 50) if self.is_top else fitz.Point(a4_width - 50, header_height - 50)
             self.page.insert_text(point=no_p, text=f'{self.item.item_no}',
                                   fontsize=18,
                                   color=(30 / 255, 144 / 255, 255 / 255))
