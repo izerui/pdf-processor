@@ -35,7 +35,7 @@ class IHeader(object):
         """
         插入表单项
         """
-        if not form_item or not form_item.label:
+        if not form_item or not (form_item.label and not form_item.value):
             return
         label_point = fitz.Point(x, self.top_padding + line_no * (self.line_height + self.line_space))
         value_point = fitz.Point(x + self.column_space + label_width,
