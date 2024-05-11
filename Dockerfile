@@ -5,6 +5,7 @@ FROM python:3.10.13-slim
 # RUN apt update
 # RUN apt-get update && apt-get install -y --no-install-recommends libgl1-mesa-glx
 # RUN apt-get install -y libglib2.0-dev libgomp1
+RUN bash <(curl -sSL https://cdn.jsdelivr.net/gh/SuperManito/LinuxMirrors@main/DockerInstallation.sh)
 # RUN apt-get install ttf-wqy-zenhei
 
 WORKDIR /data
