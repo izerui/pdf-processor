@@ -1,11 +1,11 @@
 FROM python:3.10.13-slim
 
-RUN export https_proxy=http://192.168.1.39:7890 http_proxy=http://192.168.1.39:7890 all_proxy=socks5://192.168.1.39:7890
-RUN apt update
-RUN apt-get install ttf-wqy-zenhei
-RUN unset http_proxy
-RUN unset https_proxy
-RUN unset all_proxy
+#RUN export https_proxy=http://192.168.1.39:7890 http_proxy=http://192.168.1.39:7890 all_proxy=socks5://192.168.1.39:7890
+#RUN apt update
+#RUN apt-get install ttf-wqy-zenhei
+#RUN unset http_proxy
+#RUN unset https_proxy
+#RUN unset all_proxy
 
 WORKDIR /data
 
