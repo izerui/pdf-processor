@@ -27,7 +27,7 @@ sequenceDiagram
 ![readme.png](readme.png)
 
 * pip3 config set global.index-url https://mirror.baidu.com/pypi/simple/
-* pip install PyMuPDF==1.24.2
+* pip install PyMuPDF==1.24.5
 * pip install fonttools
 * ~~pip install pymupdf-fonts~~
 * pip install qrcode
