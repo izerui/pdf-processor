@@ -54,14 +54,15 @@ class IHeader(object):
         # page.draw_rect(get_rect(value_point, value_width, line_height), color=(1, 0, 0))
 
     def generate_header_page(self):
-        # 二维码: 左上角坐标 80、10、宽高统一180
-        img: PilImage = qrcode.make(data=self.item.qr_code)
-        imagefile = BytesIO()
-        img.save(imagefile)
-        self.page.insert_image(
-            rect=fitz.Rect(80, 0, 260, 180),
-            stream=imagefile,
-            overlay=False)
+        if self.item.qr_code:
+            # 二维码: 左上角坐标 80、10、宽高统一180
+            img: PilImage = qrcode.make(data=self.item.qr_code)
+            imagefile = BytesIO()
+            img.save(imagefile)
+            self.page.insert_image(
+                rect=fitz.Rect(80, 0, 260, 180),
+                stream=imagefile,
+                overlay=False)
 
         # 序号
         if self.item.item_no:
