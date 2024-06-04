@@ -1,9 +1,9 @@
 import os
 import unittest
 
-import fitz
-from fitz import Page, Document
-from fitz.utils import Shape
+import pymupdf
+from pymupdf import Page, Document
+from pymupdf.utils import Shape
 
 from support import get_url_content_retry
 
@@ -12,7 +12,7 @@ from support import get_url_content_retry
 def convert_doc(doc: Document):
     result = doc
     # try:
-    #     result = fitz.open('pdf', doc.convert_to_pdf())
+    #     result = pymupdf.open('pdf', doc.convert_to_pdf())
     # except BaseException as e:
     #     pass
     return result
@@ -38,7 +38,7 @@ class TestTable(unittest.TestCase):
                 file_path = os.path.join(dir, filename)
                 if not (os.path.isfile(file_path) and (file_path.endswith('.pdf') or file_path.endswith('.PDF'))):
                     continue
-                files.append((filename, fitz.open(file_path)))
+                files.append((filename, pymupdf.open(file_path)))
 
         for filename, doc in files:
             for index, page in enumerate(doc):
@@ -50,7 +50,7 @@ class TestTable(unittest.TestCase):
                 for i in [0, 0, 500, 500]:
                     p.append(i / zoom)
 
-                rect = fitz.Rect(float(p[0]), float(p[1]), float(p[2]), float(p[3]))
+                rect = pymupdf.Rect(float(p[0]), float(p[1]), float(p[2]), float(p[3]))
 
                 # 矩阵旋转 https://pymupdf.readthedocs.io/en/latest/page.html#Page.rotation_matrix
                 # rect = rect.transform(page.transformation_matrix)
@@ -80,7 +80,7 @@ class TestTable(unittest.TestCase):
                 if img_url:
                     bytes = get_url_content_retry(img_url)
                     # page.set_rotation(0)
-                    img_pixmap = fitz.Pixmap(bytes)
+                    img_pixmap = pymupdf.Pixmap(bytes)
                     page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0)
                 else:
                     shape: Shape = page.new_shape()
@@ -103,8 +103,8 @@ class TestTable(unittest.TestCase):
             if not os.path.isfile(file_path) or not file_path.endswith('.pdf'):
                 continue
             # 遮罩doc
-            mark_pdf: Document = fitz.open()
-            with fitz.open(file_path) as doc:
+            mark_pdf: Document = pymupdf.open()
+            with pymupdf.open(file_path) as doc:
                 for index, page in enumerate(doc):
                     page: Page = page
                     # 遮罩页, 使用源页面未旋转前的矩形区域
@@ -116,7 +116,7 @@ class TestTable(unittest.TestCase):
                     for i in [0, 0, 500, 500]:
                         p.append(i / zoom)
 
-                    rect = fitz.Rect(float(p[0]), float(p[1]), float(p[2]), float(p[3]))
+                    rect = pymupdf.Rect(float(p[0]), float(p[1]), float(p[2]), float(p[3]))
 
                     # 矩阵旋转 https://pymupdf.readthedocs.io/en/latest/page.html#Page.rotation_matrix
                     # rect = rect.transform(page.transformation_matrix)
@@ -146,7 +146,7 @@ class TestTable(unittest.TestCase):
                     if img_url:
                         bytes = get_url_content_retry(img_url)
                         # page.set_rotation(0)
-                        img_pixmap = fitz.Pixmap(bytes)
+                        img_pixmap = pymupdf.Pixmap(bytes)
                         mark_page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0)
                     else:
                         shape: Shape = mark_page.new_shape()

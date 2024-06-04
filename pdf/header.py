@@ -1,8 +1,8 @@
 from io import BytesIO
 
-import fitz
+import pymupdf
 import qrcode
-from fitz import *
+from pymupdf import *
 from qrcode.image.pil import PilImage
 
 from model import Item, ItemRender
@@ -12,7 +12,7 @@ from support import a4_width, header_height, a4_height
 def get_rect(p: Point, width: int = 200, height: int = 35):
     x1 = p.x + width
     y1 = p.y + height
-    return fitz.Rect(p.x, p.y, x1, y1)
+    return pymupdf.Rect(p.x, p.y, x1, y1)
 
 
 class IHeader(object):
@@ -38,8 +38,8 @@ class IHeader(object):
         """
         if not form_item or (not form_item.label and not form_item.value):
             return
-        label_point = fitz.Point(x, self.top_padding + line_no * (self.line_height + self.line_space))
-        value_point = fitz.Point(x + self.column_space + label_width,
+        label_point = pymupdf.Point(x, self.top_padding + line_no * (self.line_height + self.line_space))
+        value_point = pymupdf.Point(x + self.column_space + label_width,
                                  self.top_padding + line_no * (self.line_height + self.line_space))
         self.page.insert_htmlbox(
             rect=get_rect(label_point, label_width, self.line_height),
@@ -60,18 +60,18 @@ class IHeader(object):
             imagefile = BytesIO()
             img.save(imagefile)
             self.page.insert_image(
-                rect=fitz.Rect(80, 0, 260, 180),
+                rect=pymupdf.Rect(80, 0, 260, 180),
                 stream=imagefile,
                 overlay=False)
 
         # 序号
         if self.item.item_no:
-            no_p = fitz.Point(a4_width - 50, 50) if self.is_top else fitz.Point(a4_width - 50, header_height - 50)
+            no_p = pymupdf.Point(a4_width - 50, 50) if self.is_top else pymupdf.Point(a4_width - 50, header_height - 50)
             self.page.insert_text(point=no_p, text=f'{self.item.item_no}',
                                   fontsize=18,
                                   color=(30 / 255, 144 / 255, 255 / 255))
             # page.insert_htmlbox(
-            #     rect=get_rect(fitz.Point(1804 - 50, 50), 50, 20),
+            #     rect=get_rect(pymupdf.Point(1804 - 50, 50), 50, 20),
             #     text=f'<b>{self.item.item_no}</b>',
             #     css='* {font-family: sans-serif;font-size:16px;color:blue;}'
             # )

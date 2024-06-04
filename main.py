@@ -3,7 +3,7 @@ import threading
 import time
 from typing import List
 
-import fitz
+import pymupdf
 import httpx
 import uvicorn
 from fastapi import FastAPI, Response, UploadFile, Form
@@ -265,7 +265,7 @@ async def callback_file(file: UploadFile | None = None,
 
 
 if __name__ == "__main__":
-    # 解决 fitz 新旧别名映射的bug
-    fitz.restore_aliases()
+    # 解决 pymupdf 新旧别名映射的bug
+    pymupdf.restore_aliases()
     print('文档地址: http://localhost:8000/docs')
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)

@@ -5,8 +5,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from symtable import Function
 
-import fitz
-from fitz import Document, TEXT_ALIGN_LEFT
+import pymupdf
+from pymupdf import Document, TEXT_ALIGN_LEFT
 from tqdm import tqdm
 
 from model import Item, File
@@ -33,7 +33,7 @@ from support import a4_width, a4_height, header_height, logger, get_url_content_
 #             fontbuffer=font_buffer,
 #             language='zh-Hans')
 
-# arch_fonts = fitz.Archive(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts'))
+# arch_fonts = pymupdf.Archive(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts'))
 
 header_meta = __import__('pdf.header', globals(), locals(),
                          ['IHeader', 'Header331', 'Header221', 'Header222', 'Header333', 'Header441'])
@@ -67,7 +67,7 @@ class Processor(object):
         """
         try:
             header_doc = self.generate_header_doc_without_close(item)
-            target_item_doc = fitz.open()
+            target_item_doc = pymupdf.open()
             for file in item.files:
 
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
@@ -80,6 +80,7 @@ class Processor(object):
                     # 添加遮罩区域
                     editor.wrap_doc_with_marks(rotations, file.zoom, file.marks, url_datas)
                 source_file_doc = editor.get_doc_without_close()
+                # source_file_doc.ez_save('1111.pdf')
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 end
                 # source_file_doc.page_xref(0)
                 # source_file_doc.get_page_images()
@@ -110,7 +111,7 @@ class Processor(object):
         :return:
         """
         # 每个item对应的header头文档集合
-        header_doc = fitz.open()
+        header_doc = pymupdf.open()
         self._generate_header_page(item, header_doc)
         header_doc = self.subset_doc_and_return_new_doc(header_doc)
         return header_doc
@@ -123,7 +124,7 @@ class Processor(object):
         :return:
         """
         # 每个item对应的header头文档集合
-        header_doc = fitz.open()
+        header_doc = pymupdf.open()
         process_bar = tqdm(total=len(items), desc=f'生成header文档,共{len(items)}个页面.')
         for index, item in enumerate(items):
             self._generate_header_page(item, header_doc)
@@ -175,15 +176,15 @@ class Processor(object):
         """
 
         for p_index, source_page in enumerate(source_file_doc):
-            # fitz.Matrix()
+            # pymupdf.Matrix()
             # bottom_rect = source_page.cropbox.transform(page.derotation_matrix)
             if is_top:
                 # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
                 new_page = target_doc.new_page(width=a4_width, height=a4_height)
                 # 顶部header区域
-                r1 = fitz.Rect(0, 0, a4_width, header_height)
+                r1 = pymupdf.Rect(0, 0, a4_width, header_height)
                 # 下部区域
-                r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+                r2 = pymupdf.Rect(0, header_height, a4_width, a4_height)
                 # 将header-pdf首页贴到顶部区域
                 new_page.show_pdf_page(r1, header_doc, 0)
                 # 记录原来的旋转角度
@@ -200,9 +201,9 @@ class Processor(object):
                 # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
                 new_page = target_doc.new_page(width=a4_width, height=a4_height)
                 # 上部区域
-                r1 = fitz.Rect(0, 0, a4_width, a4_height - header_height)
+                r1 = pymupdf.Rect(0, 0, a4_width, a4_height - header_height)
                 # 下部header区域
-                r2 = fitz.Rect(0, a4_height - header_height, a4_width, a4_height)
+                r2 = pymupdf.Rect(0, a4_height - header_height, a4_width, a4_height)
                 # 记录原来的旋转角度
                 _source_page_rotation = source_page.rotation
                 # 因为 show_pdf_page 利用的原始图层，故将页面重置为未旋转前的， 并且拼接后，按照上面得到的旋转角度再旋转
@@ -225,7 +226,7 @@ class Processor(object):
         将源文件页面的注释原样copy到target_item_doc中
         """
         # 下部区域
-        r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+        r2 = pymupdf.Rect(0, header_height, a4_width, a4_height)
         for p_index, target_page in enumerate(target_item_doc):
             annot_page = annot_doc[p_index]
             _annot_page_rotation = annot_page.rotation
@@ -241,15 +242,15 @@ class Processor(object):
         """
         try:
             # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-            fitz.TOOLS.set_small_glyph_heights(True)
+            pymupdf.TOOLS.set_small_glyph_heights(True)
             # 下部区域
-            r2 = fitz.Rect(0, header_height, a4_width, a4_height)
+            r2 = pymupdf.Rect(0, header_height, a4_width, a4_height)
 
             for index, page in enumerate(source_file_doc):
                 # 这里一定要先将原始页面角度设置为0，否则注释的字体方向不是以0为参考基准，因为之前合并到bottom区域的时候都是先设置原始页面为0再复制过去的
                 _rotation = page.rotation
                 page.set_rotation(0)
-                annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT, fitz.mupdf.PDF_ANNOT_LINE]))
+                annots = list(page.annots(types=[pymupdf.mupdf.PDF_ANNOT_FREE_TEXT, pymupdf.mupdf.PDF_ANNOT_LINE]))
                 # print(doc.xref_object(page.xref))
                 if len(annots) < 0:
                     continue
@@ -293,15 +294,15 @@ class Processor(object):
                                 # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                                 line_wmode = line['wmode']
                                 line_rotation = get_text_rotation_from_dir(line['dir'])
-                                line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2],
+                                line_rect = pymupdf.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2],
                                                       line['bbox'][3])
-                                # line_rect = line_rect.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
+                                # line_rect = line_rect.transform(pymupdf.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
                                 for span in line['spans']:
                                     span_size = span['size']
                                     span_flags = span['flags']
                                     span_font = span['font']
                                     # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
-                                    rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                                    rgb_tuple = pymupdf.sRGB_to_pdf(span['color'])
                                     span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
                                     span_ascender = span['ascender']
                                     span_descender = span['descender']
@@ -310,8 +311,8 @@ class Processor(object):
                                     # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
                                     a = span["ascender"]
                                     d = span["descender"]
-                                    o = fitz.Point(span["origin"])
-                                    r = fitz.Rect(span['bbox'])
+                                    o = pymupdf.Point(span["origin"])
+                                    r = pymupdf.Rect(span['bbox'])
 
                                     # 如果区域高度不足以包含字体的大小，则把字体大小设置为rect的高度
                                     if r.height < span_size:
@@ -324,12 +325,12 @@ class Processor(object):
                                     y1_outer_extend = 2
 
                                     # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
-                                    r = fitz.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
+                                    r = pymupdf.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
                                                   r[1] * scale_factor + y_offset - y0_outer_extend + header_height,
                                                   r[2] * scale_factor + x_offset + x1_outer_extend,
                                                   r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
 
-                                    # r = r.transform(fitz.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
+                                    # r = r.transform(pymupdf.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
                                     # print('line rotation: ', line_rotation)
                                     _annot = new_page.add_freetext_annot(rect=r,
                                                                          text=span_text,
@@ -344,7 +345,7 @@ class Processor(object):
                         annot_pixmap = annot.get_pixmap(alpha=True)
                         r = annot.rect
                         # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
-                        r = fitz.Rect(r[0] * scale_factor + x_offset,
+                        r = pymupdf.Rect(r[0] * scale_factor + x_offset,
                                       r[1] * scale_factor + y_offset + header_height,
                                       r[2] * scale_factor + x_offset,
                                       r[3] * scale_factor + y_offset + header_height)
@@ -451,14 +452,14 @@ class Processor(object):
             doc.subset_fonts()
 
             # 参考: https://github.com/pymupdf/PyMuPDF/discussions/3383
-            # pdf = fitz._as_pdf_document(doc)  # access underlying PDF-specific level
-            # fitz.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
+            # pdf = pymupdf._as_pdf_document(doc)  # access underlying PDF-specific level
+            # pymupdf.mupdf.pdf_subset_fonts2(pdf, list(range(doc.page_count)))
 
             tmp_dir = tempfile.gettempdir()
             tmp_file_path = os.path.join(tmp_dir, f"{tmp_dir}/{int(time.perf_counter() * 1000)}.pdf")
             doc.ez_save(tmp_file_path)
             doc.close()
-            return fitz.open(tmp_file_path)
+            return pymupdf.open(tmp_file_path)
         except Exception:
             logger.warn(f'压缩文档处理进程冲突!')
         finally:
@@ -474,7 +475,7 @@ class Processor(object):
         :param is_item_doc_close: 是否关闭子文档
         :return: 一个文档
         """
-        target_doc = fitz.open()
+        target_doc = pymupdf.open()
         for index, item_doc in enumerate(item_docs):
             # 每个item生成独立的document，然后插入到target中
             target_doc.insert_pdf(docsrc=item_doc)
@@ -528,8 +529,8 @@ class Processor(object):
         可立即在 PyMuPDF 中使用。有一个功能可以将注释和字段（！！！）“烘焙”到 PDF 中 - 这意味着它将这些项目转换为正常的页面内容。
         解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
         """
-        source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
-        fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        source_file_pdf = pymupdf.mupdf.pdf_document_from_fz_document(doc)
+        pymupdf.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
         pass
 
     def merge_url_pdfs(self, urls, item_call: Function = None):
@@ -540,6 +541,6 @@ class Processor(object):
         url_datas = self.download_urls(urls)
         docs = []
         for url in urls:
-            doc = fitz.open("pdf", url_datas[url])
+            doc = pymupdf.open("pdf", url_datas[url])
             docs.append(doc)
         return self.merge_and_compress_docs(docs, is_item_doc_close=True, item_call=item_call)

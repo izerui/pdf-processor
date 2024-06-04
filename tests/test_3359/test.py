@@ -1,4 +1,4 @@
-from fitz import fitz
+from pymupdf import pymupdf
 
 # 内容丢失
 # https://github.com/pymupdf/PyMuPDF/discussions/3359
@@ -7,9 +7,9 @@ def test_wrong_files():
 
     rect = [0, 0, 200, 300]
 
-    target_doc = fitz.open()
+    target_doc = pymupdf.open()
     for file in files:
-        doc = fitz.open(file)
+        doc = pymupdf.open(file)
         for page in doc:
             page.clean_contents(sanitize=False)
             page.insert_image(rect, filename="logo.png")
@@ -26,9 +26,9 @@ def test_wrong_files2():
 
     rect = [0, 0, 200, 300]
 
-    target_doc = fitz.open()
+    target_doc = pymupdf.open()
     for file in files:
-        doc = fitz.open(file)
+        doc = pymupdf.open(file)
         for page in doc:
             page.wrap_contents()
             page.insert_image(rect, filename="logo.png")

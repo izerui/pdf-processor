@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 import httpx
-from fitz import fitz, Document
+from pymupdf import pymupdf, Document
 
 from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height
 
@@ -90,15 +90,15 @@ class TestTable(unittest.TestCase):
         img_stream = io.BytesIO()
         img.save(img_stream, format='JPEG')
         # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
-        img_pixmap = fitz.Pixmap(img_stream)
+        img_pixmap = pymupdf.Pixmap(img_stream)
 
-        # img_pixmap = fitz.Pixmap()
-        # img_pixmap = fitz.Pixmap(image_array)
+        # img_pixmap = pymupdf.Pixmap()
+        # img_pixmap = pymupdf.Pixmap(image_array)
 
         bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf')
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for page in doc:
-            rect = fitz.Rect(0, 0, 400, 300)
+            rect = pymupdf.Rect(0, 0, 400, 300)
             # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_image
             page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, overlay=True)
         doc.save('11111111.pdf', garbage=3, deflate=True)
@@ -106,7 +106,7 @@ class TestTable(unittest.TestCase):
 
     def test_open_pdf(self):
         bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-03-26/28205N61101AAA.pdf')
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             print(
                 f'''第{index + 1}页
@@ -120,14 +120,14 @@ class TestTable(unittest.TestCase):
     # https://pymupdf.readthedocs.io/en/latest/recipes-annotations.html
     def test_copy_annot(self):
         # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-        fitz.TOOLS.set_small_glyph_heights(True)
+        pymupdf.TOOLS.set_small_glyph_heights(True)
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-01/mt_04_24024_0_812.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-2.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
         bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-03/x.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-03/result-1366723231.pdf')
-        target_doc: Document = fitz.open()
-        doc = fitz.open('pdf', bytes)
+        target_doc: Document = pymupdf.open()
+        doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             page.clean_contents()
             # print(doc.xref_object(page.xref))
@@ -140,12 +140,12 @@ class TestTable(unittest.TestCase):
 
             new_page.set_rotation(page.rotation)
             # 新的底部区域的自身rect大小(即剪切掉header区域后，剩余的底部区域的整个rect)
-            bottom_self_rect = fitz.Rect(0, 0, a4_width, a4_height - header_height)
+            bottom_self_rect = pymupdf.Rect(0, 0, a4_width, a4_height - header_height)
             new_height = a4_width * page.cropbox.height / page.cropbox.width
-            bottom_scale_matrix = fitz.Matrix(1, 0, 0, new_height / page.cropbox.height, 0, 0)
+            bottom_scale_matrix = pymupdf.Matrix(1, 0, 0, new_height / page.cropbox.height, 0, 0)
 
             # 底部区域在整个A4纸张的新页面的rect区域
-            # bottom_rect = fitz.Rect(0, header_height, a4_width, a4_height)
+            # bottom_rect = pymupdf.Rect(0, header_height, a4_width, a4_height)
             new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
                                    clip=page.cropbox)
             for annot_index, annot in enumerate(page.annots()):
@@ -173,7 +173,7 @@ class TestTable(unittest.TestCase):
                         # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                         line_wmode = line['wmode']
                         line_rotation = get_text_rotation_from_dir(line['dir'])
-                        line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                        line_rect = pymupdf.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
                         for span in line['spans']:
                             span_size = span['size']
                             fontsize = span_size
@@ -181,7 +181,7 @@ class TestTable(unittest.TestCase):
                             span_font = span['font']
                             fontname = span_font
                             # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
-                            rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                            rgb_tuple = pymupdf.sRGB_to_pdf(span['color'])
                             span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
                             color = span_color
                             span_ascender = span['ascender']
@@ -191,16 +191,16 @@ class TestTable(unittest.TestCase):
                             # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
                             a = span["ascender"]
                             d = span["descender"]
-                            o = fitz.Point(span["origin"])
-                            r = fitz.Rect(span['bbox'])
+                            o = pymupdf.Point(span["origin"])
+                            r = pymupdf.Rect(span['bbox'])
 
                             # a = span["ascender"]
                             # d = span["descender"]
-                            # o = fitz.Point(span["origin"])  # its y-value is the baseline
+                            # o = pymupdf.Point(span["origin"])  # its y-value is the baseline
                             # r.y1 = o.y - span["size"] * scale_factor * d / (a - d)
                             # r.y0 = r.y1 - span["size"]
 
-                            r = fitz.Rect(r[0] * scale_factor,
+                            r = pymupdf.Rect(r[0] * scale_factor,
                                           r[1] * scale_factor,
                                           r[2] * scale_factor,
                                           r[3] * scale_factor)
@@ -248,8 +248,8 @@ class TestTable(unittest.TestCase):
                     #     default_style = doc.xref_get_key(annot.xref, 'DS')[1]
                     #     print('USE DS: ', default_style)
                     #     styles = get_properties_from_style(default_style)
-                    # rect = fitz.Rect(annot.rect)
-                    # rect = fitz.Rect(rect[0] * scale_factor, rect[1] * scale_factor, rect[2] * scale_factor, rect[3] * scale_factor)
+                    # rect = pymupdf.Rect(annot.rect)
+                    # rect = pymupdf.Rect(rect[0] * scale_factor, rect[1] * scale_factor, rect[2] * scale_factor, rect[3] * scale_factor)
                     # # 复制注释到目标文档中
                     # match annot.type[1]:
                     #     case 'FreeText':
@@ -284,14 +284,14 @@ class TestTable(unittest.TestCase):
 
     def test_copy_annot2(self):
         # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-        fitz.TOOLS.set_small_glyph_heights(True)
+        pymupdf.TOOLS.set_small_glyph_heights(True)
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-01/mt_04_24024_0_812.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-2.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
         # bytes = get_url_content_retry('https://tfile.yj2025.com/pdf-processor/source/2024-04-03/x.pdf')
         bytes = get_url_content_retry('https://file.yj2025.com/工程图纸0940-竖向.pdf')
-        target_doc: Document = fitz.open()
-        doc = fitz.open('pdf', bytes)
+        target_doc: Document = pymupdf.open()
+        doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             page.clean_contents()
             _page_rotation = page.rotation
@@ -302,7 +302,7 @@ class TestTable(unittest.TestCase):
             new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
                                    clip=page.cropbox)
 
-            for annot_index, annot in enumerate(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT])):
+            for annot_index, annot in enumerate(page.annots(types=[pymupdf.mupdf.PDF_ANNOT_FREE_TEXT])):
                 if annot.type[1] == 'FreeText':
                     blocks = annot.get_textpage().extractDICT()['blocks']
                     for block in blocks:
@@ -310,13 +310,13 @@ class TestTable(unittest.TestCase):
                             # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                             line_wmode = line['wmode']
                             line_rotation = get_text_rotation_from_dir(line['dir'])
-                            line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                            line_rect = pymupdf.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
                             for span in line['spans']:
                                 span_size = span['size']
                                 span_flags = span['flags']
                                 span_font = span['font']
                                 # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
-                                rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                                rgb_tuple = pymupdf.sRGB_to_pdf(span['color'])
                                 span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
                                 span_ascender = span['ascender']
                                 span_descender = span['descender']
@@ -325,8 +325,8 @@ class TestTable(unittest.TestCase):
                                 # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
                                 a = span["ascender"]
                                 d = span["descender"]
-                                o = fitz.Point(span["origin"])
-                                r = fitz.Rect(span['bbox'])
+                                o = pymupdf.Point(span["origin"])
+                                r = pymupdf.Rect(span['bbox'])
 
                                 # 通过设置的旋转角度通过反向计算区域块实际位置
                                 # r = r.transform(page.derotation_matrix)
@@ -348,8 +348,8 @@ class TestTable(unittest.TestCase):
     def test_bug_91(self):
         bytes = get_url_content_retry(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-02/mt_04_24024_0_812-wps.pdf')
-        target_doc: Document = fitz.open()
-        doc = fitz.open('pdf', bytes)
+        target_doc: Document = pymupdf.open()
+        doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             page.clean_contents()
             # print(doc.xref_object(page.xref))
@@ -380,7 +380,7 @@ class TestTable(unittest.TestCase):
         text = 'some text with breaks'
         bytes = httpx.get(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-03/x.pdf').content
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         page = doc[0]
         page.add_freetext_annot((50, 100, 150, 200), text, rotate=90, text_color=(1, 0, 0))
         doc.ez_save('x.pdf')
@@ -388,7 +388,7 @@ class TestTable(unittest.TestCase):
     def test_get_annot_rotation(self):
         bytes = httpx.get(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-03/x.pdf').content
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         page = doc[0]
         for annot in page.annots():
             # print(annot.xref, annot.get_text(), doc.xref_get_keys(annot.xref))
@@ -429,11 +429,11 @@ class TestTable(unittest.TestCase):
     def test_ghost(self):
         bytes = httpx.get(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf').content
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for page in doc:
             page.clean_contents()
-        doc = fitz.open('pdf', doc.tobytes(garbage=4, clean=True, deflate=True))
-        # doc = fitz.open('pdf', doc.convert_to_pdf())
+        doc = pymupdf.open('pdf', doc.tobytes(garbage=4, clean=True, deflate=True))
+        # doc = pymupdf.open('pdf', doc.convert_to_pdf())
         doc.save('xxx.pdf')
 
     def test_bakes(self):
@@ -443,11 +443,11 @@ class TestTable(unittest.TestCase):
         """
         bytes = httpx.get(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-07/mt_04_24024_0_812--1.pdf').content
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for page in doc:
             page.clean_contents()
-        pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
-        fitz.mupdf.pdf_bake_document(pdf, 1, 1)
+        pdf = pymupdf.mupdf.pdf_document_from_fz_document(doc)
+        pymupdf.mupdf.pdf_bake_document(pdf, 1, 1)
         doc.save('xxx.pdf')
 
     def test_clean_pages(self):
@@ -461,7 +461,7 @@ class TestTable(unittest.TestCase):
         docs = []
         for file in files:
             bytes = httpx.get(file).content
-            doc = fitz.open('pdf', bytes)
+            doc = pymupdf.open('pdf', bytes)
             docs.append(doc)
 
         from PIL import Image
@@ -472,7 +472,7 @@ class TestTable(unittest.TestCase):
 
         rect = [0, 0, 200, 300]
 
-        target_doc = fitz.open()
+        target_doc = pymupdf.open()
         for doc in docs:
             for index, page in enumerate(doc):
                 print(
@@ -512,7 +512,7 @@ class TestTable(unittest.TestCase):
         """
         bytes = httpx.get(
             'https://tfile.yj2025.com/pdf-processor/source/2024-04-08/内容丢失-401-020605-00.pdf').content
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for page in doc:
             page.clean_contents()
         doc.save('xxx.pdf')
@@ -526,9 +526,9 @@ class TestTable(unittest.TestCase):
 
         rect = [0, 0, 200, 300]
 
-        target_doc = fitz.open()
+        target_doc = pymupdf.open()
         for file in files:
-            doc = fitz.open(file)
+            doc = pymupdf.open(file)
             for page in doc:
                 page.clean_contents(sanitize=False)
                 page.insert_image(rect, filename="test_3359/logo.png")
@@ -542,17 +542,17 @@ class TestTable(unittest.TestCase):
 
     # https://github.com/pymupdf/PyMuPDF/discussions/2384  show_pdf_page 需要按照逆时针旋转
     def test_rotation(self):
-        # doc = fitz.open('扫码报工PDF/图档不正确/图档倒转/打开方向正确-打印翻转了180°-20231205-明信达.pdf')
-        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图方向不正确-1.pdf')
-        doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图-0度-左侧为底.pdf')
-        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/横图-90度.pdf')
-        # doc = fitz.open('扫码报工PDF/图档不正确/竖图/竖图右侧-0度.pdf')
+        # doc = pymupdf.open('扫码报工PDF/图档不正确/图档倒转/打开方向正确-打印翻转了180°-20231205-明信达.pdf')
+        # doc = pymupdf.open('扫码报工PDF/图档不正确/竖图/竖图方向不正确-1.pdf')
+        doc = pymupdf.open('扫码报工PDF/图档不正确/竖图/竖图-0度-左侧为底.pdf')
+        # doc = pymupdf.open('扫码报工PDF/图档不正确/竖图/横图-90度.pdf')
+        # doc = pymupdf.open('扫码报工PDF/图档不正确/竖图/竖图右侧-0度.pdf')
         page = doc[0]
         print(page.rotation)
         page.set_rotation(90)
         doc.save('90.pdf')
 
-        result_doc = fitz.open()
+        result_doc = pymupdf.open()
         new_page = result_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
         _rotation = page.rotation
         page.set_rotation(0)

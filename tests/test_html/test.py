@@ -1,19 +1,19 @@
 import time
 from subprocess import Popen, PIPE, STDOUT
 
-import fitz
+import pymupdf
 
 from support import a4_width, a4_height, logged, header_height
 
 
 def test_html_to_pdf():
     s_time = int(time.perf_counter() * 1000)
-    doc = fitz.open()
+    doc = pymupdf.open()
     page = doc.new_page(width=a4_width, height=header_height)
 
     with open('dist/index.html', 'r') as f:
         content = f.read()
-        story = fitz.Story(html=content, user_css=None, archive=fitz.Archive("."))
+        story = pymupdf.Story(html=content, user_css=None, archive=pymupdf.Archive("."))
         page.insert_htmlbox(
             rect=page.cropbox,
             text=story

@@ -6,7 +6,7 @@ import time
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 
-from fitz import Shape, fitz
+from pymupdf import Shape, pymupdf
 
 from support import get_url_content_retry, read_bytes_from_file
 
@@ -15,7 +15,7 @@ from support import get_url_content_retry, read_bytes_from_file
 class TestTable(unittest.TestCase):
 
     def test_rotation(self):
-        doc = fitz.open('扫码报工PDF/CS01-P3-001-竖向-右侧.pdf')
+        doc = pymupdf.open('扫码报工PDF/CS01-P3-001-竖向-右侧.pdf')
         for page in doc:
             print(page.rotation)
 
@@ -38,7 +38,7 @@ class TestTable(unittest.TestCase):
     def test_open_save_new(self):
         url = 'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/mt_03_22318er_0_806.pdf'
         bytes = get_url_content_retry(url)
-        doc = fitz.open('pdf', bytes)
+        doc = pymupdf.open('pdf', bytes)
         for page in doc:
             page.clean_contents()
         doc.save(f'result-new-{int(time.perf_counter() * 1000)}.pdf')
@@ -47,15 +47,15 @@ class TestTable(unittest.TestCase):
     def test_open_show_page_new(self):
         url = 'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/CS01-P3-001.pdf'
         bytes = get_url_content_retry(url)
-        target = fitz.open()
-        doc = fitz.open('pdf', bytes)
-        # doc = fitz.open('pdf', doc.convert_to_pdf())
+        target = pymupdf.open()
+        doc = pymupdf.open('pdf', bytes)
+        # doc = pymupdf.open('pdf', doc.convert_to_pdf())
         for page in doc:
             page.clean_contents()
             mark_img_url = 'https://tfile.yj2025.com/360826a9-27d4-4121-8ede-b3938a2ed6be.jpg'
             mark_img_bytes = get_url_content_retry(mark_img_url)
-            img_pixmap = fitz.Pixmap(mark_img_bytes)
-            rect = fitz.Rect(140 / 0.2, 561 / 0.2, 290 / 0.2, 652 / 0.2)
+            img_pixmap = pymupdf.Pixmap(mark_img_bytes)
+            rect = pymupdf.Rect(140 / 0.2, 561 / 0.2, 290 / 0.2, 652 / 0.2)
 
             # 记录原来的旋转角度
             _rotation = page.rotation
@@ -87,16 +87,16 @@ class TestTable(unittest.TestCase):
         hui_img_buffer = read_bytes_from_file(
             os.path.join(os.path.abspath(os.path.dirname(__file__)), 'img', 'gray.png'))
 
-        hui_pixmap = fitz.Pixmap(hui_img_buffer)
+        hui_pixmap = pymupdf.Pixmap(hui_img_buffer)
 
         url = 'https://tfile.yj2025.com/pdf-processor/source/2024-03-26/CS01-P3-001.pdf'
         bytes = get_url_content_retry(url)
-        target = fitz.open()
-        doc = fitz.open('pdf', bytes)
-        # doc = fitz.open('pdf', doc.convert_to_pdf())
+        target = pymupdf.open()
+        doc = pymupdf.open('pdf', bytes)
+        # doc = pymupdf.open('pdf', doc.convert_to_pdf())
         for page in doc:
             page.clean_contents()
-            rect = fitz.Rect(200 / 0.2, 300 / 0.2, 400 / 0.2, 600 / 0.2)
+            rect = pymupdf.Rect(200 / 0.2, 300 / 0.2, 400 / 0.2, 600 / 0.2)
 
             # 记录原来的旋转角度
             _rotation = page.rotation

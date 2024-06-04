@@ -1,11 +1,11 @@
 import os
 
-import fitz
+import pymupdf
 
 
 def bake_document(doc):
-    # source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(doc)
-    # fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+    # source_file_pdf = pymupdf.mupdf.pdf_document_from_fz_document(doc)
+    # pymupdf.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
     # 1.24.2 升级替换
     doc.bake()
     pass
@@ -14,28 +14,28 @@ def bake_document(doc):
 # 解释参考: https://pymupdf.readthedocs.io/en/latest/recipes-low-level-interfaces.html#how-to-handle-page-contents
 def handle_page(page, type):
     if type == 0:
-        page.insert_text(point=fitz.Point(300, 300), text='no_operation', fontsize=48, color=[1, 0, 0])
+        page.insert_text(point=pymupdf.Point(300, 300), text='no_operation', fontsize=48, color=[1, 0, 0])
         pass
     elif type == 1:
         page.clean_contents()
-        page.insert_text(point=fitz.Point(300, 300), text='clean_contents', fontsize=48, color=[1, 0, 0])
+        page.insert_text(point=pymupdf.Point(300, 300), text='clean_contents', fontsize=48, color=[1, 0, 0])
     elif type == 2:
         page.wrap_contents()
-        page.insert_text(point=fitz.Point(300, 300), text='wrap_contents', fontsize=48, color=[1, 0, 0])
+        page.insert_text(point=pymupdf.Point(300, 300), text='wrap_contents', fontsize=48, color=[1, 0, 0])
     pass
 
 
 def test():
     docs = [
-        fitz.open('28205N61101AAA (1).pdf'),
-        fitz.open('mt_03_22318er.pdf'),
-        fitz.open('401-020605-00.pdf'),
-        fitz.open('mt_04_23024cc.pdf'),
-        fitz.open('401-016306-01(内容丢失).pdf'),
-        fitz.open('NOR4.139.136（V00）.pdf')
+        pymupdf.open('28205N61101AAA (1).pdf'),
+        pymupdf.open('mt_03_22318er.pdf'),
+        pymupdf.open('401-020605-00.pdf'),
+        pymupdf.open('mt_04_23024cc.pdf'),
+        pymupdf.open('401-016306-01(内容丢失).pdf'),
+        pymupdf.open('NOR4.139.136（V00）.pdf')
     ]
 
-    new_doc = fitz.open()
+    new_doc = pymupdf.open()
     for doc in docs:
         new_doc.insert_pdf(docsrc=doc)
 

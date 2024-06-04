@@ -10,7 +10,7 @@ from functools import wraps
 import httpx
 import psutil
 from PIL import ImageColor
-from fitz import TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
+from pymupdf import TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)

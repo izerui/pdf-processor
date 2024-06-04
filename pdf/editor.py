@@ -2,7 +2,7 @@ import concurrent
 import io
 
 from PIL import Image
-from fitz import fitz, Shape, Document
+from pymupdf import pymupdf, Shape, Document
 
 from model import Mark
 from pdf import Reader
@@ -12,7 +12,7 @@ from support import logged, get_url_content_retry, logger, get_text_rotation_fro
 # hui_img_buffer = read_bytes_from_file(
 #     os.path.join(os.path.abspath(os.path.dirname(__file__)), 'img', 'gray.png'))
 #
-# hui_pixmap = fitz.Pixmap(hui_img_buffer)
+# hui_pixmap = pymupdf.Pixmap(hui_img_buffer)
 
 class Editor(Reader):
     """
@@ -43,7 +43,7 @@ class Editor(Reader):
                 img_stream = io.BytesIO()
                 img.save(img_stream, format='JPEG')
                 # TODO 这里转成pixmap会不会定义一个引用，缩小pdf体积？
-                img_pixmap = fitz.Pixmap(img_stream)
+                img_pixmap = pymupdf.Pixmap(img_stream)
                 marks_images_cache[url] = img_pixmap
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
@@ -81,7 +81,7 @@ class Editor(Reader):
                 # print('rotation: ', rotations[index], 'mark: ', mark)
 
                 # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
-                rect = fitz.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
+                rect = pymupdf.Rect(float(mark.x0) / zoom, float(mark.y0) / zoom, float(mark.x1) / zoom,
                                  float(mark.y1) / zoom)
                 # 设置为传入的旋转角度，防止显示效果不一致
                 page.set_rotation(rotations[index])
@@ -94,7 +94,7 @@ class Editor(Reader):
                     img_stream = io.BytesIO()
                     img.save(img_stream, format='JPEG')
                     # 这里转成pixmap反而会增大最终pdf体积
-                    # img_pixmap = fitz.Pixmap(img_stream)
+                    # img_pixmap = pymupdf.Pixmap(img_stream)
                     # 跟随页面旋转角度进行旋转，否则图片方向不对
                     page.insert_image(rect, stream=img_stream, keep_proportion=False, alpha=0, xref=0,
                                       rotate=rotations[index])
@@ -113,15 +113,15 @@ class Editor(Reader):
 
     def generate_annot_doc_without_close(self) -> Document:
         # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
-        fitz.TOOLS.set_small_glyph_heights(True)
+        pymupdf.TOOLS.set_small_glyph_heights(True)
         # 下部区域
-        annot_doc = fitz.open()
+        annot_doc = pymupdf.open()
         for index, page in enumerate(self.doc):
             _page_rotation = page.rotation
             page.set_rotation(0)
             new_page = annot_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
             # 查找源页面注释
-            annots = list(page.annots(types=[fitz.mupdf.PDF_ANNOT_FREE_TEXT]))
+            annots = list(page.annots(types=[pymupdf.mupdf.PDF_ANNOT_FREE_TEXT]))
             if len(annots) < 0:
                 continue
             for annot_index, annot in enumerate(annots):
@@ -138,13 +138,13 @@ class Editor(Reader):
                             # 书写方向及书写方式（横/竖） 0 = horizontal, 1 = vertical
                             line_wmode = line['wmode']
                             line_rotation = get_text_rotation_from_dir(line['dir'])
-                            line_rect = fitz.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
+                            line_rect = pymupdf.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2], line['bbox'][3])
                             for span in line['spans']:
                                 span_size = span['size']
                                 span_flags = span['flags']
                                 span_font = span['font']
                                 # span_color = [((span['color'] >> 16) & 255) / 255, ((span['color'] >> 8) & 255) / 255, (span['color'] & 255) / 255]
-                                rgb_tuple = fitz.sRGB_to_pdf(span['color'])
+                                rgb_tuple = pymupdf.sRGB_to_pdf(span['color'])
                                 span_color = [rgb_tuple[0], rgb_tuple[1], rgb_tuple[2]]
                                 span_ascender = span['ascender']
                                 span_descender = span['descender']
@@ -153,8 +153,8 @@ class Editor(Reader):
                                 # https://pymupdf.readthedocs.io/en/latest/textpage.html#span-dictionary
                                 a = span["ascender"]
                                 d = span["descender"]
-                                o = fitz.Point(span["origin"])
-                                r = fitz.Rect(span['bbox'])
+                                o = pymupdf.Point(span["origin"])
+                                r = pymupdf.Rect(span['bbox'])
 
                                 # 通过设置的旋转角度通过反向计算区域块实际位置
                                 # r = r.transform(page.derotation_matrix)
@@ -200,7 +200,7 @@ class Editor(Reader):
         """
         复制一个新的pdf
         """
-        clone_doc = fitz.open()
+        clone_doc = pymupdf.open()
         clone_doc.insert_pdf(docsrc=self.doc)
         self.doc.close()
         self.doc = clone_doc
@@ -211,8 +211,8 @@ class Editor(Reader):
         可立即在 PyMuPDF 中使用。有一个功能可以将注释和字段（！！！）“烘焙”到 PDF 中 - 这意味着它将这些项目转换为正常的页面内容。
         解释：https://github.com/pymupdf/PyMuPDF/discussions/3356
         """
-        # source_file_pdf = fitz.mupdf.pdf_document_from_fz_document(self.doc)
-        # fitz.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
+        # source_file_pdf = pymupdf.mupdf.pdf_document_from_fz_document(self.doc)
+        # pymupdf.mupdf.pdf_bake_document(source_file_pdf, 1, 1)
         # 1.24.2 增加新功能
         self.doc.bake()
         pass

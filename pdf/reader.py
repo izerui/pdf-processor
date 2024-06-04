@@ -1,5 +1,5 @@
-from fitz import Document
-from fitz import Page, fitz
+from pymupdf import Document
+from pymupdf import Page, pymupdf
 
 from support import logger, logged, get_text_rotation_from_dir
 
@@ -15,7 +15,7 @@ class Reader(object):
         :param data: 单个pdf对象的内容字节数组
         :param is_convert: 单个pdf对象的内容字节数组
         """
-        self.doc = fitz.open("pdf", data)
+        self.doc = pymupdf.open("pdf", data)
         # 如果doc不是pdf或者强制进行二次转换
         if is_convert or not self.doc.is_pdf:
             self.doc = self.convert_doc(self.doc)
@@ -49,7 +49,7 @@ class Reader(object):
 
             # 将原pdf重新转换下，保证注释可见
             # 问题fixed: https://pymupdf.readthedocs.io/en/latest/page.html#f6
-            convert_pdf = fitz.open('pdf', document.convert_to_pdf())
+            convert_pdf = pymupdf.open('pdf', document.convert_to_pdf())
             # 还原转换前的旋转角度
             for index, page in enumerate(document):
                 page.set_rotation(rotations[index])
