@@ -92,6 +92,11 @@ class Item(BaseModel):
     # 传入的原始pdf文件对象列表
     files: List[File]
 
+    header_show: str = Field(
+        None, title='是否显示头部区域布局',
+        examples=['true', 'false']
+    )
+
     header_model: str = Field(
         None, title='头部区域表单模版',
         examples=['Header331', 'Header333', 'Header221', 'Header222', 'Header333', 'Header441']
