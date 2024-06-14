@@ -1,5 +1,6 @@
 import concurrent
 import os
+import shutil
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -485,6 +486,26 @@ class Processor(object):
                 item_doc.close()
         return target_doc
 
+    @logged(desc='压缩合并多个item文档到一个结果文档')
+    def merge_and_compress_docs_by_path(self, item_doc_paths: list[str], is_item_doc_close: bool = True,
+                                item_call: Function = None) -> Document:
+        """
+        合并多个文档并压缩
+        :param item_doc_paths: 多个子文档的路径
+        :param is_item_doc_close: 是否关闭子文档
+        :return: 一个文档
+        """
+        target_doc = pymupdf.open()
+        for index, item_doc_path in enumerate(item_doc_paths):
+            # 每个item生成独立的document，然后插入到target中
+            item_doc = pymupdf.open(item_doc_path)
+            target_doc.insert_pdf(docsrc=item_doc)
+            if item_call:
+                item_call(index, item_doc)
+            if is_item_doc_close:
+                item_doc.close()
+        return target_doc
+
     @logged(desc='通过多个items处理成一个结果文档')
     def generate_from_items_without_close(self, items: list[Item], url_datas: dict,
                                           item_callback: Function = None) -> Document:
@@ -497,9 +518,10 @@ class Processor(object):
         """
         s_time = int(time.perf_counter() * 1000)
         file_count = 0
-
+        # 保存临时文件目录
+        tmp_file_path = tempfile.mkdtemp()
         # 合并后的item最终文档集合
-        item_docs = []
+        item_doc_paths = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
             for index, item in enumerate(items):
@@ -517,11 +539,16 @@ class Processor(object):
                     logger.exception(exception)
                     raise exception
                 else:
-                    item_docs.append(future.result())
+                    doc = future.result()
+                    item_tmp_doc_path = os.path.join(tmp_file_path, f'item_{int(time.perf_counter() * 1000)}.pdf')
+                    doc.ez_save(item_tmp_doc_path)
+                    item_doc_paths.append(item_tmp_doc_path)
         logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
         # header_doc.close()
-        target_doc = self.merge_and_compress_docs(item_docs)
+        target_doc = self.merge_and_compress_docs_by_path(item_doc_paths)
+        if tmp_file_path:
+            shutil.rmtree(tmp_file_path)
         return target_doc
 
     def bake_document(self, doc: Document) -> None:
