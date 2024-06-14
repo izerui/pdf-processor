@@ -542,6 +542,7 @@ class Processor(object):
                     doc = future.result()
                     item_tmp_doc_path = os.path.join(tmp_file_path, f'item_{int(time.perf_counter() * 1000)}.pdf')
                     doc.ez_save(item_tmp_doc_path)
+                    doc.close()
                     item_doc_paths.append(item_tmp_doc_path)
         logger.info(
             f'=======================================> 【{file_count}个pdf文件处理完毕】 耗时: {int(time.perf_counter() * 1000) - s_time}/ms <=======================================')
