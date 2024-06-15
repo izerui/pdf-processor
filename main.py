@@ -153,8 +153,9 @@ def callback_from_urls(callback_items: CallbackItems):
                 pass
 
         def async_post_process(url, data):
+            logger.info(f'【进度通知】{repr(data)}')
             if url:
-                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+                httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
         def async_generate_and_callback(callback_items: CallbackItems):
             """
