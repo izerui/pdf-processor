@@ -379,6 +379,7 @@ class Processor(object):
 
         # 对象流提供额外的压缩效果 https://github.com/pymupdf/PyMuPDF/discussions/3383
         try:
+            logger.info(f'【压缩转换doc文件到字节数组】')
             pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
             return pdf_bytes
         except BaseException as err:
