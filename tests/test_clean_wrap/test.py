@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import pymupdf
 
@@ -66,3 +67,7 @@ def test():
     import webbrowser
     browser = webbrowser.get('chrome')
     browser.open(f'file:///{os.path.realpath("x.pdf")}')
+
+def test003():
+    fff = tempfile.mkdtemp()
+    print(fff)
