@@ -383,6 +383,7 @@ class Processor(object):
             return pdf_bytes
         except BaseException as err:
             logger.exception(err)
+            raise err
 
     def download_urls_from_items(self, items: list[Item]):
         """
