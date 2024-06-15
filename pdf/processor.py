@@ -381,6 +381,8 @@ class Processor(object):
         try:
             logger.info(f'【压缩转换doc文件到字节数组】')
             pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
+            if auto_close:
+                doc.close()
             return pdf_bytes
         except BaseException as err:
             logger.exception(err)
