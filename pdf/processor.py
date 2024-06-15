@@ -12,7 +12,7 @@ from tqdm import tqdm
 from model import Item, File
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, \
-    get_text_rotation_from_dir
+    get_text_rotation_from_dir, read_temp_file_instant
 
 # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
 # 其他字体下载: http://www.ae-sys.com/China/Fonts/
@@ -371,16 +371,13 @@ class Processor(object):
 
         # https://pymupdf.readthedocs.io/en/latest/document.html#Document.save
         def write_file_path(filepath: str):
-            doc.save(filepath, garbage=4, deflate=True)
-            if auto_close:
-                doc.close()
-
-        # pdf_bytes = read_temp_file_instant(write_file_path)
+            doc.save(filepath, garbage=4, deflate=True, use_objstms=1)
 
         # 对象流提供额外的压缩效果 https://github.com/pymupdf/PyMuPDF/discussions/3383
         try:
             logger.info(f'【压缩转换doc文件到字节数组】')
-            pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
+            # pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
+            pdf_bytes = read_temp_file_instant(write_file_path)
             if auto_close:
                 doc.close()
             return pdf_bytes
