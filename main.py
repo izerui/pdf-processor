@@ -169,7 +169,7 @@ def callback_from_urls(callback_items: CallbackItems):
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
-                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                                      timeout=Timeout(timeout=300.0, connect=10.0))
                 if response.is_success:
                     logger.info(f'【上传pdf返回结果】: {response.content}')
 
