@@ -475,15 +475,19 @@ class Processor(object):
         :param is_item_doc_close: 是否关闭子文档
         :return: 一个文档
         """
-        target_doc = pymupdf.open()
-        for index, item_doc in enumerate(item_docs):
-            # 每个item生成独立的document，然后插入到target中
-            target_doc.insert_pdf(docsrc=item_doc)
-            if item_call:
-                item_call(index, item_doc)
-            if is_item_doc_close:
-                item_doc.close()
-        return target_doc
+        try:
+            target_doc = pymupdf.open()
+            for index, item_doc in enumerate(item_docs):
+                # 每个item生成独立的document，然后插入到target中
+                target_doc.insert_pdf(docsrc=item_doc)
+                if item_call:
+                    item_call(index, item_doc)
+                if is_item_doc_close:
+                    item_doc.close()
+            return target_doc
+        except BaseException as exception:
+            logger.exception(exception)
+            raise exception
 
     @logged(desc='通过多个items处理成一个结果文档')
     def generate_from_items_without_close(self, items: list[Item], url_datas: dict,
