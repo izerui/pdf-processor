@@ -378,8 +378,11 @@ class Processor(object):
         # pdf_bytes = read_temp_file_instant(write_file_path)
 
         # 对象流提供额外的压缩效果 https://github.com/pymupdf/PyMuPDF/discussions/3383
-        pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
-        return pdf_bytes
+        try:
+            pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
+            return pdf_bytes
+        except BaseException as err:
+            logger.exception(err)
 
     def download_urls_from_items(self, items: list[Item]):
         """
