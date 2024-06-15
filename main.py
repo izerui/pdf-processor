@@ -103,7 +103,7 @@ def merge_from_urls(callback_urls: CallbackUrls):
 
         def async_post_process(url, data):
             if url:
-                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+                httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
         def async_merge_and_callback(callback_urls: CallbackUrls):
             """
@@ -117,7 +117,7 @@ def merge_from_urls(callback_urls: CallbackUrls):
                 data = {'request_id': callback_urls.request_id, 'total': len(callback_urls.urls)}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
                 response = httpx.post(callback_urls.callback_url, files=files, data=data,
-                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                                      timeout=Timeout(timeout=60.0, connect=30.0))
                 if response.is_success:
                     logger.info(f'【上传pdf返回结果】: {response.content}')
 
@@ -125,7 +125,7 @@ def merge_from_urls(callback_urls: CallbackUrls):
                 logger.exception(err)
                 data = {'request_id': callback_urls.request_id, 'total': len(callback_urls.items),
                         'err_msg': repr(err)}
-                httpx.post(callback_urls.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                httpx.post(callback_urls.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
         thread = threading.Thread(target=async_merge_and_callback, args=(callback_urls,))
@@ -179,7 +179,7 @@ def callback_from_urls(callback_items: CallbackItems):
                 logger.exception(err)
                 data = {'request_id': callback_items.request_id, 'total': len(callback_items.items),
                         'err_msg': repr(err)}
-                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
         thread = threading.Thread(target=async_generate_and_callback, args=(callback_items,))
@@ -212,7 +212,7 @@ def callback_from_urls(callback_file: CallbackFile):
 
         def async_post_process(url, data):
             if url:
-                httpx.post(url, json=data, timeout=Timeout(timeout=30.0, connect=10.0))
+                httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
         def async_generate_and_callback(callback_items: CallbackItems):
             """
@@ -226,14 +226,14 @@ def callback_from_urls(callback_file: CallbackFile):
                 data = {'request_id': callback_items.request_id}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
                 response = httpx.post(callback_items.callback_url, files=files, data=data,
-                                      timeout=Timeout(timeout=60.0, connect=10.0))
+                                      timeout=Timeout(timeout=60.0, connect=30.0))
                 if response.is_success:
                     logger.info(f'【上传单个处理的原pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
                 data = {'request_id': callback_items.request_id, 'err_msg': repr(err)}
-                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=10.0))
+                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
         thread = threading.Thread(target=async_generate_and_callback, args=(callback_file,))
