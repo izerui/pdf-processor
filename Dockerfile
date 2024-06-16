@@ -9,7 +9,7 @@ FROM python:3.10.14-alpine
 
 WORKDIR /data
 
-RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple/
+RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
 RUN pip install PyMuPDF==1.24.5 qrcode fastapi[all] uvicorn[standard]
 RUN pip install fonttools
 RUN pip install tqdm
