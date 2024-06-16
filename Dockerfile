@@ -10,13 +10,16 @@ FROM bitnami/python:3.10-debian-12
 WORKDIR /data
 
 RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
-RUN pip install PyMuPDF==1.24.5 qrcode fastapi[all] uvicorn[standard]==0.29.0
-RUN pip install fonttools
-RUN pip install tqdm
-RUN pip install qiniu
-RUN pip install psutil
-RUN pip install Pillow
-RUN pip install prettytable
+RUN pip install PyMuPDF==1.24.5
+RUN pip install fastapi[all]==0.110.0
+RUN pip install qrcode==7.4.2
+RUN pip install uvicorn[standard]==0.29.0
+RUN pip install fonttools==4.50.0
+RUN pip install tqdm==4.66.2
+RUN pip install qiniu==7.13.1
+RUN pip install psutil==5.9.8
+RUN pip install Pillow==10.2.0
+RUN pip install prettytable==3.10.0
 
 COPY *.py ./
 COPY ./model/ ./model/
