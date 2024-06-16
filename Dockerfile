@@ -1,4 +1,4 @@
-FROM python:3.10.14-alpine3.20
+FROM python:3.10.14-alpine
 
 #RUN export https_proxy=http://192.168.1.39:7890 http_proxy=http://192.168.1.39:7890 all_proxy=socks5://192.168.1.39:7890
 #RUN apt update
