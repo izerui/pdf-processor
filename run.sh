@@ -1,1 +1,1 @@
-uvicorn main:app --host 127.0.0.1 --timeout-keep-alive 60 --workers 16
+uvicorn main:app --host 0.0.0.0 --timeout-keep-alive 60 --workers 8

@@ -10,7 +10,7 @@ FROM bitnami/python:3.10-debian-12
 WORKDIR /data
 
 RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
-RUN pip install PyMuPDF==1.24.5 qrcode fastapi[all] uvicorn[standard]
+RUN pip install PyMuPDF==1.24.5 qrcode fastapi[all] uvicorn[standard]==0.29.0
 RUN pip install fonttools
 RUN pip install tqdm
 RUN pip install qiniu

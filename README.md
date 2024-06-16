@@ -3,12 +3,19 @@
 
 第三方库对比: https://dothinking.github.io/2021-01-02-Python%E5%A4%84%E7%90%86PDF%E7%9A%84%E7%AC%AC%E4%B8%89%E6%96%B9%E5%BA%93%E5%AF%B9%E6%AF%94/
 
+1. 初始化 python 虚拟环境: `python3 -m venv pdf-processor/venv`
+2. 并切换到当前环境 `cd pdf-processor && source ./venv/bin/activate`, windows 下自行google。
+3. 安装依赖 `pip install -r requirements.txt`
+4. 启动应用: `uvicorn main:app --host 0.0.0.0 --timeout-keep-alive 60 --workers 8`
+
+依赖管理:
 ```
 # 安装依赖
 pip install -r requirements.txt
 # 生成依赖描述文件
 pip freeze > requirements.txt
 ```
+
 
 
 流程图: 
