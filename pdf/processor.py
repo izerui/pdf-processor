@@ -66,7 +66,9 @@ class Processor(object):
         :return:
         """
         try:
-            header_doc = self.generate_header_doc_without_close(item)
+            header_doc = None
+            if item.header_show and item.header_show == 'true':
+                header_doc = self.generate_header_doc_without_close(item)
             target_item_doc = pymupdf.open()
             for file in item.files:
 
@@ -93,7 +95,8 @@ class Processor(object):
                 # 将源文件页面的注释原样copy到target_item_doc中
                 # self.wrap_target_doc_with_annot(rotations, editor.generate_annot_doc_without_close(), target_item_doc)
                 # self.wrap_target_doc_with_source_annots(rotations, source_file_doc, target_item_doc)
-            header_doc.close()
+            if header_doc:
+                header_doc.close()
             if item_callback:
                 item_callback(index, item, target_item_doc, None)
             return target_item_doc
@@ -174,6 +177,10 @@ class Processor(object):
         :param target_doc: 目标文件
         :return:
         """
+
+        if not header_doc:
+            target_doc.insert_pdf(docsrc=source_file_doc)
+            return
 
         for p_index, source_page in enumerate(source_file_doc):
             # pymupdf.Matrix()
