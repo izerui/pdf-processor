@@ -9,7 +9,7 @@ FROM bitnami/python:3.10-debian-12
 
 WORKDIR /data
 
-RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple/
+RUN pip config set global.index-url https://mirrors.cloud.tencent.com/pypi/simple/
 RUN pip install PyMuPDF==1.24.5
 RUN pip install fastapi[all]==0.110.0
 RUN pip install qrcode==7.4.2
