@@ -19,6 +19,7 @@ class Reader(object):
         # 如果doc不是pdf或者强制进行二次转换
         if is_convert or not self.doc.is_pdf:
             self.doc = self.convert_doc(self.doc)
+        pass
 
     def get_doc_without_close(self) -> Document:
         """

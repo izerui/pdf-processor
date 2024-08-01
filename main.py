@@ -3,8 +3,8 @@ import threading
 import time
 from typing import List
 
-import pymupdf
 import httpx
+import pymupdf
 import uvicorn
 from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
@@ -12,7 +12,7 @@ from httpx import Timeout
 
 from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile, CallbackUrls
 from pdf import Reader, Processor
-from support import logger, logged, QiniuClient
+from support import logger, logged, QiniuClient, get_url_content_retry
 
 app = FastAPI(
     title='pdf生成、合并服务',
@@ -38,6 +38,24 @@ async def file_url(file: UploadFile):
     return Response(content=rest['url'], media_type="text/html")
 
 
+@logged(desc='接收url转pdf')
+@app.post('/convert/from-url', summary='接收url转成pdf文档')
+def generate_from_urls(file_url: str):
+    try:
+        data = get_url_content_retry(file_url)
+        doc = pymupdf.open("pdf", data)
+        if not doc.is_pdf:
+            doc = pymupdf.open('pdf', doc.convert_to_pdf())
+        pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1)
+        doc.close()
+        headers = {"content-type": "application/pdf",
+                   "content-disposition": f'attachment;filename=convert-{int(time.perf_counter() * 1000)}.pdf'}
+        return Response(content=pdf_bytes, headers=headers, media_type="application/pdf")
+    except Exception as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
 @app.post('/rotations/from-urls', summary='通过文件url列表获取旋转角度', response_class=ORJSONResponse)
 def rotate_from_urls(files: List[SimpleFile]):
     try:
@@ -55,6 +73,7 @@ def rotate_from_urls(files: List[SimpleFile]):
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
 
+
 @logged(desc='接收多个文档url，合并成一个文档')
 @app.post('/merge/from-urls', summary='接收多个文档url，合并成一个文档')
 def generate_from_urls(file_urls: List[str]):
@@ -68,6 +87,7 @@ def generate_from_urls(file_urls: List[str]):
     except Exception as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
+
 
 @logged(desc='处理多个pdf文件,并返回结果文档')
 @app.post('/generate/from-urls', summary='处理多个pdf文件,并返回结果文档')
@@ -130,10 +150,12 @@ def merge_from_urls(callback_urls: CallbackUrls):
 
         thread = threading.Thread(target=async_merge_and_callback, args=(callback_urls,))
         thread.start()
-        return Response(content=f'已经开始合并,待合并完成后回调地址: {callback_urls.callback_url}', media_type="text/html")
+        return Response(content=f'已经开始合并,待合并完成后回调地址: {callback_urls.callback_url}',
+                        media_type="text/html")
     except Exception as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
+
 
 @logged(desc='处理多个pdf文件,并回调通知')
 @app.post('/generate/async-callback-from-urls', summary='处理多个pdf文件,并回调通知')
