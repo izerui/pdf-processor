@@ -557,5 +557,7 @@ class Processor(object):
         docs = []
         for url in urls:
             doc = pymupdf.open("pdf", url_datas[url])
+            if not doc.is_pdf:
+                doc = pymupdf.open('pdf', doc.convert_to_pdf())
             docs.append(doc)
         return self.merge_and_compress_docs(docs, is_item_doc_close=True, item_call=item_call)
