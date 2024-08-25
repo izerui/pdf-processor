@@ -1,7 +1,7 @@
 from pymupdf import Document
 from pymupdf import Page, pymupdf
 
-from support import logger, logged, get_text_rotation_from_dir
+from support import logger, logged, get_page_rect_unrotate
 
 
 class Reader(object):
@@ -100,8 +100,10 @@ class Reader(object):
         #     旋转矩阵:{page.rotation_matrix}
         #     变换矩阵:{page.transformation_matrix}''')
 
+        origin_page_rect_unrotate = get_page_rect_unrotate(page)
+
         # 原页面是否是横版
-        is_horizontal: bool = page.cropbox.width > page.cropbox.height
+        is_horizontal: bool = origin_page_rect_unrotate.width > origin_page_rect_unrotate.height
         rotate_for_cropbox = 0
         # 如果原始页面是横版，不做90转换, 如果原始页面是竖版，需要旋转90度的奇数倍数
         if not is_horizontal:

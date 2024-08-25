@@ -5,7 +5,7 @@ import pymupdf
 from pymupdf import Page, Document
 from pymupdf.utils import Shape
 
-from support import get_url_content_retry
+from support import get_url_content_retry, get_page_rect_unrotate
 
 
 @unittest.expectedFailure
@@ -107,8 +107,9 @@ class TestTable(unittest.TestCase):
             with pymupdf.open(file_path) as doc:
                 for index, page in enumerate(doc):
                     page: Page = page
+                    page_unrotate_rect = get_page_rect_unrotate(page)
                     # 遮罩页, 使用源页面未旋转前的矩形区域
-                    mark_page: Page = mark_pdf.new_page(width=page.cropbox.width, height=page.cropbox.height)
+                    mark_page: Page = mark_pdf.new_page(width=page_unrotate_rect.width, height=page_unrotate_rect.height)
                     # 页面传递进来的缩放倍数,这里使用的时候要进行反向缩放，才能适配原始页面的坐标系
                     zoom = 1
                     # 矩形的左上、右下坐标数组 [x0,y0,x1,y1]
@@ -162,7 +163,7 @@ class TestTable(unittest.TestCase):
                     # 合并前设置两个页面旋转为0，保证页面一致
                     page.set_rotation(0)
                     mark_page.show_pdf_page(rect=page.cropbox, src=doc, pno=index, keep_proportion=True, rotate=0,
-                                            clip=mark_page.cropbox)
+                                            clip=mark_page.rect)
                     # 合并后页面恢复原来的旋转角度
                     page.set_rotation(rotation)
                     mark_page.set_rotation(page.rotation)

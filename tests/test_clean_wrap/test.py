@@ -3,6 +3,8 @@ import tempfile
 
 import pymupdf
 
+from support import get_page_rect_unrotate
+
 
 def bake_document(doc):
     # source_file_pdf = pymupdf.mupdf.pdf_document_from_fz_document(doc)
@@ -41,6 +43,7 @@ def test():
         new_doc.insert_pdf(docsrc=doc)
 
         page = doc[0]
+        page_unrotate_rect = get_page_rect_unrotate(page)
         print('')
         print(doc.name)
         print(doc.xref_object(page.xref))
@@ -60,7 +63,7 @@ def test():
 
         bake_document(doc)
 
-        new_page = new_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+        new_page = new_doc.new_page(width=page_unrotate_rect.width, height=page_unrotate_rect.height)
         new_page.show_pdf_page(new_page.cropbox, doc, 0)
         doc.close()
     new_doc.ez_save('x.pdf')

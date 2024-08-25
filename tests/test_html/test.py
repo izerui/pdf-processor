@@ -3,7 +3,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 import pymupdf
 
-from support import a4_width, a4_height, logged, header_height
+from support import a4_width, a4_height, logged, header_height, get_page_rect_unrotate
 
 
 def test_html_to_pdf():
@@ -15,7 +15,7 @@ def test_html_to_pdf():
         content = f.read()
         story = pymupdf.Story(html=content, user_css=None, archive=pymupdf.Archive("."))
         page.insert_htmlbox(
-            rect=page.cropbox,
+            rect=get_page_rect_unrotate(page),
             text=story
         )
     print(f'耗时: {int(time.perf_counter() * 1000) - s_time}/ms')

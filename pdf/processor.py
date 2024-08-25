@@ -6,13 +6,13 @@ from concurrent.futures import ThreadPoolExecutor
 from symtable import Function
 
 import pymupdf
-from pymupdf import Document, TEXT_ALIGN_LEFT
+from pymupdf import Document, TEXT_ALIGN_LEFT, Page
 from tqdm import tqdm
 
 from model import Item, File
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, \
-    get_text_rotation_from_dir, read_temp_file_instant
+    get_text_rotation_from_dir, get_page_rect_unrotate
 
 # ms宋体下载: https://www.fontsaddict.com/font/ms-song.html
 # 其他字体下载: http://www.ae-sys.com/China/Fonts/
@@ -184,10 +184,11 @@ class Processor(object):
 
         for p_index, source_page in enumerate(source_file_doc):
             # pymupdf.Matrix()
+            # 有时会遇到 cropbox 和 rect 不一致的问题。cropbox 是 PDF 页面上显示的区域，而 rect 是页面的实际尺寸。故下面的注释代码只是参考
             # bottom_rect = source_page.cropbox.transform(page.derotation_matrix)
             if is_top:
                 # 所以需要在二次转化前记录之前每页的旋转角度，并转换后再设置进去, 这里不可删除
-                new_page = target_doc.new_page(width=a4_width, height=a4_height)
+                new_page: Page = target_doc.new_page(width=a4_width, height=a4_height)
                 # 顶部header区域
                 r1 = pymupdf.Rect(0, 0, a4_width, header_height)
                 # 下部区域
@@ -201,7 +202,7 @@ class Processor(object):
                 # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
                 # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
                 new_page.show_pdf_page(r2, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
-                                       clip=source_page.cropbox)
+                                       clip=get_page_rect_unrotate(source_page))
                 # 还原旋转角度
                 source_page.set_rotation(_source_page_rotation)
             else:
@@ -218,7 +219,7 @@ class Processor(object):
                 # 这里将rotate按逆时针旋转指定度数,暂时有点疑惑(理论上如果是竖图,以后侧为底,-90度翻转为正确的横图)
                 # 参考： https://github.com/pymupdf/PyMuPDF/discussions/2384
                 new_page.show_pdf_page(r1, source_file_doc, p_index, rotate=-rotations[p_index], keep_proportion=True,
-                                       clip=source_page.cropbox)
+                                       clip=get_page_rect_unrotate(source_page))
                 # 还原旋转角度
                 source_page.set_rotation(_source_page_rotation)
 
@@ -239,7 +240,7 @@ class Processor(object):
             _annot_page_rotation = annot_page.rotation
             annot_page.set_rotation(0)
             target_page.show_pdf_page(r2, annot_doc, p_index, rotate=rotations[p_index], keep_proportion=True,
-                                      clip=annot_page.cropbox)
+                                      clip=annot_page.rect)
             annot_page.set_rotation(_annot_page_rotation)
 
     @logged(desc='复制源页面的注释内容到bottom区域')
@@ -252,7 +253,6 @@ class Processor(object):
             pymupdf.TOOLS.set_small_glyph_heights(True)
             # 下部区域
             r2 = pymupdf.Rect(0, header_height, a4_width, a4_height)
-
             for index, page in enumerate(source_file_doc):
                 # 这里一定要先将原始页面角度设置为0，否则注释的字体方向不是以0为参考基准，因为之前合并到bottom区域的时候都是先设置原始页面为0再复制过去的
                 _rotation = page.rotation
@@ -265,8 +265,8 @@ class Processor(object):
                 new_page = target_item_doc[index]
 
                 # 计算缩放因子(针对target_item_doc的底部区域)
-                h_scale_factor = r2.width / page.cropbox.width
-                v_scale_factor = r2.height / page.cropbox.height
+                h_scale_factor = r2.width / page.rect.width
+                v_scale_factor = r2.height / page.rect.height
                 scale_factor = min(h_scale_factor, v_scale_factor)
                 # 以宽度为准进行等比例缩放
                 is_h_scale_factor = h_scale_factor == scale_factor
@@ -280,9 +280,9 @@ class Processor(object):
                 x_offset = 0
                 y_offset = 0
                 if not is_h_scale_factor:
-                    x_offset = (r2.width - scale_factor * page.cropbox.width) / 2
+                    x_offset = (r2.width - scale_factor * page.rect.width) / 2
                 else:
-                    y_offset = (r2.height - scale_factor * page.cropbox.height) / 2
+                    y_offset = (r2.height - scale_factor * page.rect.height) / 2
 
                 # 测试用，将原图贴过来
                 # new_page.show_pdf_page(r2, source_file_doc, index, rotate=rotations[index], keep_proportion=True,
@@ -302,7 +302,7 @@ class Processor(object):
                                 line_wmode = line['wmode']
                                 line_rotation = get_text_rotation_from_dir(line['dir'])
                                 line_rect = pymupdf.Rect(line['bbox'][0], line['bbox'][1], line['bbox'][2],
-                                                      line['bbox'][3])
+                                                         line['bbox'][3])
                                 # line_rect = line_rect.transform(pymupdf.Matrix(1, 0, 0, 1, 0, 0).prerotate(90))
                                 for span in line['spans']:
                                     span_size = span['size']
@@ -333,9 +333,9 @@ class Processor(object):
 
                                     # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
                                     r = pymupdf.Rect(r[0] * scale_factor + x_offset - x0_outer_extend,
-                                                  r[1] * scale_factor + y_offset - y0_outer_extend + header_height,
-                                                  r[2] * scale_factor + x_offset + x1_outer_extend,
-                                                  r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
+                                                     r[1] * scale_factor + y_offset - y0_outer_extend + header_height,
+                                                     r[2] * scale_factor + x_offset + x1_outer_extend,
+                                                     r[3] * scale_factor + y_offset + y1_outer_extend + header_height)
 
                                     # r = r.transform(pymupdf.Matrix(1, 0, 0, 1, 0, 0).prerotate(180))
                                     # print('line rotation: ', line_rotation)
@@ -353,9 +353,9 @@ class Processor(object):
                         r = annot.rect
                         # 源注释的span区域在新页面的区域位置，除了偏移量，向外延伸，还要考虑header头区域的高度
                         r = pymupdf.Rect(r[0] * scale_factor + x_offset,
-                                      r[1] * scale_factor + y_offset + header_height,
-                                      r[2] * scale_factor + x_offset,
-                                      r[3] * scale_factor + y_offset + header_height)
+                                         r[1] * scale_factor + y_offset + header_height,
+                                         r[2] * scale_factor + x_offset,
+                                         r[3] * scale_factor + y_offset + header_height)
                         # 跟随页面旋转角度进行旋转，否则图片方向不对
                         new_page.insert_image(r, pixmap=annot_pixmap, keep_proportion=True, alpha=0, xref=0,
                                               rotate=rotations[index])

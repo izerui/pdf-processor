@@ -9,6 +9,7 @@ from functools import wraps
 
 import httpx
 import psutil
+import pymupdf
 from PIL import ImageColor
 from pymupdf import TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
 
@@ -150,3 +151,13 @@ def get_text_rotation_from_dir(dir_tuple: tuple):
     if rotation < 0:
         rotation = rotation + 360
     return rotation
+
+
+def get_page_rect_unrotate(page):
+    """
+    获取页面未旋转前的区域, 不推荐使用page.cropbox 因为: 可能旋转前和旋转后的长宽不一致，统一使用实际尺寸作为w和h来计算。
+    """
+    rect = page.rect
+    rotation = page.rotation
+    unrotate_rect = rect.transform(pymupdf.Matrix(1, 0, 0, 1, 0, 0).prerotate(-rotation))
+    return unrotate_rect

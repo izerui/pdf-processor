@@ -12,7 +12,8 @@ from datetime import datetime
 import httpx
 from pymupdf import pymupdf, Document
 
-from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height
+from support import get_url_content_retry, get_text_rotation_from_dir, a4_width, a4_height, header_height, \
+    get_page_rect_unrotate
 
 
 def random_wait_return(index, item):
@@ -130,24 +131,26 @@ class TestTable(unittest.TestCase):
         doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             page.clean_contents()
+
+            page_unrotate_rect = get_page_rect_unrotate(page)
             # print(doc.xref_object(page.xref))
 
             # 初始化一张A4纸张大小的新页面
             new_page = target_doc.new_page(width=a4_width, height=a4_height)
 
             # 计算缩放因子
-            scale_factor = min(a4_width / page.cropbox.width, a4_height / page.cropbox.height)
+            scale_factor = min(a4_width / page_unrotate_rect.width, a4_height / page_unrotate_rect.height)
 
             new_page.set_rotation(page.rotation)
             # 新的底部区域的自身rect大小(即剪切掉header区域后，剩余的底部区域的整个rect)
             bottom_self_rect = pymupdf.Rect(0, 0, a4_width, a4_height - header_height)
-            new_height = a4_width * page.cropbox.height / page.cropbox.width
-            bottom_scale_matrix = pymupdf.Matrix(1, 0, 0, new_height / page.cropbox.height, 0, 0)
+            new_height = a4_width * page_unrotate_rect.height / page_unrotate_rect.width
+            bottom_scale_matrix = pymupdf.Matrix(1, 0, 0, new_height / page_unrotate_rect.height, 0, 0)
 
             # 底部区域在整个A4纸张的新页面的rect区域
             # bottom_rect = pymupdf.Rect(0, header_height, a4_width, a4_height)
             new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
-                                   clip=page.cropbox)
+                                   clip=page_unrotate_rect)
             for annot_index, annot in enumerate(page.annots()):
                 # if annot.xref != 25:
                 #     continue
@@ -294,13 +297,14 @@ class TestTable(unittest.TestCase):
         doc = pymupdf.open('pdf', bytes)
         for index, page in enumerate(doc):
             page.clean_contents()
+            page_unrotate_rect = get_page_rect_unrotate(page)
             _page_rotation = page.rotation
             page.set_rotation(0)
             # 初始化一张A4纸张大小的新页面
-            new_page = target_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+            new_page = target_doc.new_page(width=page_unrotate_rect.width, height=page_unrotate_rect.height)
 
             new_page.show_pdf_page(new_page.cropbox, doc, index, rotate=page.rotation, keep_proportion=True,
-                                   clip=page.cropbox)
+                                   clip=page_unrotate_rect)
 
             for annot_index, annot in enumerate(page.annots(types=[pymupdf.mupdf.PDF_ANNOT_FREE_TEXT])):
                 if annot.type[1] == 'FreeText':

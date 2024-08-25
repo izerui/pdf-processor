@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from pymupdf import Shape, pymupdf
 
-from support import get_url_content_retry, read_bytes_from_file
+from support import get_url_content_retry, read_bytes_from_file, get_page_rect_unrotate
 
 
 # 测试主入口
@@ -52,6 +52,7 @@ class TestTable(unittest.TestCase):
         # doc = pymupdf.open('pdf', doc.convert_to_pdf())
         for page in doc:
             page.clean_contents()
+            page_unrotate_rect = get_page_rect_unrotate(page)
             mark_img_url = 'https://tfile.yj2025.com/360826a9-27d4-4121-8ede-b3938a2ed6be.jpg'
             mark_img_bytes = get_url_content_retry(mark_img_url)
             img_pixmap = pymupdf.Pixmap(mark_img_bytes)
@@ -68,11 +69,11 @@ class TestTable(unittest.TestCase):
             # 跟随页面旋转角度进行旋转，否则图片方向不对
             page.insert_image(rect, pixmap=img_pixmap, keep_proportion=False, alpha=0, xref=0, rotate=rotation)
 
-            new_page = target.new_page(width=page.cropbox.width, height=page.cropbox.height)
+            new_page = target.new_page(width=page_unrotate_rect.width, height=page_unrotate_rect.height)
 
             page.set_rotation(0)
             new_page.show_pdf_page(page.cropbox, doc, keep_proportion=True, rotate=rotation,
-                                   clip=new_page.cropbox)
+                                   clip=new_page.rect) # 使用 new_page 的 区域
             # 还原原来的旋转角度
             page.set_rotation(0)
 
@@ -118,10 +119,10 @@ class TestTable(unittest.TestCase):
             )
             shape.commit()
 
-            new_page = target.new_page(width=page.cropbox.width, height=page.cropbox.height)
+            new_page = target.new_page(width=page.rect.width, height=page.rect.height)
 
             page.set_rotation(0)
-            new_page.show_pdf_page(page.cropbox, doc, keep_proportion=True, rotate=rotation,
+            new_page.show_pdf_page(page.rect, doc, keep_proportion=True, rotate=rotation,
                                    clip=new_page.cropbox)
             # 还原原来的旋转角度
             page.set_rotation(0)

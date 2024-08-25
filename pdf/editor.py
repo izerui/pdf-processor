@@ -119,7 +119,7 @@ class Editor(Reader):
         for index, page in enumerate(self.doc):
             _page_rotation = page.rotation
             page.set_rotation(0)
-            new_page = annot_doc.new_page(width=page.cropbox.width, height=page.cropbox.height)
+            new_page = annot_doc.new_page(width=page.rect.width, height=page.rect.height)
             # 查找源页面注释
             annots = list(page.annots(types=[pymupdf.mupdf.PDF_ANNOT_FREE_TEXT]))
             if len(annots) < 0:
