@@ -53,7 +53,7 @@ class IHeader(object):
         )
         # page.draw_rect(get_rect(value_point, value_width, line_height), color=(1, 0, 0))
 
-    def generate_header_page(self):
+    def generate_header_page(self, header_padding_left):
         if self.item.qr_code:
             # 二维码: 左上角坐标 80、10、宽高统一180
             img: PilImage = qrcode.make(data=self.item.qr_code)
@@ -80,93 +80,114 @@ class IHeader(object):
 
 class Header331(IHeader):
 
-    def generate_header_page(self):
-        super().generate_header_page()
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
 
         # https://pymupdf.readthedocs.io/en/latest/page.html#Page.insert_font
         # page.insert_font(fontname=chn_fontname,
         #                  fontbuffer=font.buffer)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 270, 80, 320, 0)
-        self.insert_form_item(self.item.form_item4, 270, 80, 320, 1)
-        self.insert_form_item(self.item.form_item7, 270, 80, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 320, 0)
+        self.insert_form_item(self.item.form_item4, 270 + header_padding_left, 80, 320, 1)
+        self.insert_form_item(self.item.form_item7, 270 + header_padding_left, 80, 800, 2)
 
         # 第二列  + 410
-        self.insert_form_item(self.item.form_item2, 680, 80, 330, 0)
-        self.insert_form_item(self.item.form_item5, 680, 80, 330, 1)
+        self.insert_form_item(self.item.form_item2, 680 + header_padding_left, 80, 330, 0)
+        self.insert_form_item(self.item.form_item5, 680 + header_padding_left, 80, 330, 1)
 
         # 第三列  + 420
-        self.insert_form_item(self.item.form_item3, 1100, 80, 320, 0)
-        self.insert_form_item(self.item.form_item6, 1100, 80, 320, 1)
+        self.insert_form_item(self.item.form_item3, 1100 + header_padding_left, 80, 320, 0)
+        self.insert_form_item(self.item.form_item6, 1100 + header_padding_left, 80, 320, 1)
 
 
 class Header221(IHeader):
-    def generate_header_page(self):
-        super().generate_header_page()
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 270, 80, 600, 0)
-        self.insert_form_item(self.item.form_item3, 270, 80, 600, 1)
-        self.insert_form_item(self.item.form_item5, 270, 80, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 600, 0)
+        self.insert_form_item(self.item.form_item3, 270 + header_padding_left, 80, 600, 1)
+        self.insert_form_item(self.item.form_item5, 270 + header_padding_left, 80, 800, 2)
 
         # 第二列  + 710
-        self.insert_form_item(self.item.form_item2, 980, 80, 600, 0)
-        self.insert_form_item(self.item.form_item4, 980, 80, 600, 1)
+        self.insert_form_item(self.item.form_item2, 980 + header_padding_left, 80, 600, 0)
+        self.insert_form_item(self.item.form_item4, 980 + header_padding_left, 80, 600, 1)
 
 
 class Header222(IHeader):
-    def generate_header_page(self):
-        super().generate_header_page()
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 270, 80, 600, 0)
-        self.insert_form_item(self.item.form_item3, 270, 80, 600, 1)
-        self.insert_form_item(self.item.form_item5, 270, 80, 600, 2)
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 600, 0)
+        self.insert_form_item(self.item.form_item3, 270 + header_padding_left, 80, 600, 1)
+        self.insert_form_item(self.item.form_item5, 270 + header_padding_left, 80, 600, 2)
 
         # 第二列  + 710
-        self.insert_form_item(self.item.form_item2, 980, 80, 600, 0)
-        self.insert_form_item(self.item.form_item4, 980, 80, 600, 1)
-        self.insert_form_item(self.item.form_item6, 980, 80, 600, 2)
+        self.insert_form_item(self.item.form_item2, 980 + header_padding_left, 80, 600, 0)
+        self.insert_form_item(self.item.form_item4, 980 + header_padding_left, 80, 600, 1)
+        self.insert_form_item(self.item.form_item6, 980 + header_padding_left, 80, 600, 2)
 
 
 class Header333(IHeader):
-    def generate_header_page(self):
-        super().generate_header_page()
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 270, 80, 320, 0)
-        self.insert_form_item(self.item.form_item4, 270, 80, 320, 1)
-        self.insert_form_item(self.item.form_item7, 270, 80, 320, 2)
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 320, 0)
+        self.insert_form_item(self.item.form_item4, 270 + header_padding_left, 80, 320, 1)
+        self.insert_form_item(self.item.form_item7, 270 + header_padding_left, 80, 320, 2)
 
         # 第二列 + 410
-        self.insert_form_item(self.item.form_item2, 680, 80, 330, 0)
-        self.insert_form_item(self.item.form_item5, 680, 80, 330, 1)
-        self.insert_form_item(self.item.form_item8, 680, 80, 330, 2)
+        self.insert_form_item(self.item.form_item2, 680 + header_padding_left, 80, 330, 0)
+        self.insert_form_item(self.item.form_item5, 680 + header_padding_left, 80, 330, 1)
+        self.insert_form_item(self.item.form_item8, 680 + header_padding_left, 80, 330, 2)
 
         # 第三列 + 420
-        self.insert_form_item(self.item.form_item3, 1100, 80, 330, 0)
-        self.insert_form_item(self.item.form_item6, 1100, 80, 330, 1)
-        self.insert_form_item(self.item.form_item9, 1100, 80, 330, 2)
+        self.insert_form_item(self.item.form_item3, 1100 + header_padding_left, 80, 330, 0)
+        self.insert_form_item(self.item.form_item6, 1100 + header_padding_left, 80, 330, 1)
+        self.insert_form_item(self.item.form_item9, 1100 + header_padding_left, 80, 330, 2)
 
 
 class Header441(IHeader):
-    def generate_header_page(self):
-        super().generate_header_page()
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
 
         # 第一列
-        self.insert_form_item(self.item.form_item1, 270, 80, 240, 0)
-        self.insert_form_item(self.item.form_item5, 270, 80, 240, 1)
-        self.insert_form_item(self.item.form_item9, 270, 80, 800, 2)
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item5, 270 + header_padding_left, 80, 240, 1)
+        self.insert_form_item(self.item.form_item9, 270 + header_padding_left, 80, 800, 2)
 
         # 第二列 + 330
-        self.insert_form_item(self.item.form_item2, 600, 80, 240, 0)
-        self.insert_form_item(self.item.form_item6, 600, 80, 240, 1)
+        self.insert_form_item(self.item.form_item2, 600 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item6, 600 + header_padding_left, 80, 240, 1)
 
         # 第三列 + 320
-        self.insert_form_item(self.item.form_item3, 920, 80, 240, 0)
-        self.insert_form_item(self.item.form_item7, 920, 80, 240, 1)
+        self.insert_form_item(self.item.form_item3, 920 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item7, 920 + header_padding_left, 80, 240, 1)
 
         # 第四列 + 320
-        self.insert_form_item(self.item.form_item4, 1240, 80, 240, 0)
-        self.insert_form_item(self.item.form_item8, 1240, 80, 240, 1)
+        self.insert_form_item(self.item.form_item4, 1240 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item8, 1240 + header_padding_left, 80, 240, 1)
+
+class Header441(IHeader):
+    def generate_header_page(self, header_padding_left):
+        super().generate_header_page(header_padding_left)
+
+        # 第一列
+        self.insert_form_item(self.item.form_item1, 270 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item5, 270 + header_padding_left, 80, 240, 1)
+        self.insert_form_item(self.item.form_item9, 270 + header_padding_left, 80, 800, 2)
+
+        # 第二列 + 330
+        self.insert_form_item(self.item.form_item2, 600 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item6, 600 + header_padding_left, 80, 240, 1)
+
+        # 第三列 + 320
+        self.insert_form_item(self.item.form_item3, 920 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item7, 920 + header_padding_left, 80, 240, 1)
+
+        # 第四列 + 320
+        self.insert_form_item(self.item.form_item4, 1240 + header_padding_left, 80, 240, 0)
+        self.insert_form_item(self.item.form_item8, 1240 + header_padding_left, 80, 240, 1)

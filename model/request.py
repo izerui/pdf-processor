@@ -107,6 +107,10 @@ class Item(BaseModel):
         examples=['top', 'bottom']
     )
 
+    header_padding_left: int = Field(
+        default=0, title='头部区域距离左侧间隙,或者理解为右偏移量', examples=[0]
+    )
+
     # 序号
     item_no: str | None = Field(
         None, title='序号', examples=['29']
