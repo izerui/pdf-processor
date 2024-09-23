@@ -36,7 +36,7 @@ from support import a4_width, a4_height, header_height, logger, get_url_content_
 # arch_fonts = pymupdf.Archive(os.path.join(os.path.abspath(os.path.dirname(__file__)), 'fonts'))
 
 header_meta = __import__('pdf.header', globals(), locals(),
-                         ['IHeader', 'Header331', 'Header221', 'Header222', 'Header333', 'Header441'])
+                         ['IHeader', 'Header331', 'Header221', 'Header222', 'Header333', 'Header441', 'Header551'])
 
 
 class Processor(object):

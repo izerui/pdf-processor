@@ -99,7 +99,7 @@ class Item(BaseModel):
 
     header_model: str = Field(
         None, title='头部区域表单模版',
-        examples=['Header331', 'Header333', 'Header221', 'Header222', 'Header333', 'Header441']
+        examples=['Header331', 'Header333', 'Header221', 'Header222', 'Header333', 'Header441', 'Header551']
     )
 
     header_layout: str = Field(
@@ -151,6 +151,12 @@ class Item(BaseModel):
         None, title='表单项8'
     )
     form_item9: ItemRender | None = Field(
+        None, title='表单项9'
+    )
+    form_item10: ItemRender | None = Field(
+        None, title='表单项9'
+    )
+    form_item11: ItemRender | None = Field(
         None, title='表单项9'
     )
 
