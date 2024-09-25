@@ -460,7 +460,8 @@ class Processor(object):
         try:
             # doc.subset_fonts(verbose=True)
             # https://pymupdf.readthedocs.io/en/latest/tools.html#Tools.set_subset_fontnames
-            doc.subset_fonts()
+            doc.subset_fonts(fallback=True)
+            # doc.subset_fonts(fallback=True) # 支持拉丁字符，不过效率会慢.  use doc.subset_fonts(fallback=True) which will use the mechanism of the fontTools package.
 
             # 参考: https://github.com/pymupdf/PyMuPDF/discussions/3383
             # pdf = pymupdf._as_pdf_document(doc)  # access underlying PDF-specific level

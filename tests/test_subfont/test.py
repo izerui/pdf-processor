@@ -6,9 +6,10 @@ def test_subfont0():
     page = doc.new_page(width=1024, height=768)
     page.insert_htmlbox(
         rect=pymupdf.Rect(280, 50, 480, 100),
-        text=f'<span style="font-size:18px;font-weight:bold;word-break:break-all;font-family:\'helv\';">Α、Β、Γ、Δ、Ε、Ζ、Η、Θ、Ι、Κ、Λ、Μ、Ν、Ξ、Ο、Π、Ρ、Σ、Τ、Υ、Φ、Χ、Ψ、Ω。α、β、γ、δ、ε、ζ、η、θ、ι、κ、λ、μ、ν、ξ、ο、π、ρ、ς、τ、υ、φ、χ、ψ、ω。</span>'
+        text=f'<span style="font-size:18px;font-weight:bold;word-break:break-all;font-family:\'helv\';">Α、Β、Γ、Δ、Ε、Ζ、Η、Θ、Ι、Κ、Λ、Μ、Ν、Ξ、Ο、Π、Ρ、Σ、Τ、Υ、Φ、Χ、Ψ、Ω。α、β、γ、δ、ε、ζ、η、θ、ι、κ、λ、μ、ν、ξ、ο、π、ρ、ς、τ、υ、φ、χ、ψ、ω。</span>',
     )
-    doc.subset_fonts()
+    # doc.subset_fonts() # 有问题
+    doc.subset_fonts(fallback=True) # 没问题正常显示
     doc.ez_save('subseted.pdf')
 
 
