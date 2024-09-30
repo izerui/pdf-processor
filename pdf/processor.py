@@ -9,7 +9,7 @@ import pymupdf
 from pymupdf import Document, TEXT_ALIGN_LEFT, Page
 from tqdm import tqdm
 
-from model import Item, File
+from model import Item, File, ItemRender
 from pdf import Editor
 from support import a4_width, a4_height, header_height, logger, get_url_content_retry, logged, \
     get_text_rotation_from_dir, get_page_rect_unrotate
@@ -37,6 +37,8 @@ from support import a4_width, a4_height, header_height, logger, get_url_content_
 
 header_meta = __import__('pdf.header', globals(), locals(),
                          ['IHeader', 'Header331', 'Header221', 'Header222', 'Header333', 'Header441', 'Header551'])
+
+alphabeticals = ['Γ', 'Δ', 'Θ', 'Ξ', 'Π', 'Ψ', 'Ω', 'α', 'β', 'γ', 'δ', 'θ', 'λ', 'μ', 'π', 'ρ', 'φ', 'χ', 'ω']
 
 
 class Processor(object):
@@ -115,8 +117,8 @@ class Processor(object):
         """
         # 每个item对应的header头文档集合
         header_doc = pymupdf.open()
-        self._generate_header_page(item, header_doc)
-        header_doc = self.subset_doc_and_return_new_doc(header_doc)
+        contains_latin = self._generate_header_page(item, header_doc)
+        header_doc = self.subset_doc_and_return_new_doc(header_doc, contains_latin)
         return header_doc
 
     @logged(desc='生成多个header头信息pdf对象,暂时不用')
@@ -129,23 +131,37 @@ class Processor(object):
         # 每个item对应的header头文档集合
         header_doc = pymupdf.open()
         process_bar = tqdm(total=len(items), desc=f'生成header文档,共{len(items)}个页面.')
+        # 是否存在特殊拉丁字符
+        contains_latin = False
         for index, item in enumerate(items):
-            self._generate_header_page(item, header_doc)
+            _latin = self._generate_header_page(item, header_doc)
+            if _latin:
+                contains_latin = True
             process_bar.update(1)
-        header_doc = self.subset_doc_and_return_new_doc(header_doc)
+        header_doc = self.subset_doc_and_return_new_doc(header_doc, contains_latin)
         return header_doc
 
     def _generate_header_page(self, item: Item, header_doc: Document) -> None:
         """
         生成header头信息pdf对象
         :param item: 生成需要的当前header头信息
-        :return:
+        :return: 是否包含特殊的拉丁字符
         """
         # 通过名称动态加载类并执行
         header_class_meta = getattr(header_meta, item.header_model)
         header = header_class_meta(header_doc, item)
         header.generate_header_page(item.header_padding_left)
-        pass
+        item_attrs = vars(item)
+        # 交集
+        intersection = False
+        for attr in item_attrs:
+            if intersection:
+                break
+            item_value = item_attrs[attr]
+            if isinstance(item_value, ItemRender):
+                item_chars = list(item_value.value)
+                intersection = set(item_chars) & set(alphabeticals)
+        return True if intersection else False
 
     @logged(desc='处理单个文档加遮罩并返回处理后的源文档')
     def generate_source_bytes_from_file(self, file: File, url_datas: dict) -> bytes:
@@ -449,7 +465,7 @@ class Processor(object):
         return url_datas
 
     @logged(desc='压缩并返回新的文档')
-    def subset_doc_and_return_new_doc(self, doc: Document) -> Document:
+    def subset_doc_and_return_new_doc(self, doc: Document, contains_latin: bool = False) -> Document:
         """
         创建字体的子集，减少文档大小，前提必须在主线程中调用,否则会导致文件找不到异常
         参考：https://pymupdf.readthedocs.io/en/latest/document.html#Document.subset_fonts
@@ -460,8 +476,12 @@ class Processor(object):
         try:
             # doc.subset_fonts(verbose=True)
             # https://pymupdf.readthedocs.io/en/latest/tools.html#Tools.set_subset_fontnames
-            doc.subset_fonts()
-            # doc.subset_fonts(fallback=True) # 支持拉丁字符，不过效率会慢.  use doc.subset_fonts(fallback=True) which will use the mechanism of the fontTools package.
+            if contains_latin:
+                doc.subset_fonts(
+                    fallback=True)  # 支持拉丁字符，不过效率会慢.  use doc.subset_fonts(fallback=True) which will use the mechanism of the fontTools package.
+            else:
+                doc.subset_fonts()
+            # doc.subset_fonts(fallback=True)
 
             # 参考: https://github.com/pymupdf/PyMuPDF/discussions/3383
             # pdf = pymupdf._as_pdf_document(doc)  # access underlying PDF-specific level
