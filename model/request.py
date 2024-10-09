@@ -108,7 +108,7 @@ class Item(BaseModel):
         examples=['top', 'bottom']
     )
 
-    img_length: int | None = Field(
+    qr_code_size: int | None = Field(
         default=180, title='二维码宽度', examples=[180]
     )
 

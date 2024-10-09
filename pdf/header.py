@@ -61,8 +61,8 @@ class IHeader(object):
             img.save(imagefile)
             x0 = 80 + self.item.header_padding_left
             y0 = 0
-            x1 = 80 + self.item.header_padding_left + self.item.img_length
-            y1 = self.item.img_length
+            x1 = 80 + self.item.header_padding_left + self.item.qr_code_size
+            y1 = self.item.qr_code_size
             self.page.insert_image(
                 rect=pymupdf.Rect(x0, y0, x1, y1),
                 stream=imagefile,
