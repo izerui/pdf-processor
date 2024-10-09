@@ -150,7 +150,7 @@ class Processor(object):
         # 通过名称动态加载类并执行
         header_class_meta = getattr(header_meta, item.header_model)
         header = header_class_meta(header_doc, item)
-        header.generate_header_page(item.header_padding_left)
+        header.generate_header_page()
         item_attrs = vars(item)
         # 交集
         intersection = False

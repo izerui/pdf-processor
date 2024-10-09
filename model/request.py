@@ -77,7 +77,8 @@ class ItemRender(BaseModel):
         None, title='标签', examples=['标签标签:']
     )
     value: str = Field(
-        None, title='输出内容', examples=['输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容']
+        None, title='输出内容', examples=[
+            '输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容输出内容']
     )
     # label_width: float = Field(
     #     default=None, title='标签宽度,三列建议: 两个字60、三个字80', examples=[60.0, 80.0]
@@ -105,6 +106,10 @@ class Item(BaseModel):
     header_layout: str = Field(
         None, title='头部区域布局',
         examples=['top', 'bottom']
+    )
+
+    img_length: int | None = Field(
+        default=180, title='二维码宽度', exclude=[180]
     )
 
     header_padding_left: int = Field(
