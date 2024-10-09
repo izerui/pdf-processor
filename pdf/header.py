@@ -59,10 +59,14 @@ class IHeader(object):
             img: PilImage = qrcode.make(data=self.item.qr_code)
             imagefile = BytesIO()
             img.save(imagefile)
-            x0 = 80 + self.item.header_padding_left
-            y0 = 0
-            x1 = 80 + self.item.header_padding_left + self.item.qr_code_size
-            y1 = self.item.qr_code_size
+            top_padding = 0
+            left_padding = 80
+            if self.item.qr_code_size < 180:
+                top_padding = (180 - self.item.qr_code_size) / 2
+            x0 = left_padding + self.item.header_padding_left
+            y0 = top_padding
+            x1 = left_padding + self.item.header_padding_left + self.item.qr_code_size
+            y1 = top_padding + self.item.qr_code_size
             self.page.insert_image(
                 rect=pymupdf.Rect(x0, y0, x1, y1),
                 stream=imagefile,
