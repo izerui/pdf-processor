@@ -109,7 +109,7 @@ class Item(BaseModel):
     )
 
     img_length: int | None = Field(
-        default=180, title='二维码宽度', exclude=[180]
+        default=180, title='二维码宽度', examples=[180]
     )
 
     header_padding_left: int = Field(
