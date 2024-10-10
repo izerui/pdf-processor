@@ -62,7 +62,10 @@ class IHeader(object):
             top_padding = 0
             left_padding = 80
             if self.item.qr_code_size < 180:
-                top_padding = (180 - self.item.qr_code_size) / 4
+                if self.item.header_layout == 'top':
+                    top_padding = (180 - self.item.qr_code_size) * 3/5
+                elif self.item.header_layout == 'bottom':
+                    top_padding = (180 - self.item.qr_code_size) * 2/5
             x0 = left_padding + self.item.header_padding_left
             y0 = top_padding
             x1 = left_padding + self.item.header_padding_left + self.item.qr_code_size
