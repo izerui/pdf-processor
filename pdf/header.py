@@ -77,13 +77,13 @@ class IHeader(object):
 
         # 序号
         if self.item.item_no:
-            no_p = pymupdf.Point(a4_width - 50, 50) if self.is_top else pymupdf.Point(a4_width - 50, header_height - 50)
+            no_p = pymupdf.Point(a4_width - 80, 50) if self.is_top else pymupdf.Point(a4_width - 80, header_height - 50)
             # self.page.insert_text(point=no_p, text=f'{self.item.item_no}',
             #                       fontsize=20,
             #                       color=(30 / 255, 144 / 255, 255 / 255))
             self.page.insert_htmlbox(
-                rect=get_rect(no_p, 80, 80),
-                text=f'<span style="font-size:20px;font-weight:bold;word-break:break-all;">{self.item.item_no}</span>'
+                rect=get_rect(no_p, 100, 80),
+                text=f'<span style="font-size:22px;font-weight:bold;word-break:break-all;">{self.item.item_no}</span>'
             )
             # page.insert_htmlbox(
             #     rect=get_rect(pymupdf.Point(1804 - 50, 50), 50, 20),
