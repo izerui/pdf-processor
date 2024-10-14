@@ -77,7 +77,7 @@ class IHeader(object):
 
         # 序号
         if self.item.item_no:
-            no_p = pymupdf.Point(a4_width - 80, 50) if self.is_top else pymupdf.Point(a4_width - 80, header_height - 50)
+            no_p = pymupdf.Point(a4_width - 100, 50) if self.is_top else pymupdf.Point(a4_width - 100, header_height - 50)
             # self.page.insert_text(point=no_p, text=f'{self.item.item_no}',
             #                       fontsize=20,
             #                       color=(30 / 255, 144 / 255, 255 / 255))
