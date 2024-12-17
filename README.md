@@ -45,6 +45,7 @@ sequenceDiagram
 * ~~pip install matplotlib~~
 * pip install qiniu
 * pip install prettytable
+* pip install apscheduler
 
 压力测试工具:
 * pip install locust

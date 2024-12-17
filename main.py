@@ -1,11 +1,13 @@
 import datetime
 import threading
 import time
+import tracemalloc
 from typing import List
 
 import httpx
 import pymupdf
 import uvicorn
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
 from httpx import Timeout
@@ -287,6 +289,20 @@ async def callback_file(file: UploadFile | None = None,
         print(f'<--- 【接收到回调文件】: request_id:{request_id} 错误信息:{err_msg}')
     return Response(content='success', media_type="text/html")
 
+
+def start_memory_monitor():
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+    logger.info('==================================内存分析==================================')
+    logger.info("| [ Top 10 ]")
+    for stat in top_stats[:10]:
+        logger.info(f'| {stat}')
+
+
+tracemalloc.start()
+scheduler = BackgroundScheduler()
+scheduler.add_job(start_memory_monitor, 'interval', seconds=300, replace_existing=True)
+scheduler.start()
 
 if __name__ == "__main__":
     # 解决 pymupdf 新旧别名映射的bug
