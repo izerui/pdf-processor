@@ -11,6 +11,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
 from httpx import Timeout
+from pymupdf import Document
 
 from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile, CallbackUrls
 from pdf import Reader, Processor
@@ -164,10 +165,11 @@ def merge_from_urls(callback_urls: CallbackUrls):
 def callback_from_urls(callback_items: CallbackItems):
     try:
 
-        def item_callback(index, item, doc, exception):
+        def item_callback(index: int, item: Item, doc: Document, files_first_page_thumbnail_base64: list[str], exception):
             if callback_items.process_url:
                 process_data = {'total': len(callback_items.items), 'index': index,
                                 'request_id': callback_items.request_id,
+                                'files_first_page_thumbnail_base64': files_first_page_thumbnail_base64,
                                 'item_id': item.item_id, 'success': True, 'err_msg': None}
                 if exception:
                     process_data['success'] = False

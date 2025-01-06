@@ -1,3 +1,6 @@
+import base64
+import io
+
 from pymupdf import Document
 from pymupdf import Page, pymupdf
 
@@ -168,3 +171,35 @@ class Reader(object):
             else:
                 rotations.append(self.get_page_roration_for_cropbox(index))
         return rotations
+
+    @logged(desc='获取第一页的缩略图')
+    def get_first_page_thumbnail_base64(self, target_width=1024):
+        """
+        获取pdf文件第一页的缩略图
+        在线预览: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAALVCAIA...
+        """
+
+        # 获取第一页
+        first_page = self.doc.load_page(0)
+
+        # 获取页面尺寸
+        rect = first_page.rect
+        width = rect.width
+        height = rect.height
+
+        # 计算缩放比例
+        zoom = target_width / width
+        mat = pymupdf.Matrix(zoom, zoom)
+
+        # 渲染页面为图像
+        pix = first_page.get_pixmap(matrix=mat)
+
+        # 将图像数据放入内存中
+        img_data = pix.tobytes("png")  # 以 PNG 格式获取图像数据
+        img_buffer = io.BytesIO(img_data)
+
+        # 将 BytesIO 对象转换为 base64 编码的字符串
+        img_buffer.seek(0)  # 将指针移动到开始位置
+        img_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+
+        return img_base64

@@ -72,10 +72,12 @@ class Processor(object):
             if item.header_show and item.header_show == 'true':
                 header_doc = self.generate_header_doc_without_close(item)
             target_item_doc = pymupdf.open()
+            files_first_page_thumbnail_base64: list[str] = []
             for file in item.files:
 
                 #### 内部逻辑处理与 `generate_from_file_without_close` 方法处理逻辑保持一致 begin
                 editor: Editor = Editor(url_datas[file.url], False)
+                files_first_page_thumbnail_base64.append(editor.get_first_page_thumbnail_base64())
                 rotations = editor.get_horizontal_transform_rotations(file.rotations)
                 editor.clean_pages()
                 # editor.clone_doc_for_self()
@@ -100,12 +102,12 @@ class Processor(object):
             if header_doc:
                 header_doc.close()
             if item_callback:
-                item_callback(index, item, target_item_doc, None)
+                item_callback(index, item, target_item_doc, files_first_page_thumbnail_base64, None)
             return target_item_doc
         except BaseException as err:
             logger.exception(err)
             if item_callback:
-                item_callback(index, item, None, err)
+                item_callback(index, item, None, None, err)
             raise err
 
     @logged(desc='生成单个header头信息pdf对象(包括生成和压缩)')
@@ -171,7 +173,7 @@ class Processor(object):
         :param url_datas: url_data对照表
         :return:
         """
-        editor: Editor = Editor(file.data, False)
+        editor: Editor = Editor(url_datas[file.url], False)
         rotations = editor.get_horizontal_transform_rotations(file.rotations)
         editor.clean_pages()
         # editor.clone_doc_for_self()
