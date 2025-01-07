@@ -1,3 +1,4 @@
+import concurrent.futures
 import datetime
 import threading
 import time
@@ -13,7 +14,8 @@ from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 from pymupdf import Document
 
-from model import File, SimpleFile, Item, CallbackItems, CallbackProcess, CallbackFile, CallbackUrls
+from model import File, SimpleFile, Item, ItemsRequest, CallbackProcess, FileRequest, urlsRequest
+from model.request import ThumbnailRequest, CallbackThumbnail
 from pdf import Reader, Processor
 from support import logger, logged, QiniuClient, get_url_content_retry
 
@@ -110,17 +112,17 @@ def generate_from_urls(items: List[Item]):
 
 @logged(desc='接收多个文档url，合并成一个文档，并回调通知')
 @app.post('/merge/async-callback-from-urls', summary='接收多个文档url，合并成一个文档')
-def merge_from_urls(callback_urls: CallbackUrls):
+def merge_from_urls(urls_request: urlsRequest):
     try:
 
         def item_callback(index, doc):
-            if callback_urls.process_url:
-                process_data = {'total': len(callback_urls.urls),
+            if urls_request.process_url:
+                process_data = {'total': len(urls_request.urls),
                                 'index': index,
-                                'request_id': callback_urls.request_id,
+                                'request_id': urls_request.request_id,
                                 'success': True,
                                 'err_msg': None}
-                thread = threading.Thread(target=async_post_process, args=(callback_urls.process_url, process_data))
+                thread = threading.Thread(target=async_post_process, args=(urls_request.process_url, process_data))
                 thread.start()
                 pass
 
@@ -128,7 +130,7 @@ def merge_from_urls(callback_urls: CallbackUrls):
             if url:
                 httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
-        def async_merge_and_callback(callback_urls: CallbackUrls):
+        def async_merge_and_callback(callback_urls: urlsRequest):
             """
             异步开启合并线程
             """
@@ -151,9 +153,9 @@ def merge_from_urls(callback_urls: CallbackUrls):
                 httpx.post(callback_urls.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
-        thread = threading.Thread(target=async_merge_and_callback, args=(callback_urls,))
+        thread = threading.Thread(target=async_merge_and_callback, args=(urls_request,))
         thread.start()
-        return Response(content=f'已经开始合并,待合并完成后回调地址: {callback_urls.callback_url}',
+        return Response(content=f'已经开始合并,待合并完成后回调地址: {urls_request.callback_url}',
                         media_type="text/html")
     except Exception as err:
         logger.exception(err)
@@ -162,19 +164,18 @@ def merge_from_urls(callback_urls: CallbackUrls):
 
 @logged(desc='处理多个pdf文件,并回调通知')
 @app.post('/generate/async-callback-from-urls', summary='处理多个pdf文件,并回调通知')
-def callback_from_urls(callback_items: CallbackItems):
+def callback_from_urls(items_request: ItemsRequest):
     try:
 
-        def item_callback(index: int, item: Item, doc: Document, files_first_page_thumbnail_base64: list[str], exception):
-            if callback_items.process_url:
-                process_data = {'total': len(callback_items.items), 'index': index,
-                                'request_id': callback_items.request_id,
-                                'files_first_page_thumbnail_base64': files_first_page_thumbnail_base64,
+        def item_callback(index: int, item: Item, doc: Document, exception):
+            if items_request.process_url:
+                process_data = {'total': len(items_request.items), 'index': index,
+                                'request_id': items_request.request_id,
                                 'item_id': item.item_id, 'success': True, 'err_msg': None}
                 if exception:
                     process_data['success'] = False
                     process_data['err_msg'] = repr(exception)
-                thread = threading.Thread(target=async_post_process, args=(callback_items.process_url, process_data))
+                thread = threading.Thread(target=async_post_process, args=(items_request.process_url, process_data))
                 thread.start()
                 pass
 
@@ -183,34 +184,34 @@ def callback_from_urls(callback_items: CallbackItems):
             if url:
                 httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
-        def async_generate_and_callback(callback_items: CallbackItems):
+        def async_generate_and_callback(items_request: ItemsRequest):
             """
             异步开启处理线程
             """
             try:
                 processor = Processor()
-                url_datas = processor.download_urls_from_items(callback_items.items)
-                target_doc = processor.generate_from_items_without_close(callback_items.items, url_datas, item_callback)
+                url_datas = processor.download_urls_from_items(items_request.items)
+                target_doc = processor.generate_from_items_without_close(items_request.items, url_datas, item_callback)
                 target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}
-                data = {'request_id': callback_items.request_id, 'total': len(callback_items.items)}
+                data = {'request_id': items_request.request_id, 'total': len(items_request.items)}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
                 logger.info(f'【开始上传结果文档到业务应用】')
-                response = httpx.post(callback_items.callback_url, files=files, data=data,
+                response = httpx.post(items_request.callback_url, files=files, data=data,
                                       timeout=Timeout(timeout=300.0, connect=30.0))
                 if response.is_success:
                     logger.info(f'【上传pdf返回结果】: {response.content}')
 
             except BaseException as err:
                 logger.exception(err)
-                data = {'request_id': callback_items.request_id, 'total': len(callback_items.items),
+                data = {'request_id': items_request.request_id, 'total': len(items_request.items),
                         'err_msg': repr(err)}
-                httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
+                httpx.post(items_request.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
-        thread = threading.Thread(target=async_generate_and_callback, args=(callback_items,))
+        thread = threading.Thread(target=async_generate_and_callback, args=(items_request,))
         thread.start()
-        return Response(content=f'已经开始处理,待完成后回调地址: {callback_items.callback_url}', media_type="text/html")
+        return Response(content=f'已经开始处理,待完成后回调地址: {items_request.callback_url}', media_type="text/html")
     except BaseException as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
@@ -233,21 +234,21 @@ def generate_from_file(file: File):
 
 @logged(desc='处理单个源pdf文件, 加遮罩后, 异步回调')
 @app.post('/generate/async-callback-from-file', summary='处理单个pdf文件, 加遮罩后, 异步回调')
-def callback_from_urls(callback_file: CallbackFile):
+def callback_from_urls(file_request: FileRequest):
     try:
 
         def async_post_process(url, data):
             if url:
                 httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
-        def async_generate_and_callback(callback_items: CallbackItems):
+        def async_generate_and_callback(callback_items: ItemsRequest):
             """
             异步开启处理线程
             """
             try:
                 processor = Processor()
-                url_datas = processor.download_urls_from_files([callback_file.file])
-                file_doc_bytes = processor.generate_source_bytes_from_file(callback_file.file, url_datas)
+                url_datas = processor.download_urls_from_files([file_request.file])
+                file_doc_bytes = processor.generate_source_bytes_from_file(file_request.file, url_datas)
                 files = {'file': (f'file-{int(time.perf_counter() * 1000)}.pdf', file_doc_bytes, 'application/pdf')}
                 data = {'request_id': callback_items.request_id}
                 # 暂时不考虑上传结果接口异常,出现异常，由业务方重新调用即可。
@@ -262,9 +263,64 @@ def callback_from_urls(callback_file: CallbackFile):
                 httpx.post(callback_items.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
                 pass
 
-        thread = threading.Thread(target=async_generate_and_callback, args=(callback_file,))
+        thread = threading.Thread(target=async_generate_and_callback, args=(file_request,))
         thread.start()
-        return Response(content=f'已经开始处理,待完成后回调地址: {callback_file.callback_url}', media_type="text/html")
+        return Response(content=f'已经开始处理,待完成后回调地址: {file_request.callback_url}', media_type="text/html")
+    except BaseException as err:
+        logger.exception(err)
+        return Response(content=repr(err), media_type="text/html", status_code=500)
+
+
+@logged(desc='接收多个pdf文件,获取每个pdf文件的首页截图并异步通知回调')
+@app.post('/thumbnail/async-callback-from-urls', summary='接收多个pdf文件,获取每个pdf文件的首页截图并异步通知回调')
+def thumbnail_callback_from_urls(thumbnail: ThumbnailRequest):
+    try:
+        def get_first_page_thumbnail_base64(url: str, url_datas: dict):
+            reader = Reader(url_datas[url])
+            image_base64 = reader.get_first_page_thumbnail_base64()
+            return {
+                'url': url,
+                'image_base64': image_base64,
+            }
+
+        def async_thumbnail_and_callback(thumbnail: ThumbnailRequest):
+            """
+            异步开启处理线程
+            """
+            try:
+                processor = Processor()
+                url_datas = processor.download_urls(thumbnail.urls)
+                url_images = []
+                with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
+                    futures = []
+                    for url in thumbnail.urls:
+                        futures.append(pool.submit(get_first_page_thumbnail_base64, url, url_datas))
+                    for future in concurrent.futures.as_completed(futures):  # 并发执行
+                        exception = future.exception()
+                        if exception:
+                            logger.exception(exception)
+                            raise exception
+                        else:
+                            url_images.append(future.result())
+                        pass
+
+                data = {
+                    'request_id': thumbnail.request_id,
+                    'url_images': url_images
+                }
+                response = httpx.post(thumbnail.callback_url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
+                if response.is_success:
+                    logger.info(f'【上传多个pdf文件首页的缩略图返回结果】: {response.content}')
+
+            except BaseException as err:
+                logger.exception(err)
+                data = {'request_id': thumbnail.request_id, 'err_msg': repr(err)}
+                httpx.post(thumbnail.callback_url, data=data, timeout=Timeout(timeout=60.0, connect=30.0))
+                pass
+
+        thread = threading.Thread(target=async_thumbnail_and_callback, args=(thumbnail,))
+        thread.start()
+        return Response(content=f'已经开始处理,待完成后回调地址: {thumbnail.callback_url}', media_type="text/html")
     except BaseException as err:
         logger.exception(err)
         return Response(content=repr(err), media_type="text/html", status_code=500)
@@ -274,6 +330,13 @@ def callback_from_urls(callback_file: CallbackFile):
 def callback_process(callback_process: CallbackProcess):
     logger.info(
         f'<--- 【接收到处理进度】: 共{callback_process.total}个item, 当前第{callback_process.index}个, request_id:{callback_process.request_id}, item_id:{callback_process.item_id} success: {callback_process.success} err_msg:{callback_process.err_msg}')
+    return Response(content='success', media_type="text/html")
+
+
+@app.post('/callback/thumbnail', summary='回调示例-接收缩略图信息')
+def callback_process(callback_thumbnail: CallbackThumbnail):
+    logger.info(
+        f'<--- 【接收到缩略图】: 共{len(callback_thumbnail.url_images)}个缩略图, 内容: {callback_thumbnail.url_images} request_id:{callback_thumbnail.request_id}, err_msg:{callback_thumbnail.err_msg}')
     return Response(content='success', media_type="text/html")
 
 

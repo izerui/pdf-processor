@@ -166,7 +166,7 @@ class Item(BaseModel):
     )
 
 
-class CallbackFile(BaseModel):
+class FileRequest(BaseModel):
     file: File
     request_id: str
     callback_url: str | None = Field(
@@ -174,7 +174,17 @@ class CallbackFile(BaseModel):
     )
 
 
-class CallbackUrls(BaseModel):
+class ThumbnailRequest(BaseModel):
+    urls: List[str] = Field(
+        None, examples=[['https://file.yj2025.com/CH3600-1-M04003A%20搬运爪安装板-长.pdf', 'https://file.yj2025.com/003.pdf']]
+    )
+    request_id: str
+    callback_url: str | None = Field(
+        None, examples=['http://localhost:8000/callback/thumbnail']
+    )
+
+
+class urlsRequest(BaseModel):
     urls: List[str]
     request_id: str
     process_url: str | None = Field(
@@ -185,7 +195,7 @@ class CallbackUrls(BaseModel):
     )
 
 
-class CallbackItems(BaseModel):
+class ItemsRequest(BaseModel):
     items: List[Item]
     request_id: str
     process_url: str | None = Field(
@@ -202,4 +212,10 @@ class CallbackProcess(BaseModel):
     request_id: str | None = None
     item_id: str | None = None
     success: bool | None = None
+    err_msg: str | None = None
+
+
+class CallbackThumbnail(BaseModel):
+    request_id: str | None = None
+    url_images: list | None = None
     err_msg: str | None = None
