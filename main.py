@@ -13,6 +13,7 @@ from fastapi import FastAPI, Response, UploadFile, Form
 from fastapi.responses import ORJSONResponse
 from httpx import Timeout
 from pymupdf import Document
+from scalar_fastapi import get_scalar_api_reference
 
 from model import File, SimpleFile, Item, ItemsRequest, CallbackProcess, FileRequest, urlsRequest
 from model.request import ThumbnailRequest, CallbackThumbnail
@@ -29,6 +30,14 @@ app = FastAPI(
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     }
 )
+
+# https://scalar.com/#api-client
+@app.get("/scalar", include_in_schema=False)
+async def scalar_html():
+    return get_scalar_api_reference(
+        openapi_url=app.openapi_url,
+        title=app.title,
+    )
 
 
 @app.post('/file/upload-url', summary='测试示例-上传文件到测试公有空间并返回url等信息')
@@ -373,4 +382,5 @@ if __name__ == "__main__":
     # 解决 pymupdf 新旧别名映射的bug
     pymupdf.restore_aliases()
     print('文档地址: http://localhost:8000/docs')
+    print('文档地址: http://localhost:8000/scalar')
     uvicorn.run(app, host="0.0.0.0", port=8000, timeout_keep_alive=60)

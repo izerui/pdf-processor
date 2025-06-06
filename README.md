@@ -46,6 +46,7 @@ sequenceDiagram
 * pip install qiniu
 * pip install prettytable
 * pip install apscheduler
+* pip install scalar-fastapi
 
 压力测试工具:
 * pip install locust
