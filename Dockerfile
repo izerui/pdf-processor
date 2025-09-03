@@ -21,6 +21,7 @@ RUN pip install psutil==5.9.8
 RUN pip install Pillow==10.2.0
 RUN pip install prettytable==3.10.0
 RUN pip install apscheduler
+RUN pip install scalar-fastapi
 
 COPY *.py ./
 COPY ./model/ ./model/
