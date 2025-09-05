@@ -60,7 +60,7 @@ async def async_get_url_file_retry(url, retry_count: int = 5):
             content_length = resp.headers.get('Content-Length')
             if content_length:
                 file_size = int(content_length)
-                if file_size > 1024:  # 2GB
+                if file_size > 2 * 1024 * 1024 * 1024:  # 2GB
                     raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
 
             resp = await client.get(url)
@@ -78,7 +78,7 @@ def get_url_content_retry(url, retry_count: int = 5):
         content_length = head_response.headers.get('Content-Length')
         if content_length:
             file_size = int(content_length)
-            if file_size > 1024:  # 2GB
+            if file_size > 2 * 1024 * 1024 * 1024:  # 2GB
                 raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
 
         response = httpx.get(url)
