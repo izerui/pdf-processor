@@ -56,19 +56,15 @@ async def async_get_url_file_retry(url, retry_count: int = 5):
     """
     async with httpx.AsyncClient() as client:
         for _ in range(retry_count):
-            try:
-                resp = await client.head(url)
-                content_length = resp.headers.get('Content-Length')
-                if content_length:
-                    file_size = int(content_length)
-                    if file_size > 1024:  # 2GB
-                        raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
+            resp = await client.head(url)
+            content_length = resp.headers.get('Content-Length')
+            if content_length:
+                file_size = int(content_length)
+                if file_size > 1024:  # 2GB
+                    raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
 
-                resp = await client.get(url)
-                return resp
-            except Exception:
-                continue
-        raise RuntimeError(f'{url} 文件下载失败')
+            resp = await client.get(url)
+            return resp
 
 
 def get_url_content_retry(url, retry_count: int = 5):
@@ -78,21 +74,17 @@ def get_url_content_retry(url, retry_count: int = 5):
     :return:
     """
     for _ in range(retry_count):
-        try:
-            head_response = httpx.head(url)
-            content_length = head_response.headers.get('Content-Length')
-            if content_length:
-                file_size = int(content_length)
-                if file_size > 1024:  # 2GB
-                    raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
+        head_response = httpx.head(url)
+        content_length = head_response.headers.get('Content-Length')
+        if content_length:
+            file_size = int(content_length)
+            if file_size > 1024:  # 2GB
+                raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
 
-            response = httpx.get(url)
-            if not response.is_success:
-                raise IOError(f'获取文件内容失败, url: {url}')
-            return response.content
-        except Exception:
-            continue
-    raise RuntimeError(f'{url} 获取文件内容失败')
+        response = httpx.get(url)
+        if not response.is_success:
+            raise IOError(f'获取文件内容失败, url: {url}')
+        return response.content
 
 
 def read_temp_file_instant(callback):
