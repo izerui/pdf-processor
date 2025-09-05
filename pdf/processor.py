@@ -461,6 +461,7 @@ class Processor(object):
                 exception = future.exception()
                 if exception:
                     logger.exception(exception)
+                    raise exception
                 pass
         return url_datas
 
