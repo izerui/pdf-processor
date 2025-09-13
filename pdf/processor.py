@@ -105,7 +105,7 @@ class Processor(object):
         except BaseException as err:
             logger.exception(err)
             if item_callback:
-                item_callback(index, item, None, None, err)
+                item_callback(index, item, None, err)
             raise err
 
     @logged(desc='生成单个header头信息pdf对象(包括生成和压缩)')
