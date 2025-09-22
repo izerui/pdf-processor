@@ -22,6 +22,7 @@ RUN pip install Pillow==10.2.0
 RUN pip install prettytable==3.10.0
 RUN pip install apscheduler
 RUN pip install scalar-fastapi
+RUN pip install tenacity
 
 COPY *.py ./
 COPY ./model/ ./model/

@@ -4,9 +4,11 @@ import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from symtable import Function
+from typing import Callable
 
 import pymupdf
 from pymupdf import Document, TEXT_ALIGN_LEFT, Page
+from pymupdf.mupdf import PDF_PERM_PRINT, PDF_PERM_ACCESSIBILITY
 from tqdm import tqdm
 
 from model import Item, File, ItemRender
@@ -399,7 +401,7 @@ class Processor(object):
         # 对象流提供额外的压缩效果 https://github.com/pymupdf/PyMuPDF/discussions/3383
         try:
             logger.info(f'【压缩转换doc文件到字节数组】')
-            pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1, permissions=0)
+            pdf_bytes = doc.tobytes(garbage=4, deflate=True, use_objstms=1, permissions=PDF_PERM_ACCESSIBILITY | PDF_PERM_PRINT)
             # pdf_bytes = read_temp_file_instant(write_file_path)
             if auto_close:
                 doc.close()
@@ -408,23 +410,26 @@ class Processor(object):
             logger.exception(err)
             raise err
 
-    def download_urls_from_items(self, items: list[Item]):
+    def download_urls_from_items(self, items: list[Item], item_error_callback: Callable[[str, object, Exception], None] = None):
         """
         批量从请求的items中所有的文件url地址，以多线程的形式下载文件，并补全到bytes_array
         :param items:
         :return:
         """
         urls = []
+        url_owner_map = {}
         for item in items:
             for file in item.files:
                 assert file.url, f'{file.name} 的url不能为空!'
                 if file.url not in urls:
                     urls.append(file.url)
+                    url_owner_map[file.url] = item
                 if file.marks:
                     for mark in file.marks:
                         if mark.image_url and mark.image_url not in urls:
                             urls.append(mark.image_url)
-        return self.download_urls(urls)
+                            url_owner_map[mark.image_url] = item
+        return self.download_urls(urls, url_owner_map = url_owner_map, owner_error_callback=item_error_callback)
 
     def download_urls_from_files(self, files: list[File]):
         """
@@ -444,24 +449,34 @@ class Processor(object):
         return self.download_urls(urls)
 
     @logged(desc='批量下载网络文件及图片')
-    def download_urls(self, urls: list[str]):
+    def download_urls(self, urls: list[str], url_owner_map: object = None, owner_error_callback: Callable[[str, object, Exception], None] = None):
 
-        def append_url_data(url: str, url_datas: dict):
-            data = get_url_content_retry(url, 5)
-            if url not in url_datas:
-                url_datas[url] = data
+        def append_url_data(url: str, url_datas: dict, owner: object = None):
+            try:
+                data = get_url_content_retry(url)
+                if url not in url_datas:
+                    url_datas[url] = data
+            except BaseException as err:
+                return url, owner, err
 
-        urls = list(set(urls))
         url_datas = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as pool:
             futures = []
             for url in urls:
-                futures.append(pool.submit(append_url_data, url, url_datas))
+                if url_owner_map and len(url_owner_map) > 0:
+                    owner = url_owner_map[url]
+                else:
+                    owner = None
+                futures.append(pool.submit(append_url_data, url, url_datas, owner))
             for future in concurrent.futures.as_completed(futures):  # 并发执行
-                exception = future.exception()
-                if exception:
-                    logger.exception(exception)
-                    raise exception
+                result = future.result()
+                if result:
+                    url, owner, exception = result
+                    if exception:
+                        if owner_error_callback:
+                            owner_error_callback(url, owner, exception)
+                        logger.exception(exception)
+                        raise exception
                 pass
         return url_datas
 

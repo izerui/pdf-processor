@@ -193,13 +193,17 @@ def callback_from_urls(items_request: ItemsRequest):
             if url:
                 httpx.post(url, json=data, timeout=Timeout(timeout=60.0, connect=30.0))
 
+        def item_download_error(url: str, item: object, exception):
+            index = items_request.items.index(item)
+            item_callback(index, item, None, exception)
+
         def async_generate_and_callback(items_request: ItemsRequest):
             """
             异步开启处理线程
             """
             try:
                 processor = Processor()
-                url_datas = processor.download_urls_from_items(items_request.items)
+                url_datas = processor.download_urls_from_items(items_request.items, item_download_error)
                 target_doc = processor.generate_from_items_without_close(items_request.items, url_datas, item_callback)
                 target_doc_bytes = processor.get_doc_bytes_and_close(target_doc, auto_close=True)
                 files = {'file': (f'result-{int(time.perf_counter() * 1000)}.pdf', target_doc_bytes, 'application/pdf')}

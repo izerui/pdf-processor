@@ -12,6 +12,7 @@ import psutil
 import pymupdf
 from PIL import ImageColor
 from pymupdf import TEXT_ALIGN_LEFT, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
@@ -67,24 +68,24 @@ async def async_get_url_file_retry(url, retry_count: int = 5):
             return resp
 
 
-def get_url_content_retry(url, retry_count: int = 5):
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2), reraise=True)
+def get_url_content_retry(url):
     """
     从url获取文件内容，重试5次
     :param url: 文件的url地址
     :return:
     """
-    for _ in range(retry_count):
-        head_response = httpx.head(url)
-        content_length = head_response.headers.get('Content-Length')
-        if content_length:
-            file_size = int(content_length)
-            if file_size > 1 * 1024 * 1024 * 1024:  # 2GB
-                raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
+    head_response = httpx.head(url)
+    content_length = head_response.headers.get('Content-Length')
+    if content_length:
+        file_size = int(content_length)
+        if file_size > 1 * 1024 * 1024 * 1024:  # 2GB
+            raise ValueError(f'文件大小超过2GB限制: {file_size} bytes')
 
-        response = httpx.get(url)
-        if not response.is_success:
-            raise IOError(f'获取文件内容失败, url: {url}')
-        return response.content
+    response = httpx.get(url)
+    if not response.is_success:
+        raise IOError(f'获取文件内容失败: {response.reason_phrase}, url: {url}')
+    return response.content
 
 
 def read_temp_file_instant(callback):
