@@ -88,6 +88,15 @@ class Editor(Reader):
                 # 通过设置的旋转角度通过反向计算区域块实际位置
                 rect = rect.transform(page.derotation_matrix)
                 if mark.image_url:
+                    # 不填充颜色，彻底删除
+                    page.add_redact_annot(rect)
+                    # 应用删除操作
+                    page.apply_redactions(
+                        images=2,  # 抹掉重叠部分：只把图像中与删除区域重叠的部分变空白，保留图像其他部分
+                        graphics=1,  # 删除包含的图形：只删除完全包含在删除矩形内的图形（包括线条）
+                        text=0  # 删除文字
+                    )
+
                     # PIL加载网络图片，并转换成统一jpeg格式的二进制
                     img = Image.open(io.BytesIO(url_datas[mark.image_url])).convert("RGB")
                     # img = img.resize((int(rect.width), int(rect.height)))
