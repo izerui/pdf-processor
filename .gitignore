@@ -162,3 +162,9 @@ cython_debug/
 tmp/
 .qiniu_pythonsdk_hostscache.json
 x.pdf
+/tests/table/output/医学部本科专业人才培养方案 2025版.xlsx
+/tests/table/output/商学部本科人才培养方案 2025版.xlsx
+/tests/table/output/学前教育专业人才培养方案-本科-2025版.xlsx
+/tests/table/output/工学部本科专业人才培养方案 2025版.xlsx
+/tests/table/output/应用技术学院本科专业人才培养方案 2025版.xlsx
+/tests/table/output/艺体学部本科专业人才培养方案 2025版.xlsx
